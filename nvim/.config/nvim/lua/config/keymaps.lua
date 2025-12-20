@@ -40,3 +40,7 @@ vim.keymap.set("n", "<leader>bF", function()
   vim.cmd("!biome check --write " .. vim.fn.expand("%"))
   vim.cmd("edit") -- reload the buffer
 end, { desc = "Biome Fix All" })
+
+vim.keymap.set("n", "<leader><leader>", function()
+  Snacks.picker.buffers()
+end, { desc = "Open buffers" })
