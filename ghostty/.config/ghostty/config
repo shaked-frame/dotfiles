@@ -1,0 +1,33 @@
+keybind = ctrl+z=close_surface
+keybind = ctrl+shift+v=new_split:right
+keybind = ctrl+shift+d=new_split:down
+keybind = ctrl+t>h=toggle_quick_terminal
+keybind = ctrl+shift+M=toggle_split_zoom
+keybind = ctrl+shift+equal=equalize_splits
+keybind = ctrl+shift+right=resize_split:right,20
+keybind = ctrl+shift+left=resize_split:left,20
+keybind = ctrl+shift+t=new_tab
+keybind = ctrl+shift+o=toggle_tab_overview
+
+macos-option-as-alt = true
+
+font-family =  BlexMono Nerd Font Mono
+font-size = 14
+
+
+theme = Tokyonight Night
+background-opacity = 0.9
+background-blur-radius = 50
+window-padding-x=8
+window-padding-y=8
+maximize
+
+
+
+focus-follows-mouse = true
+
+
+font-feature = -liga
+font-feature = -ss20
+font-feature = -calt
+
