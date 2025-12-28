@@ -129,3 +129,10 @@ esac
 # pnpm end
 
 eval "$(starship init zsh)"
+
+. "$HOME/.atuin/bin/env"
+
+eval "$(atuin init zsh)"
+
+# bun completions
+[ -s "/Users/shakedhagag/.bun/_bun" ] && source "/Users/shakedhagag/.bun/_bun"

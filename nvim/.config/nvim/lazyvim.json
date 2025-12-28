@@ -27,6 +27,7 @@
     "lazyvim.plugins.extras.lang.toml",
     "lazyvim.plugins.extras.lang.typst",
     "lazyvim.plugins.extras.ui.dashboard-nvim",
+    "lazyvim.plugins.extras.ui.mini-indentscope",
     "lazyvim.plugins.extras.util.dot",
     "lazyvim.plugins.extras.util.mini-hipatterns"
   ],

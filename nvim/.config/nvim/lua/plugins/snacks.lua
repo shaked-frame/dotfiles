@@ -29,6 +29,17 @@ return {
           pane = 2,
           { section = "keys", gap = 1, padding = 1 },
           { icon = " ", title = "Recent Files", section = "recent_files", indent = 2, padding = { 2, 2 } },
+          { icon = " ", title = "Projects", section = "projects", indent = 2, padding = 2 },
+        },
+        {
+          pane = 2,
+          icon = " ",
+          desc = "Browse Repo",
+          padding = 1,
+          key = "b",
+          action = function()
+            Snacks.gitbrowse()
+          end,
         },
         {
           pane = 2,
