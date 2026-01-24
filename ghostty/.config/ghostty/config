@@ -12,13 +12,21 @@ keybind = super+l=goto_split:right
 keybind = super+h=goto_split:left
 macos-titlebar-style = hidden
 macos-option-as-alt = true
+# Word navigation (Option + Arrow)
+keybind = alt+left=text:\x1b[1;3D
+keybind = alt+right=text:\x1b[1;3C
 
-font-family =  BlexMono Nerd Font Mono
+# Line navigation (Cmd + Arrow)
+keybind = cmd+left=text:\x1b[H
+keybind = cmd+right=text:\x1b[F
+
+
+font-family =  BitstromWera Nerd Font Mono
 font-size = 14
 
 
-theme = Tokyonight Night
-background-opacity = 0.92
+theme = GitHub Dark Colorblind
+background-opacity = 0.8
 background-blur-radius = 50
 window-padding-x=8
 window-padding-y=8
@@ -33,4 +41,9 @@ focus-follows-mouse = true
 font-feature = -liga
 font-feature = -ss20
 font-feature = -calt
+
+window-padding-balance = true 
+window-save-state = always
+window-colorspace = "display-p3"
+macos-titlebar-style = tabs
 

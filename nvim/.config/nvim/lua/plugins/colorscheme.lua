@@ -9,18 +9,29 @@ return {
     lazy = false, -- make sure we load this during startup if it is your main colorscheme
     priority = 1000, -- make sure to load this before all the other plugins
     config = function()
-      -- NOTE: you do not need to call setup if you don't want to.
       require("vague").setup({
         -- optional configuration here
-        transparent = true,
       })
       vim.cmd("colorscheme vague")
     end,
   },
   {
+    "craftzdog/solarized-osaka.nvim",
+    lazy = false,
+    priority = 1000,
+    opts = {},
+    config = function()
+      require("vague").setup({
+        -- optional configuration here
+        transparent = true,
+      })
+      vim.cmd("colorscheme solarized-osaka")
+    end,
+  },
+  {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "vague", -- or github_light, github_dark_dimmed, etc.
+      colorscheme = "solarized-osaka",
       transparent = true,
       styles = {
         sidebars = "transparent",
