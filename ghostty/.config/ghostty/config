@@ -26,7 +26,7 @@ font-size = 14
 
 
 theme = GitHub Dark Colorblind
-background-opacity = 0.9
+background-opacity = 0.96
 background-blur-radius = 50
 window-padding-x=8
 window-padding-y=8

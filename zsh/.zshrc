@@ -221,6 +221,9 @@ function bup() {
 # ║                                   PATH                                       ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
+# GNU Make (use GNU make instead of macOS make)
+export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+
 # Bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
