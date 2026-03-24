@@ -19,14 +19,16 @@ keybind = alt+right=text:\x1b[1;3C
 # Line navigation (Cmd + Arrow)
 keybind = cmd+left=text:\x1b[H
 keybind = cmd+right=text:\x1b[F
+font-thicken=true
+font-thicken-strength=200
 
-
-font-family =  BitstromWera Nerd Font Mono
+font-family =  Lilex Nerd Font Mono Regular
+font-family = BlexMono Nerd Font Mono
 font-size = 14
 
 
-theme = GitHub Dark Colorblind
-background-opacity = 0.96
+
+background-opacity = 1
 background-blur-radius = 50
 window-padding-x=8
 window-padding-y=8
@@ -46,4 +48,5 @@ window-padding-balance = true
 window-save-state = always
 window-colorspace = "display-p3"
 macos-titlebar-style = tabs
-
+macos-titlebar-style = hidden
+theme = GitHub Dark Colorblind

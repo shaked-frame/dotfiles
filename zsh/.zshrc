@@ -148,9 +148,11 @@ alias reload-zsh="source ~/.zshrc"
 
 # File navigation with FZF
 alias zf='nvim $(fzf -m --preview="bat --color=always {}")'
+alias z='zoxide'
 
 # Eza (better ls)
-alias ls="eza -G -l -a --icons=always --group-directories-first --git-ignore"
+alias ls="eza -G -a --icons=always --group-directories-first --git-ignore"
+alias ltree="eza --tree --level=2  --icons --git"
 
 # Navigation
 alias ..='cd ..'
@@ -203,6 +205,25 @@ function y() {
     builtin cd -- "$cwd"
   fi
   rm -f -- "$tmp"
+}
+
+function lg() {
+    if ! (( $+commands[lazygit] )); then
+        print "${COLOR[RED]}Error:${COLOR[RESET]} 'lazygit' is not installed." >&2
+        return 1
+    fi
+
+    local lg_config_file="${TMPDIR:-/tmp}/lazygit-chdir"
+    LAZYGIT_NEW_DIR_FILE="$lg_config_file" command lazygit "$@"
+
+    if [[ -f "$lg_config_file" ]]; then
+        local target_dir=$(cat "$lg_config_file")
+        if [[ -d "$target_dir" && "$target_dir" != "$PWD" ]]; then
+            cd "$target_dir"
+            print "${COLOR[GREEN]}:: Switched to:${COLOR[RESET]} $target_dir"
+        fi
+        rm -f "$lg_config_file"
+    fi
 }
 
 # Function with feedback
@@ -260,7 +281,6 @@ function zle-keymap-select() {
 zle -N zle-keymap-select
 
 # ── Atuin (shell history) ─────────────────────────────────────────────────────
-. "$HOME/.atuin/bin/env"
 eval "$(atuin init zsh)"
 
 # ── Bun completions ───────────────────────────────────────────────────────────

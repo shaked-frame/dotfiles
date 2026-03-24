@@ -17,3 +17,5 @@ vim.api.nvim_create_autocmd({ "BufLeave", "FocusLost" }, {
 })
 
 vim.o.winborder = "solid"
+
+require("mini.files").setup()

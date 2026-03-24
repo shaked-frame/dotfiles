@@ -49,7 +49,7 @@ vim.keymap.set("n", "<leader>sf", function()
 end, { desc = "Search Frontend files (frame)" })
 
 -- Grep in ~/frame/frontend only
-vim.keymap.set("n", "<leader>sF", function()
+vim.keymap.set("n", "<leader>gF", function()
   Snacks.picker.grep({ dirs = { vim.fn.expand("~/frame/frontend") } })
 end, { desc = "Grep Frontend files (frame)" })
 
@@ -65,4 +65,14 @@ end, { desc = "Biome Fix All" })
 
 vim.keymap.set("n", "<leader><leader>", function()
   Snacks.picker.buffers()
+end, { desc = "Open buffers" })
+
+vim.keymap.set("n", "-", function()
+  local path = vim.api.nvim_buf_get_name(0)
+  if path == "" then
+    MiniFiles.open()
+    return
+  end
+
+  MiniFiles.open(path, false)
 end, { desc = "Open buffers" })
