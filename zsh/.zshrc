@@ -66,6 +66,9 @@ zinit light djui/alias-tips
 # ║                                COMPLETIONS                                   ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
+# User completions (sesh, etc.)
+fpath=("$HOME/.zsh/completions" $fpath)
+
 autoload -Uz compinit && compinit
 zinit cdreplay -q
 
