@@ -53,4 +53,5 @@ window-save-state = always
 window-colorspace = "display-p3"
 macos-titlebar-style = tabs
 macos-titlebar-style = hidden
-theme = GitHub Dark Colorblind
+theme = Catppuccin Mocha
+
