@@ -19,6 +19,10 @@ keybind = alt+right=text:\x1b[1;3C
 # Line navigation (Cmd + Arrow)
 keybind = cmd+left=text:\x1b[H
 keybind = cmd+right=text:\x1b[F
+
+# tmux window switching (send tmux prefix + L/H)
+keybind = ctrl+tab=text:\x01L
+keybind = ctrl+shift+tab=text:\x01H
 font-thicken=true
 font-thicken-strength=200
 
