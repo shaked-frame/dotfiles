@@ -1,0 +1,8 @@
+{
+	"plugins": {
+		"pretty-comment.nvim": {
+			"rev": "48f76dc7414e7aa5ca652dad32a5cf1a2c3c01a8",
+			"src": "https://github.com/Cartoone9/pretty-comment.nvim"
+		}
+	}
+}

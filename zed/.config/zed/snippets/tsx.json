@@ -1,0 +1,154 @@
+{
+  "React Function Component": {
+    "prefix": "rfc",
+    "body": [
+      "export const ${1:ComponentName} = (${2:props}: {}) => {",
+      "\treturn (",
+      "\t\t<div>",
+      "\t\t\t$0",
+      "\t\t</div>",
+      "\t)",
+      "}"
+    ],
+    "description": "Creates a React functional component"
+  },
+  "React Export Function Component": {
+    "prefix": "rfce",
+    "body": [
+      "export function ${1:ComponentName}() {",
+      "\treturn (",
+      "\t\t<div>",
+      "\t\t\t$0",
+      "\t\t</div>",
+      "\t)",
+      "}"
+    ],
+    "description": "Creates an exported React function component"
+  },
+  "JSX Element": {
+    "prefix": "j",
+    "body": ["<${1:elementName}>", "\t$0", "</${1:elementName}>"],
+    "description": "Creates a JSX element"
+  },
+  "JSX Element Self Closed": {
+    "prefix": "jc",
+    "body": ["<${1:elementName} />"],
+    "description": "Creates a self-closing JSX element"
+  },
+  "JSX Elements Map": {
+    "prefix": "jm",
+    "body": [
+      "{${1:array}.map((item) => <${2:elementName} key={item.id}>",
+      "\t$0",
+      "</${2:elementName}>)}"
+    ],
+    "description": "Maps an array to JSX elements"
+  },
+  "JSX Elements Map With Return": {
+    "prefix": "jmr",
+    "body": [
+      "{${1:array}.map((item) => {",
+      "\treturn <${2:elementName} key={item.id}>",
+      "\t\t$0",
+      "\t</${2:elementName}>",
+      "})}"
+    ],
+    "description": "Maps an array to JSX elements with an explicit return"
+  },
+  "JSX Element Wrap Selection": {
+    "prefix": "jsx wrap selection with element",
+    "body": ["<${1:elementName}>", "\t${2:content}", "</${1:elementName}>"],
+    "description": "Wraps content with a JSX element"
+  },
+  "useState": {
+    "prefix": "us",
+    "body": ["const [${1:state}, ${2:setState}] = useState(${3:initValue})$0"],
+    "description": "React useState() hook"
+  },
+  "useEffect": {
+    "prefix": "ue",
+    "body": ["useEffect(() => {", "\t$1", "}, [${2:dependencies}])$0"],
+    "description": "React useEffect() hook"
+  },
+  "useEffect With Cleanup": {
+    "prefix": "uec",
+    "body": [
+      "useEffect(() => {",
+      "\t$1",
+      "",
+      "\treturn () => {",
+      "\t\t$2",
+      "\t}",
+      "}, [${3:dependencies}])$0"
+    ],
+    "description": "React useEffect() hook with cleanup"
+  },
+  "Create Context": {
+    "prefix": "cc",
+    "body": [
+      "export const ${1:Context} = createContext<${2:ContextType}>(",
+      "\t(null as any) as ${2:ContextType}",
+      ")"
+    ],
+    "description": "Creates a React context"
+  },
+  "Use Context": {
+    "prefix": "uc",
+    "body": ["const ${1:value} = use(${2:Context})$0"],
+    "description": "React use() hook"
+  },
+  "useRef": {
+    "prefix": "ur",
+    "body": ["const ${1:elName}El = useRef(null)$0"],
+    "description": "React useRef() hook"
+  },
+  "useCallback": {
+    "prefix": "ucb",
+    "body": [
+      "const ${1:memoizedCallback} = useCallback(",
+      "\t() => {",
+      "\t\t${2:doSomething}(${3:a}, ${4:b})",
+      "\t},",
+      "\t[${5:a}, ${6:b}],",
+      ")$0"
+    ],
+    "description": "React useCallback() hook"
+  },
+  "useMemo": {
+    "prefix": "ume",
+    "body": [
+      "const ${1:memoizedValue} = useMemo(() => ${2:computeExpensiveValue}(${3:a}, ${4:b}), [${5:a}, ${6:b}])$0"
+    ],
+    "description": "React useMemo() hook"
+  },
+  "Create React Hook": {
+    "prefix": "crh",
+    "body": ["export const use${1:HookName} = () => {", "\t$0", "}"],
+    "description": "Creates a React hook"
+  },
+  "Create React Hook With Name": {
+    "prefix": "crhn",
+    "body": ["export const ${1:hookName} = () => {", "\t$0", "}"],
+    "description": "Creates a named React hook"
+  },
+  "Describe Block": {
+    "prefix": "desc",
+    "body": ["describe('${1:name}', () => {", "  $0", "})"],
+    "description": "Testing describe block"
+  },
+  "Test Block": {
+    "prefix": "test",
+    "body": ["test('should ${1:do something}', () => {", "  $0", "})"],
+    "description": "Testing test block"
+  },
+  "It Block": {
+    "prefix": "tit",
+    "body": ["it('should ${1:do something}', () => {", "  $0", "})"],
+    "description": "Testing it block"
+  },
+  "It Async Block": {
+    "prefix": "tita",
+    "body": ["it('should ${1:do something}', async () => {", "  $0", "})"],
+    "description": "Testing async it block"
+  }
+}

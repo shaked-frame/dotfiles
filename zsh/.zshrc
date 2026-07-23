@@ -95,9 +95,6 @@ source <(carapace _carapace)
 # ║                               KEY BINDINGS                                   ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
-# Vi mode
-bindkey -v
-
 # History navigation
 bindkey '^p' history-search-backward
 bindkey '^n' history-search-forward
@@ -144,7 +141,8 @@ bindkey '^[[F' end-of-line
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 # General
-alias vim='nvim'
+alias vim='NVIM_APPNAME=nvim-minimax nvim'
+alias oc='opencode'
 alias c='clear'
 alias pn='pnpm'
 alias reload-zsh="source ~/.zshrc"
@@ -176,7 +174,7 @@ alias gco='git checkout'
 alias gsw='git switch'
 alias gd='git diff'
 alias gds='git diff --staged'
-alias glog='git lg'
+alias glog='git log --oneline --graph --decorate'
 alias grb='git rebase'
 alias gm='git merge'
 alias gsta='git stash'
@@ -241,6 +239,22 @@ function bup() {
   brew doctor
 }
 
+function worktree() {
+  local branch="$1"
+  local base="${2:-main}"
+  local path="$HOME/worktrees/frame-${branch//\//-}"
+
+  mkdir -p "$HOME/worktrees" &&
+    if git show-ref --verify --quiet "refs/heads/$branch"; then
+      git worktree add "$path" "$branch"
+    else
+      git worktree add -b "$branch" "$path" "$base"
+    fi &&
+    cd "$path" &&
+    pnpm i &&
+    pnpm setup:frontend
+}
+
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                                   PATH                                       ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -259,6 +273,41 @@ export PNPM_HOME="$HOME/.local/share/pnpm"
 # Local binaries (CodeRabbit CLI, etc.)
 export PATH="$HOME/.local/bin:$PATH"
 
+function link-worktree-zed() {
+  local source_dir="$HOME/frame/.zed"
+  local target_dir="$PWD/.zed"
+  local source_settings="$source_dir/settings.json"
+  local target_settings="$target_dir/settings.json"
+
+  if [[ ! -f "$source_settings" ]]; then
+    print "Error: $source_settings does not exist" >&2
+    return 1
+  fi
+
+  mkdir -p "$target_dir"
+
+  if [[ -e "$target_settings" && ! -L "$target_settings" ]]; then
+    print "Error: $target_settings already exists and is not a symlink" >&2
+    return 1
+  fi
+
+  ln -sfn "$source_settings" "$target_settings"
+  print "Linked $target_settings -> $source_settings"
+}
+
+# Frame worktree helper (personal — links .env.local from main clone)
+pnpm() {
+  if [[ "$1" == "link:worktree-env" && $# -eq 1 ]]; then
+    link-worktree-env
+    return
+  fi
+  if [[ "$1" == "link:worktree-zed" && $# -eq 1 ]]; then
+    link-worktree-zed
+    return
+  fi
+  command pnpm "$@"
+}
+
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                            SHELL INTEGRATIONS                                ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
@@ -276,15 +325,22 @@ eval "$(zoxide init --cmd cd zsh)"
 # Must init before atuin to prevent zle-keymap-select recursion
 eval "$(starship init zsh)"
 
-# Fix for vi-mode + starship prompt redraw recursion
-function zle-keymap-select() {
-  starship_zle-keymap-select-wrapped "$@" 2>/dev/null || true
-  zle reset-prompt
-}
-zle -N zle-keymap-select
-
 # ── Atuin (shell history) ─────────────────────────────────────────────────────
 eval "$(atuin init zsh)"
 
 # ── Bun completions ───────────────────────────────────────────────────────────
 [[ -s "$HOME/.bun/_bun" ]] && source "$HOME/.bun/_bun"
+
+# Pi
+export PATH="/Users/shakedhagag/.local/share/fnm/node-versions/v24.12.0/installation/bin:$PATH"
+
+# Vite+ bin (https://viteplus.dev)
+. "$HOME/.vite-plus/env"
+
+# pnpm
+export PNPM_HOME="/Users/shakedhagag/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end

@@ -74,5 +74,6 @@ vim.keymap.set("n", "-", function()
     return
   end
 
-  MiniFiles.open(path, false)
+  -- Keep the previous explorer state (including marks/bookmarks) when reopening.
+  MiniFiles.open(path, true)
 end, { desc = "Open buffers" })

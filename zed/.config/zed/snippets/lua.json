@@ -1,0 +1,9 @@
+{
+  "Local": {
+    "prefix": "l",
+    "body": [
+      "local ${1:name} = $0"
+    ],
+    "description": "Creates a local Lua binding"
+  }
+}

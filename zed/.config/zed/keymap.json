@@ -1,1 +1,178 @@
-../../dotfiles/zed/.config/zed/keymap.json
+[
+  {
+    "context": "vim_mode == normal && !menu",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "alt-j": "editor::MoveLineDown",
+      "alt-k": "editor::MoveLineUp",
+      "H": "pane::ActivatePreviousItem",
+      "L": "pane::ActivateNextItem",
+      "g w": "vim::HelixJumpToWord",
+      "s s": "pane::SplitDown",
+      "s r": ["workspace::SendKeystrokes", "c s"],
+      "s v": "pane::SplitRight",
+      "g r r": "editor::FindAllReferences",
+      "g r v": ["workspace::SendKeystrokes", "cmd-\\ g r r"],
+      "space space": "tab_switcher::Toggle",
+      "space b d": ["pane::CloseActiveItem", { "close_pinned": false }],
+      "space b o": ["pane::CloseOtherItems", { "close_pinned": false }],
+      "space b n": "workspace::NewFile",
+      "space =": "vim::ResetPaneSizes",
+      "space m": "workspace::ToggleEditorZoom",
+      "space a a": "agents_sidebar::ToggleThreadSwitcher",
+      "space a c": [
+        "agent::NewThread",
+        { "agent": { "custom": { "name": "opencode" } } },
+      ],
+      "space a f": "agent::OpenAddContextMenu",
+      "space a r": "agent::ManageSkills",
+      "space e b": "outline_panel::ToggleFocus",
+      "space e d": "project_panel::ToggleFocus",
+      "space f b": "tab_switcher::Toggle",
+      "space f f": "file_finder::Toggle",
+      "space F g": "pane::DeploySearch",
+      "space f g": ["text_finder::Toggle", {}],
+      "space g d": "git::Diff",
+      "space g g": [
+        "task::Spawn",
+        { "task_name": "LazyGit", "reveal_target": "center" },
+      ],
+      "space g r": "git::Restore",
+      "space g b": "editor::BlameHover",
+      "space m f": "git::OpenModifiedFiles",
+      "g r a": "editor::ToggleCodeActions",
+      "space l d": "diagnostics::DeployCurrentFile",
+      "space l f": "editor::Format",
+      "space l h": "editor::Hover",
+      "g r i": "editor::GoToImplementation",
+      "g r n": "editor::Rename",
+      "g D": "editor::GoToDefinition",
+      "g y": "editor::GoToTypeDefinition",
+      "space r r": ["pane::DeploySearch", { "replace_enabled": true }],
+      "space t t": "workspace::NewTerminal",
+      "space x X": "diagnostics::Deploy",
+      "space x x": "diagnostics::DeployCurrentFile",
+      "space g w": "git::Worktree"
+    },
+  },
+  {
+    "context": "EmptyPane || SharedScreen",
+    "bindings": {
+      // Open file finder
+      "space f f": "file_finder::Toggle",
+      // Open recent project
+      "space f p": "projects::OpenRecent",
+      "space g g": [
+        "task::Spawn",
+        { "task_name": "LazyGit", "reveal_target": "center" },
+      ],
+    },
+  },
+  {
+    "context": "vim_mode == visual && !menu",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "alt-j": "editor::MoveLineDown",
+      "alt-k": "editor::MoveLineUp",
+      "H": "pane::ActivatePreviousItem",
+      "L": "pane::ActivateNextItem",
+      "space l a": "editor::ToggleCodeActions",
+      "space l f": "editor::FormatSelections",
+      "space a v": "agent::AddSelectionToThread",
+      "shift-s": "vim::PushAddSurrounds",
+    },
+  },
+  {
+    "context": "vim_mode == insert && !menu",
+    "bindings": {
+      "alt-j": "editor::MoveLineDown",
+      "alt-k": "editor::MoveLineUp",
+      "alt-tab": "editor::AcceptNextWordEditPrediction"
+    },
+  },
+  {
+    "context": "Workspace",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-l": "workspace::ActivatePaneRight",
+      "ctrl-alt-cmd-^": "vim::ResizePaneLeft",
+      "ctrl-alt-cmd-&": "vim::ResizePaneDown",
+      "ctrl-alt-cmd-*": "vim::ResizePaneUp",
+      "ctrl-alt-cmd-(": "vim::ResizePaneRight",
+    },
+  },
+  {
+    "context": "AcpThread",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-l": "agent::FocusRight",
+    },
+  },
+  {
+    "context": "AcpThread > Editor",
+    "bindings": {
+      "ctrl-h": "workspace::ActivatePaneLeft",
+      "ctrl-j": "workspace::ActivatePaneDown",
+      "ctrl-k": "workspace::ActivatePaneUp",
+      "ctrl-l": "workspace::ActivatePaneRight",
+    },
+  },
+  {
+    "context": "ProjectPanel && not_editing",
+    "bindings": {
+      "ctrl-v": ["workspace::SendKeystrokes", "cmd-\\ space"],
+      "ctrl-s": ["workspace::SendKeystrokes", "cmd-k down space"],
+    },
+  },
+  {
+    "context": "Picker > Editor",
+    "bindings": {
+      "ctrl-v": ["workspace::SendKeystrokes", "cmd-\\ alt-enter"],
+      "ctrl-s": ["workspace::SendKeystrokes", "cmd-k down alt-enter"],
+    },
+  },
+  {
+    "context": "TabSwitcher",
+    "bindings": {
+      "ctrl-v": ["workspace::SendKeystrokes", "cmd-\\ enter"],
+      "ctrl-s": ["workspace::SendKeystrokes", "cmd-k down enter"],
+    },
+  },
+  {
+    "context": "Editor && showing_completions",
+    "bindings": {
+      "ctrl-y": "editor::ConfirmCompletion",
+    },
+  },
+  {
+    "context": "vim_operator == a || vim_operator == i || vim_operator == cs",
+    "bindings": {
+      "q": "vim::MiniQuotes",
+      "b": "vim::MiniBrackets",
+    },
+  },
+  {
+    "context": "FileFinder || (FileFinder > Picker > Editor)",
+    "bindings": {
+      "ctrl-y": "menu::Confirm",
+      "ctrl-k": "menu::SelectPrevious",
+      "ctrl-j": "menu::SelectNext",
+    },
+  },
+  {
+    "context": "FileFinder || (FileFinder > Picker > Editor)",
+    "bindings": {
+      "ctrl-v": ["workspace::SendKeystrokes", "cmd-l"],
+    },
+  },
+]

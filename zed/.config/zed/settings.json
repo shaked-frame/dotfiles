@@ -7,12 +7,168 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "lsp_results_location": "picker",
+  "semantic_tokens": "combined",
+  "edit_predictions": {
+    "provider": "copilot",
+  },
+  "tabs": {
+    "git_status": true,
+  },
+  "title_bar": {
+    "show_branch_status_icon": true,
+  },
+  "status_bar": {
+    "cursor_position_button": true,
+    "active_encoding_button": "disabled",
+  },
+  "indent_guides": {
+    "background_coloring": "disabled",
+    "coloring": "indent_aware",
+  },
+  "context_servers": {
+    "mcp-server-github": {
+      "enabled": true,
+      "remote": false,
+      "settings": {},
+    },
+  },
+  "outline_panel": {
+    "dock": "left",
+  },
+  "collaboration_panel": {
+    "dock": "left",
+  },
+  "diff_view_style": "split",
+  "lsp": {
+    "tailwindcss-language-server": {
+      "settings": {
+        "classFunctions": ["cn", "clsx", "cva", "cx"],
+        "experimental": {
+          "configFile": "/Users/shakedhagag/frame/frontend/packages/ui/src/styles/globals.css",
+          "classRegex": [
+            ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
+            ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^'\"`]*)"],
+            ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^'\"`]*)"],
+          ],
+        },
+      },
+    },
+    "vtsls": {
+      "settings": {
+        "typescript": {
+          "updateImportsOnFileMove": {
+            "enabled": "always",
+          },
+        },
+        "javascript": {
+          "updateImportsOnFileMove": {
+            "enabled": "always",
+          },
+        },
+      },
+      "enable_lsp_tasks": true,
+    },
+  },
+  "vim": {
+    "show_edit_predictions_in_normal_mode": true,
+    "toggle_relative_line_numbers": true,
+  },
+  "which_key": {
+    "enabled": true,
+  },
+  "tab_size": 2,
+  "document_symbols": "off",
+  "toolbar": {
+    "breadcrumbs": false,
+  },
+  "gutter": {
+    "breakpoints": false,
+  },
+  "buffer_font_size": 15.0,
+  "ui_font_size": 16.0,
+  "terminal": {
+    "font_size": 14.0,
+    "font_fallbacks": ["ZedMono Nerd Font Mono"],
+    "button": false,
+    "toolbar": {
+      "breadcrumbs": false,
+    },
+    "font_weight": 450.0,
+  },
+  "session": {
+    "trust_all_worktrees": true,
+  },
+  "agent_servers": {
+    "claude-acp": {
+      "type": "registry",
+    },
+    "opencode": {
+      "default_config_options": {
+        "model": "github-copilot/claude-sonnet-5",
+        "mode": "build",
+      },
+      "favorite_config_option_values": {
+        "model": [
+          "openai/gpt-5.5",
+          "openai/gpt-5.4",
+          "anthropic/claude-opus-4-7",
+          "github-copilot/gpt-5.3-codex",
+          "github-copilot/gemini-2.5-pro",
+        ],
+      },
+      "type": "registry",
+    },
+    "github-copilot-cli": {
+      "type": "registry",
+    },
+    "cursor": {
+      "default_config_options": {
+        "mode": "agent",
+        "model": "claude-opus-4-8"
+      },
+      "type": "registry",
+    },
+    "codex-acp": {
+      "default_config_options": {
+        "mode": "read-only",
+      },
+      "type": "registry",
+    },
+  },
+  "cli_default_open_behavior": "new_window",
+  "agent": {
+    "default_model": {
+      "provider": "openai",
+      "model": "gpt-5.5",
+    },
+    "flexible": false,
+    "sidebar_side": "right",
+    "dock": "right",
+    "favorite_models": [],
+    "model_parameters": [],
+  },
+  "project_panel": {
+    "dock": "left",
+  },
+  "git_panel": {
+    "dock": "left",
+  },
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false,
+  },
+  "icon_theme": {
+    "mode": "dark",
+    "light": "VSCode Icons for Zed (Dark Official Icons)",
+    "dark": "VSCode Icons for Zed (Dark Official Icons)",
+  },
   "vim_mode": true,
   "theme": {
     "mode": "dark",
     "light": "One Light",
     "dark": "GitHub Dark Colorblind",
   },
-  "buffer_font_family": "BlexMono Nerd Font Mono",
-  "ui_font_family": "Geist Mono",
+  "buffer_font_family": "CommitMono",
+  "ui_font_family": "Monaspace Neon Var",
 }

@@ -26,11 +26,13 @@ return {
       })
     end,
   },
+  { "rebelot/kanagawa.nvim", lazy = true, priority = 1000 },
   {
     "catppuccin/nvim",
     lazy = false,
     name = "catppuccin",
     opts = {
+      transparent_background = true,
       lsp_styles = {
         underlines = {
           errors = { "undercurl" },
@@ -79,6 +81,31 @@ return {
     },
   },
   {
+    "EdenEast/nightfox.nvim",
+    lazy = false,
+    priority = 1000,
+    config = function(_, opts)
+      require("nightfox").setup(opts)
+    end,
+    opts = {
+      options = {
+        transparent = true,
+        colorblind = {
+          enable = true,
+          severity = {
+            protan = 0.3,
+            deutan = 0.6,
+          },
+        },
+        styles = {
+          comments = "italic",
+          keywords = "bold",
+          types = "italic,bold",
+        },
+      },
+    },
+  },
+  {
     "LazyVim/LazyVim",
     init = function()
       local function set_diagnostic_float_highlights()
@@ -92,8 +119,7 @@ return {
       set_diagnostic_float_highlights()
     end,
     opts = {
-      colorscheme = "catppuccin",
-      transparent = true,
+      colorscheme = "nightfox",
     },
   },
 }

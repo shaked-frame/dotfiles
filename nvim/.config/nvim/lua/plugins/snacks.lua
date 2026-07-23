@@ -7,12 +7,34 @@ return {
         files = {
           hidden = true, -- show hidden files
           ignored = true,
-          exclude = { "node_modules", ".next", ".husky", "migrations", ".turbo", ".vercel", "bin", "dist", ".git" },
+          exclude = {
+            "node_modules",
+            ".output",
+            ".next",
+            ".husky",
+            "migrations",
+            ".turbo",
+            ".vercel",
+            "bin",
+            "dist",
+            ".git",
+          },
         },
         grep = {
           hidden = true, -- search in hidden files
           ignored = true,
-          exclude = { "node_modules", ".next", ".husky", "migrations", ".turbo", ".vercel", "bin", "dist", ".git" },
+          exclude = {
+            "node_modules",
+            ".next",
+            ".output",
+            ".husky",
+            "migrations",
+            ".turbo",
+            ".vercel",
+            "bin",
+            "dist",
+            ".git",
+          },
         },
       },
     },

@@ -69,10 +69,34 @@ return {
       },
       servers = {
         vtsls = {
+          filetypes = {
+            "javascript",
+            "javascriptreact",
+            "javascript.jsx",
+            "typescript",
+            "typescriptreact",
+            "typescript.tsx",
+          },
           settings = {
             typescript = {
               preferences = {
                 importModuleSpecifier = "non-relative",
+              },
+            },
+          },
+        },
+        mdx_analyzer = {
+          filetypes = { "mdx", "markdown.mdx" },
+          init_options = {
+            typescript = {
+              enabled = true,
+            },
+          },
+          capabilities = {
+            workspace = {
+              didChangeWatchedFiles = {
+                dynamicRegistration = false,
+                relativePatternSupport = false,
               },
             },
           },
