@@ -19,6 +19,7 @@ font-variation-italic = wght=200
 font-family-bold-italic = "Monospace Neon Var"
 font-variation-bold-italic = wght=600
 
+window-decoration = true
 window-title-font-family = "Maple Mono"
 
 # -----------------------------------------------------------------------------
@@ -64,7 +65,7 @@ window-save-state = never
 # -----------------------------------------------------------------------------
 # Theme
 # -----------------------------------------------------------------------------
-theme = Rose Pine
+theme = GitHub Dark Colorblind
 window-theme = ghostty
 
 # -----------------------------------------------------------------------------

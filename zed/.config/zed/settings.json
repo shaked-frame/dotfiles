@@ -34,10 +34,10 @@
     },
   },
   "outline_panel": {
-    "dock": "left",
+    "dock": "right",
   },
   "collaboration_panel": {
-    "dock": "left",
+    "dock": "right",
   },
   "diff_view_style": "split",
   "lsp": {
@@ -100,6 +100,9 @@
     "trust_all_worktrees": true,
   },
   "agent_servers": {
+    "pi-acp": {
+      "type": "registry"
+    },
     "claude-acp": {
       "type": "registry",
     },
@@ -143,16 +146,16 @@
       "model": "gpt-5.5",
     },
     "flexible": false,
-    "sidebar_side": "right",
-    "dock": "right",
+    "sidebar_side": "left",
+    "dock": "left",
     "favorite_models": [],
     "model_parameters": [],
   },
   "project_panel": {
-    "dock": "left",
+    "dock": "right",
   },
   "git_panel": {
-    "dock": "left",
+    "dock": "right",
   },
   "telemetry": {
     "diagnostics": false,

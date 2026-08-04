@@ -53,9 +53,6 @@ zinit light zsh-users/zsh-syntax-highlighting
 zinit light zsh-users/zsh-completions
 zinit light zsh-users/zsh-autosuggestions
 
-# History substring search (up/down arrow searches history)
-zinit light zsh-users/zsh-history-substring-search
-
 # FZF integration for tab completion
 zinit light Aloxaf/fzf-tab
 
@@ -255,24 +252,7 @@ function worktree() {
     pnpm setup:frontend
 }
 
-# ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                                   PATH                                       ║
-# ╚══════════════════════════════════════════════════════════════════════════════╝
-
-# GNU Make (use GNU make instead of macOS make)
-export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
-
-# Bun
-export BUN_INSTALL="$HOME/.bun"
-export PATH="$BUN_INSTALL/bin:$PATH"
-
-# pnpm
-export PNPM_HOME="$HOME/.local/share/pnpm"
-[[ ":$PATH:" != *":$PNPM_HOME:"* ]] && export PATH="$PNPM_HOME:$PATH"
-
-# Local binaries (CodeRabbit CLI, etc.)
-export PATH="$HOME/.local/bin:$PATH"
-
+# Link .zed settings from main frame clone into a worktree (personal)
 function link-worktree-zed() {
   local source_dir="$HOME/frame/.zed"
   local target_dir="$PWD/.zed"
@@ -295,18 +275,23 @@ function link-worktree-zed() {
   print "Linked $target_settings -> $source_settings"
 }
 
-# Frame worktree helper (personal — links .env.local from main clone)
-pnpm() {
-  if [[ "$1" == "link:worktree-env" && $# -eq 1 ]]; then
-    link-worktree-env
-    return
-  fi
-  if [[ "$1" == "link:worktree-zed" && $# -eq 1 ]]; then
-    link-worktree-zed
-    return
-  fi
-  command pnpm "$@"
-}
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                                   PATH                                       ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
+# GNU Make (use GNU make instead of macOS make)
+export PATH="/opt/homebrew/opt/make/libexec/gnubin:$PATH"
+
+# Bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+# pnpm
+export PNPM_HOME="$HOME/.local/share/pnpm"
+[[ ":$PATH:" != *":$PNPM_HOME:"* ]] && export PATH="$PNPM_HOME:$PATH"
+
+# Local binaries (CodeRabbit CLI, etc.)
+export PATH="$HOME/.local/bin:$PATH"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                            SHELL INTEGRATIONS                                ║
@@ -336,11 +321,3 @@ export PATH="/Users/shakedhagag/.local/share/fnm/node-versions/v24.12.0/installa
 
 # Vite+ bin (https://viteplus.dev)
 . "$HOME/.vite-plus/env"
-
-# pnpm
-export PNPM_HOME="/Users/shakedhagag/.local/share/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME/bin:"*) ;;
-  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
-esac
-# pnpm end
