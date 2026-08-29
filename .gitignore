@@ -1,1 +1,10 @@
+# macOS noise
+.DS_Store
+
+# Editor / plugin runtime state, not configuration
+nvim-minimax/.config/nvim-minimax/nvim.log
+nvim/.config/nvim/nvim.log
+
+# Zed local backups
 zed/.config/zed/settings_backup.json
+zed/.config/zed/*.bak
