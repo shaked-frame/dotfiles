@@ -8,3 +8,9 @@ nvim/.config/nvim/nvim.log
 # Zed local backups
 zed/.config/zed/settings_backup.json
 zed/.config/zed/*.bak
+
+# herdr runtime state (sockets, logs, live session) - config.toml only
+herdr/.config/herdr/*.log
+herdr/.config/herdr/*.sock
+herdr/.config/herdr/session.json
+herdr/.config/herdr/.plugins.lock
