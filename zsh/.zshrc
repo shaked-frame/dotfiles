@@ -236,20 +236,20 @@ function bup() {
   brew doctor
 }
 
-function worktree() {
-  local branch="$1"
-  local base="${2:-main}"
-  local path="$HOME/worktrees/frame-${branch//\//-}"
+# Bootstrap dependencies in a worktree. Creating and opening the worktree itself
+# is herdr's job (`prefix+shift+g` to create, `prefix+shift+o` to open, or
+# `herdr worktree create --branch <name>`), which also registers it as a
+# workspace and honours `worktrees.directory` from ~/.config/herdr/config.toml.
+#
+# This used to also run `git worktree add` into ~/worktrees/frame-<branch>, a
+# path that matched none of the worktrees actually in use.
+function worktree-setup() {
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    print "Error: not inside a git worktree" >&2
+    return 1
+  fi
 
-  mkdir -p "$HOME/worktrees" &&
-    if git show-ref --verify --quiet "refs/heads/$branch"; then
-      git worktree add "$path" "$branch"
-    else
-      git worktree add -b "$branch" "$path" "$base"
-    fi &&
-    cd "$path" &&
-    pnpm i &&
-    pnpm setup:frontend
+  pnpm i && pnpm setup:frontend
 }
 
 # Link .zed settings from main frame clone into a worktree (personal)

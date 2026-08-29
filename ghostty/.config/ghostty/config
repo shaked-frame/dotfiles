@@ -8,7 +8,7 @@
 
 # font-family = VictorMono NerdFont Mono
 font-family = Ioskeley Mono
-font-size = 15
+font-size = 16
 
 # Render italics in the Light weight of Ioskeley Mono.
 # Neovim italicizes comments, keywords and types (see nvim-minimax
@@ -26,9 +26,8 @@ font-style-italic = Light Italic
 # font-style = Light
 # font-variation = wght=300
 
-font-thicken = true
+# font-thicken = true
 
-window-decoration = true
 window-title-font-family = "Maple Mono"
 
 # -----------------------------------------------------------------------------
@@ -73,8 +72,7 @@ window-save-state = never
 # -----------------------------------------------------------------------------
 # Theme
 # -----------------------------------------------------------------------------
-theme = GitHub Dark Colorblind
-window-theme = ghostty
+theme = Atom One Dark
 
 # -----------------------------------------------------------------------------
 # Keybindings — General
@@ -105,11 +103,16 @@ keybind = cmd+right=text:\x1b[F
 # keybind = ctrl+tab=text:\x01L
 # keybind = ctrl+shift+tab=text:\x01H
 
-# tmux pane switching (Meh + hjkl)
-keybind = ctrl+alt+shift+h=text:\x01h
-keybind = ctrl+alt+shift+j=text:\x01j
-keybind = ctrl+alt+shift+k=text:\x01k
-keybind = ctrl+alt+shift+l=text:\x01l
+# Pane switching is handled natively by herdr, which accepts multiple bindings
+# per action (see the [keys] section of ~/.config/herdr/config.toml):
+#   focus_pane_left = ["prefix+h", "ctrl+alt+h"]
+# These Ghostty `text:\x01h` chords were a tmux-era workaround that injected the
+# raw prefix byte (\x01 = Ctrl+A) followed by a direction. Injecting bytes meant
+# the chords fired even in apps that had nothing to do with the multiplexer.
+# keybind = ctrl+alt+shift+h=text:\x01h
+# keybind = ctrl+alt+shift+j=text:\x01j
+# keybind = ctrl+alt+shift+k=text:\x01k
+# keybind = ctrl+alt+shift+l=text:\x01l
 
 # -----------------------------------------------------------------------------
 # Keybindings — Vim Mode

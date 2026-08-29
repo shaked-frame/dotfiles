@@ -20,10 +20,17 @@ new_cwd = "follow"  # new panes/tabs inherit the current working directory
 prefix = "ctrl+a"
 
 # Panes: vim navigation, tmux-style splits
-focus_pane_left = "prefix+h"
-focus_pane_down = "prefix+j"
-focus_pane_up = "prefix+k"
-focus_pane_right = "prefix+l"
+# Panes: vim navigation, tmux-style splits
+# Each action takes a list: the prefix binding plus a direct chord that needs no
+# prefix. `ctrl+alt` is the one modifier family herdr's docs found essentially
+# unclaimed across terminals and desktops, and it is not affected by the macOS
+# option-key composing that blocks plain `alt` chords.
+# These replace Ghostty `text:\x01h` keybinds, which injected the raw prefix byte.
+focus_pane_left = ["prefix+h", "ctrl+alt+h"]
+focus_pane_down = ["prefix+j", "ctrl+alt+j"]
+focus_pane_up = ["prefix+k", "ctrl+alt+k"]
+focus_pane_right = ["prefix+l", "ctrl+alt+l"]
+
 split_horizontal = "prefix+-"            # stacked split
 split_vertical = "prefix+|"              # side-by-side split
 close_pane = "prefix+x"

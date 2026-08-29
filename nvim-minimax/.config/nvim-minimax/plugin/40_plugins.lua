@@ -63,6 +63,14 @@ now_if_args(function()
     'terraform',
     'yaml',
     'zsh',
+    -- Config file formats edited regularly in this setup: herdr and atuin use
+    -- TOML, Zed and Neovim lockfiles use JSON.
+    -- NOTE: no 'jsonc' entry - nvim-treesitter has no such parser (it warns
+    -- "skipping unsupported language"). The 'json' parser covers jsonc files.
+    'toml',
+    'json',
+    'css',
+    'bash',
     -- Add here more languages with which you want to use tree-sitter
     -- To see available languages:
     -- - Execute `:=require('nvim-treesitter').get_available()`
@@ -138,11 +146,14 @@ now_if_args(function()
     -- TypeScript 7 native server ('tsgo'). Configured in 'after/lsp/tsc.lua'.
     -- NOTE: the server name is 'tsc', not 'tsgo' - nvim-lspconfig's 'tsgo' entry
     -- is a deprecated shim that just forwards to 'tsc'.
-    -- The old 'vtsls' (tsserver-based) config is kept at 'after/lsp/vtsls.lua'
-    -- but is inert while not listed here. Swap the names to go back.
     'tsc',
     'tailwindcss',
     'copilot',
+    -- Linting, via the oxc toolchain. 'oxlint --lsp' reports diagnostics as a
+    -- language server, so no separate lint plugin (nvim-lint / none-ls) is
+    -- needed. Formatting is handled by 'oxfmt' through conform above rather
+    -- than by enabling the 'oxfmt' language server, to keep one formatting path.
+    'oxlint',
   })
 
   -- Inline completion (a.k.a. "ghost text" / edit prediction).
@@ -207,13 +218,21 @@ later(function()
       lsp_format = 'fallback',
     },
     -- Map of filetype to formatters
-    -- Make sure that necessary CLI tool is available
+    -- Make sure that necessary CLI tool is available (all of these come from
+    -- Mason; run `:checkhealth conform` or `:ConformInfo` if formatting is a
+    -- no-op, which is what happens when the binary is missing).
+    --
+    -- NOTE: 'oxfmt' (from the oxc toolchain) replaces the previous 'biome'
+    -- entries, matching the switch already made on the Mason side.
     formatters_by_ft = {
       lua = { 'stylua' },
-      typescript = { 'biome' },
-      typescriptreact = { 'biome' },
-      javascript = { 'biome' },
-      javascriptreact = { 'biome' },
+      javascript = { 'oxfmt' },
+      javascriptreact = { 'oxfmt' },
+      typescript = { 'oxfmt' },
+      typescriptreact = { 'oxfmt' },
+      json = { 'oxfmt' },
+      jsonc = { 'oxfmt' },
+      toml = { 'oxfmt' },
     },
   })
 end)
@@ -299,17 +318,40 @@ now_if_args(function()
   require('mason').setup()
 end)
 
--- Beautiful, usable, well maintained color schemes outside of 'mini.nvim' and
--- have full support of its highlight groups. Use if you don't like 'miniwinter'
--- enabled in 'plugin/30_mini.lua' or other suggested 'mini.hues' based ones.
--- Config.now(function()
---  -- Install only those that you need
---  add({
---    'https://github.com/sainnhe/everforest',
---    'https://github.com/Shatur/neovim-ayu',
---    'https://github.com/ellisonleao/gruvbox.nvim',
---  })
+-- Color scheme ===============================================================
 --
---   -- Enable only one
---   vim.cmd('color everforest')
--- end)
+-- Overrides the 'mini.hues'-based 'miniwinter' that 'plugin/30_mini.lua' would
+-- otherwise set (that line is commented out there, so this is the only one that
+-- loads and there is no startup flash of the wrong theme).
+--
+-- Italics for comments, keywords and types are applied on top by the
+-- `ColorScheme` autocommand in 'plugin/30_mini.lua'. That merges `italic` into
+-- whatever the active scheme defined, so it keeps working across theme changes
+-- and does not need onedark's own `code_style` option.
+Config.now(function()
+  add({ 'https://github.com/navarasu/onedark.nvim' })
+
+  require('onedark').setup({
+    -- Available: dark, darker, cool, deep, warm, warmer, light
+    style = 'darker',
+
+    -- Comments ship as the palette's `grey` (#535965), which is only 2.24:1
+    -- against the `darker` background (#1f2329) - below even the 3:1 WCAG
+    -- threshold for UI text, so they visually sink into the background.
+    --
+    -- Reuse the palette's own `light_grey` (#7a818e, 4.03:1) rather than
+    -- inventing a colour: readable, still clearly dimmer than code (`fg` is
+    -- #a0a8b7 at 6.60:1), and harmonious with the rest of the theme.
+    --
+    -- Overriding the shared `grey` colour instead would also lighten LineNr,
+    -- NonText, Whitespace, FloatBorder and DiagnosticUnnecessary - several of
+    -- which are meant to stay dim - so target the comment groups only.
+    -- For more contrast still, try '#8a92a3' (5.05:1).
+    highlights = {
+      Comment = { fg = '$light_grey' },
+      SpecialComment = { fg = '$light_grey' },
+      ['@comment'] = { fg = '$light_grey' },
+    },
+  })
+  require('onedark').load()
+end)

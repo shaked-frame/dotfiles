@@ -14,3 +14,6 @@ herdr/.config/herdr/*.log
 herdr/.config/herdr/*.sock
 herdr/.config/herdr/session.json
 herdr/.config/herdr/.plugins.lock
+
+# atuin installer metadata, rewritten by cargo-dist on every upgrade
+atuin/.config/atuin/atuin-receipt.json

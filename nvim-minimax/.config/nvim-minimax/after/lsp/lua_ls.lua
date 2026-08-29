@@ -30,6 +30,38 @@ return {
         -- Add Neovim's methods for easier code writing
         library = { vim.env.VIMRUNTIME },
       },
+      diagnostics = {
+        -- Globals created at runtime, which static analysis cannot infer:
+        -- - `Config` is this config's own table, defined in 'init.lua'.
+        -- - `Mini*` are set by 'mini.nvim' modules when they are `setup()` up,
+        --   so they exist only after startup. Without listing them, every
+        --   `MiniPick.…` / `MiniFiles.…` call in 'plugin/' is reported as an
+        --   undefined global.
+        globals = {
+          'Config',
+          'MiniAi',
+          'MiniBufremove',
+          'MiniClue',
+          'MiniCompletion',
+          'MiniDeps',
+          'MiniDiff',
+          'MiniExtra',
+          'MiniFiles',
+          'MiniGit',
+          'MiniHues',
+          'MiniIcons',
+          'MiniJump2d',
+          'MiniKeymap',
+          'MiniMisc',
+          'MiniNotify',
+          'MiniPick',
+          'MiniSessions',
+          'MiniSnippets',
+          'MiniStarter',
+          'MiniTrailspace',
+          'MiniVisits',
+        },
+      },
     },
   },
 }

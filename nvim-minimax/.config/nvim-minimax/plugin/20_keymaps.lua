@@ -20,7 +20,9 @@ end
 
 -- Buffer picker that allows deleting a buffer with `<C-d>` without closing it
 local list_buffer_picker_items = function(include_current, include_unlisted)
-  local buffers_output = vim.api.nvim_exec('buffers' .. (include_unlisted and '!' or ''), true)
+  -- `nvim_exec2` rather than the deprecated `nvim_exec`
+  local cmd = 'buffers' .. (include_unlisted and '!' or '')
+  local buffers_output = vim.api.nvim_exec2(cmd, { output = true }).output
   local cur_buf_id = vim.api.nvim_get_current_buf()
   local items = {}
 

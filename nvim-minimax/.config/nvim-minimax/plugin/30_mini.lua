@@ -33,7 +33,11 @@ local now, now_if_args, later = Config.now, Config.now_if_args, Config.later
 -- - `:h mini.nvim-color-schemes` - list of other color schemes
 -- - `:h MiniHues-examples` - how to define highlighting with 'mini.hues'
 -- - 'plugin/40_plugins.lua' honorable mentions - other good color schemes
-now(function() vim.cmd('colorscheme miniwinter') end)
+-- NOTE: the color scheme is set by 'onedark.nvim' in 'plugin/40_plugins.lua'.
+-- This is left commented out so that 'miniwinter' does not load first and get
+-- immediately replaced (which shows as a flash of the wrong colors on startup).
+-- Uncomment this and remove the onedark block in 40_plugins.lua to go back.
+-- now(function() vim.cmd('colorscheme miniwinter') end)
 
 -- Italics ====================================================================
 --
