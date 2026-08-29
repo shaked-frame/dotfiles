@@ -333,20 +333,22 @@ Config.now(function()
 
   require('onedark').setup({
     -- Available: dark, darker, cool, deep, warm, warmer, light
-    style = 'darker',
+    --
+    -- 'dark' is the canonical Atom / Zed One Dark palette, matching it exactly:
+    --   bg #282c34   fg #abb2bf   comment #5c6370   blue #61afef   purple #c678dd
+    -- The other styles are recolours - 'darker' in particular darkens and
+    -- desaturates everything (bg #1f2329, fg #a0a8b7), which is why it did not
+    -- look like One Dark.
+    style = 'dark',
 
-    -- Comments ship as the palette's `grey` (#535965), which is only 2.24:1
-    -- against the `darker` background (#1f2329) - below even the 3:1 WCAG
-    -- threshold for UI text, so they visually sink into the background.
+    -- One Dark's own comment colour is only 2.32:1 against its background,
+    -- below the 3:1 WCAG floor for UI text - so authentic does not mean legible.
+    -- Use the palette's own `light_grey` (#848b98, 4.08:1): readable, still
+    -- clearly dimmer than code (`fg` #abb2bf is 6.57:1), no invented colours.
     --
-    -- Reuse the palette's own `light_grey` (#7a818e, 4.03:1) rather than
-    -- inventing a colour: readable, still clearly dimmer than code (`fg` is
-    -- #a0a8b7 at 6.60:1), and harmonious with the rest of the theme.
-    --
-    -- Overriding the shared `grey` colour instead would also lighten LineNr,
-    -- NonText, Whitespace, FloatBorder and DiagnosticUnnecessary - several of
-    -- which are meant to stay dim - so target the comment groups only.
-    -- For more contrast still, try '#8a92a3' (5.05:1).
+    -- Scoped to the comment groups on purpose: `grey` also drives LineNr,
+    -- NonText, Whitespace, FloatBorder and DiagnosticUnnecessary, which are
+    -- meant to stay dim. Remove this block for a pixel-exact One Dark.
     highlights = {
       Comment = { fg = '$light_grey' },
       SpecialComment = { fg = '$light_grey' },

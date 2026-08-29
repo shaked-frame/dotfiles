@@ -5,8 +5,17 @@
 onboarding = false
 
 [theme]
-name = "catppuccin"
+# Matches the Neovim colour scheme (onedark.nvim, style = 'dark').
+# Built-in themes: catppuccin, catppuccin-latte, terminal, tokyo-night,
+# tokyo-night-day, dracula, nord, gruvbox, gruvbox-light, one-dark, one-light,
+# solarized, solarized-light, kanagawa, kanagawa-lotus, rose-pine,
+# rose-pine-dawn, vesper.
+name = "one-dark"
 
+# Set to true to follow the host terminal's light/dark appearance. Herdr would
+# pick the `one-light` sibling automatically, but it can be named explicitly:
+#   light_name = "one-light"
+#   dark_name = "one-dark"
 auto_switch = false
 
 [terminal]

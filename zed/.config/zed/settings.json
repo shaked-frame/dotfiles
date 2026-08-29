@@ -183,7 +183,7 @@
     "metrics": false,
   },
   "icon_theme": {
-    "mode": "dark",
+    "mode": "light",
     "light": "VSCode Icons for Zed (Dark Official Icons)",
     "dark": "Material Icon Theme",
   },
@@ -191,7 +191,7 @@
   "theme": {
     "mode": "dark",
     "light": "One Light",
-    "dark": "Ayu Darker",
+    "dark": "One Dark",
   },
   "buffer_font_family": "Ioskeley Mono",
   "ui_font_family": "Ioskeley Mono",
