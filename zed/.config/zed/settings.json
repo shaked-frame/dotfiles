@@ -11,6 +11,18 @@
   "languages": {
     "Git Commit": {
       "colorize_brackets": true
+    },
+    "TypeScript": {
+      "language_servers": ["typescript-ls", "!vtsls", "!typescript-language-server", "..."]
+    },
+    "TSX": {
+      "language_servers": ["typescript-ls", "!vtsls", "!typescript-language-server", "..."]
+    },
+    "JavaScript": {
+      "language_servers": ["typescript-ls", "!vtsls", "!typescript-language-server", "..."]
+    },
+    "JSX": {
+      "language_servers": ["typescript-ls", "!vtsls", "!typescript-language-server", "..."]
     }
   },
   "code_lens": "on",
@@ -173,13 +185,13 @@
   "icon_theme": {
     "mode": "dark",
     "light": "VSCode Icons for Zed (Dark Official Icons)",
-    "dark": "VSCode Icons for Zed (Dark Official Icons)",
+    "dark": "Material Icon Theme",
   },
   "vim_mode": true,
   "theme": {
     "mode": "dark",
     "light": "One Light",
-    "dark": "GitHub Dark Colorblind",
+    "dark": "Ayu Darker",
   },
   "buffer_font_family": "Ioskeley Mono",
   "ui_font_family": "Ioskeley Mono",

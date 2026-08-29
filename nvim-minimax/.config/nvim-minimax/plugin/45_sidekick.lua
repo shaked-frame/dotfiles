@@ -1,12 +1,18 @@
--- ┌───────────────────┐
--- │ Sidekick and AI   │
--- └───────────────────┘
+-- ┌──────────────────────────────┐
+-- │ Sidekick: inline completion  │
+-- └──────────────────────────────┘
 --
--- 'folke/sidekick.nvim' provides a terminal-embedded AI CLI ("sidekick") plus
--- helpers to send buffer/selection context to it.
+-- Scope deliberately reduced to inline completion ("ghost text") only.
 --
--- Mappings live under the `<Leader>a` group (see 'plugin/20_keymaps.lua' for the
--- 'mini.clue' group registration). These mirror the Zed `space a *` bindings.
+-- 'sidekick.nvim' can also run agent CLIs inside Neovim, but that duplicates
+-- Herdr, which is the terminal workspace manager already in use here and does
+-- it better: Herdr panes survive Neovim restarts and detach, and Herdr tracks
+-- agent lifecycle state (idle / working / blocked / done) via its installed
+-- integrations. Agent mappings therefore drive Herdr - see 'plugin/60_herdr.lua'.
+--
+-- Sidekick's session persistence is also a no-op here regardless: it supports
+-- only tmux and zellij backends ('sidekick/config.lua' validates exactly those)
+-- and guards on `$TMUX` / `$ZELLIJ`, neither of which is set inside Herdr.
 
 local add = vim.pack.add
 local later = Config.later
@@ -15,14 +21,8 @@ later(function()
   add({ 'https://github.com/folke/sidekick.nvim' })
 
   require('sidekick').setup({
-    cli = {
-      mux = {
-        -- NOTE: was 'zellij' before, which never matched the actual setup.
-        -- Terminal multiplexer in use is tmux (see '~/.tmux.conf').
-        backend = 'tmux',
-        enabled = true,
-      },
-    },
+    -- Herdr owns session persistence; don't let sidekick try to manage one.
+    cli = { mux = { enabled = false } },
   })
 
   -- `<Tab>` in Insert mode, in priority order:
@@ -45,25 +45,4 @@ later(function()
 
   -- NOTE: Normal mode `<Tab>` is deliberately NOT mapped. Doing so shadows the
   -- built-in `<C-i>` (jump forward in the jumplist), since they are the same key.
-
-  vim.keymap.set({ 'n', 't', 'i', 'x' }, '<C-.>', function()
-    require('sidekick.cli').focus()
-  end, { desc = 'Sidekick Focus' })
-
-  -- stylua: ignore start
-  local cli = function(fn) return function() fn(require('sidekick.cli')) end end
-
-  vim.keymap.set('n', '<Leader>aa', cli(function(c) c.toggle() end),                          { desc = 'Toggle CLI' })
-  vim.keymap.set('n', '<Leader>as', cli(function(c) c.select() end),                          { desc = 'Select CLI' })
-  vim.keymap.set('n', '<Leader>ad', cli(function(c) c.close() end),                           { desc = 'Detach a CLI session' })
-  vim.keymap.set('n', '<Leader>af', cli(function(c) c.send({ msg = '{file}' }) end),          { desc = 'Send file' })
-  vim.keymap.set('x', '<Leader>av', cli(function(c) c.send({ msg = '{selection}' }) end),     { desc = 'Send visual selection' })
-
-  vim.keymap.set({ 'n', 'x' }, '<Leader>at', cli(function(c) c.send({ msg = '{this}' }) end), { desc = 'Send this' })
-  vim.keymap.set({ 'n', 'x' }, '<Leader>ap', cli(function(c) c.prompt() end),                 { desc = 'Select prompt' })
-
-  -- Zed's `space a c` opens a thread with the "opencode" agent
-  vim.keymap.set('n', '<Leader>ac', cli(function(c) c.toggle({ name = 'opencode', focus = true }) end), { desc = 'Toggle opencode' })
-  vim.keymap.set('n', '<Leader>aC', cli(function(c) c.toggle({ name = 'claude', focus = true }) end),   { desc = 'Toggle Claude' })
-  -- stylua: ignore end
 end)

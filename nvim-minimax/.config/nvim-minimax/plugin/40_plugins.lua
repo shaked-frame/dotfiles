@@ -255,19 +255,25 @@ later(function()
   require('grug-far').setup()
 
   -- 'dial.nvim' needs a mapping per mode/kind
+  --
+  -- NOTE: deliberately NOT on the conventional `<C-a>` / `<C-x>`. Herdr uses
+  -- `ctrl+a` as its prefix key, and unlike tmux (which offers `send-prefix`)
+  -- Herdr has no action to emit a literal `Ctrl-A` - so `<C-a>` never reaches
+  -- Neovim inside a Herdr pane. `<C-Up>` / `<C-Down>` are free in both Neovim
+  -- and the Ghostty keybindings.
   local dial_map = require('dial.map')
   local dial = function(mode, lhs, direction, kind, desc)
     vim.keymap.set(mode, lhs, function() dial_map.manipulate(direction, kind) end, { desc = desc })
   end
 
-  dial('n', '<C-a>',  'increment', 'normal',  'Increment')
-  dial('n', '<C-x>',  'decrement', 'normal',  'Decrement')
-  dial('x', '<C-a>',  'increment', 'visual',  'Increment')
-  dial('x', '<C-x>',  'decrement', 'visual',  'Decrement')
-  dial('n', 'g<C-a>', 'increment', 'gnormal', 'Increment sequentially')
-  dial('n', 'g<C-x>', 'decrement', 'gnormal', 'Decrement sequentially')
-  dial('x', 'g<C-a>', 'increment', 'gvisual', 'Increment sequentially')
-  dial('x', 'g<C-x>', 'decrement', 'gvisual', 'Decrement sequentially')
+  dial('n', '<C-Up>',    'increment', 'normal',  'Increment')
+  dial('n', '<C-Down>',  'decrement', 'normal',  'Decrement')
+  dial('x', '<C-Up>',    'increment', 'visual',  'Increment')
+  dial('x', '<C-Down>',  'decrement', 'visual',  'Decrement')
+  dial('n', 'g<C-Up>',   'increment', 'gnormal', 'Increment sequentially')
+  dial('n', 'g<C-Down>', 'decrement', 'gnormal', 'Decrement sequentially')
+  dial('x', 'g<C-Up>',   'increment', 'gvisual', 'Increment sequentially')
+  dial('x', 'g<C-Down>', 'decrement', 'gvisual', 'Decrement sequentially')
 
   -- 'yanky.nvim' replaces the put mappings to enable cycling with `]y`/`[y`
   vim.keymap.set({ 'n', 'x' }, 'p',  '<Plug>(YankyPutAfter)')
