@@ -20,7 +20,7 @@
       "space b o": ["pane::CloseOtherItems", { "close_pinned": false }],
       "space b n": "workspace::NewFile",
       "space =": "vim::ResetPaneSizes",
-      "space m": "workspace::ToggleEditorZoom",
+      "space m": "workspace::ToggleZoom",
       "space a a": "agents_sidebar::ToggleThreadSwitcher",
       "space a c": [
         "agent::NewThread",
@@ -41,16 +41,23 @@
       "space F g": "pane::DeploySearch",
       "space f g": ["text_finder::Toggle", {}],
       "space g d": "git::Diff",
+      "space g l": "git_graph::Open",
       "space g g": [
         "task::Spawn",
         { "task_name": "LazyGit", "reveal_target": "center" },
       ],
       "space g r": "git::Restore",
+      "space g o": "git_panel::ToggleFocus",
+      "space g e": "project_panel::ToggleFocus",
       "s v": "pane::SplitAndMoveRight",
       "s l": ["workspace::MoveItemToPaneInDirection", { "direction": "right" }],
       "s h": ["workspace::MoveItemToPaneInDirection", { "direction": "left" }],
       "space g b": "editor::BlameHover",
       "space m f": "git::OpenModifiedFiles",
+      "space s r": [
+        "buffer_search::Deploy",
+        { "replace_enabled": true, "selection_search_enabled": true },
+      ],
       "g r a": "editor::ToggleCodeActions",
       "space l d": "diagnostics::DeployCurrentFile",
       "space l f": "editor::Format",
@@ -93,6 +100,10 @@
       "space l a": "editor::ToggleCodeActions",
       "space l f": "editor::FormatSelections",
       "space a v": "agent::AddSelectionToThread",
+      "space s r": [
+        "buffer_search::Deploy",
+        { "replace_enabled": true, "selection_search_enabled": true },
+      ],
       "shift-s": "vim::PushAddSurrounds",
       "space f g": ["text_finder::Toggle", {}],
       "space f f": "file_finder::Toggle",
@@ -160,8 +171,9 @@
   {
     "context": "TabSwitcher",
     "bindings": {
-      "ctrl-v": ["workspace::SendKeystrokes", "cmd-\\ enter"],
-      "ctrl-s": ["workspace::SendKeystrokes", "cmd-k down enter"],
+      "ctrl-v": "pane::SplitRight",
+      "ctrl-s": "tab_switcher::OpenInActivePane",
+      "ctrl-x": "tab_switcher::CloseSelectedItem",
     },
   },
   {
@@ -194,13 +206,27 @@
   {
     "context": "vim_mode==normal",
     "bindings": {
-      "g r i": "editor::GoToImplementationSplit"
-    }
+      "g r i": "editor::GoToImplementationSplit",
+    },
   },
   {
     "context": "vim_mode==normal",
     "bindings": {
-      "space g u": "git::ViewUncommittedChanges"
-    }
-  }
+      "space g u": "git::ViewUncommittedChanges",
+    },
+  },
+  {
+    "context": "Editor",
+    "bindings": {
+      "ctrl-alt-cmd-|": "editor::GoToDiagnostic",
+    },
+  },
+  {
+    "context": "GitDiff > Editor",
+    "use_key_equivalents": true,
+    "bindings": {
+      "f7": "editor::GoToPreviousHunk",
+      "f8": "editor::GoToHunk",
+    },
+  },
 ]

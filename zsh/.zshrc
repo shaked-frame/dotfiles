@@ -287,31 +287,45 @@ export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
 
 # pnpm
-export PNPM_HOME="$HOME/.local/share/pnpm"
-[[ ":$PATH:" != *":$PNPM_HOME:"* ]] && export PATH="$PNPM_HOME:$PATH"
+export PNPM_HOME="/Users/shakedhagag/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME/bin:"*) ;;
+  *) export PATH="$PNPM_HOME/bin:$PATH" ;;
+esac
+# pnpm end
 
 # Local binaries (CodeRabbit CLI, etc.)
 export PATH="$HOME/.local/bin:$PATH"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
-# ║                            SHELL INTEGRATIONS                                ║
+# ║                              SHELL INTEGRATIONS                              ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 # Node version manager
 eval "$(fnm env --use-on-cd)"
 
-# FZF keybindings and completion
-eval "$(fzf --zsh)"
+# FZF keybindings and completion (guard: re-running stacks zle wrappers)
+(( $+functions[fzf-history-widget] )) || eval "$(fzf --zsh)"
 
 # Zoxide (smart cd)
 eval "$(zoxide init --cmd cd zsh)"
 
+# ╔══════════════════════════════════════════════════════════════════════════════╗
+# ║                                   PROMPT                                     ║
+# ╚══════════════════════════════════════════════════════════════════════════════╝
+
 # ── Starship prompt ───────────────────────────────────────────────────────────
-# Must init before atuin to prevent zle-keymap-select recursion
-eval "$(starship init zsh)"
+# Must init before atuin to prevent zle-keymap-select recursion.
+# Guards matter: each re-init wraps the same zle widgets again, and every
+# reload-zsh deepens the chain until FUNCNEST explodes (the double-ESC error).
+(( $+functions[starship_zle-keymap-select] )) || eval "$(starship init zsh)"
 
 # ── Atuin (shell history) ─────────────────────────────────────────────────────
-eval "$(atuin init zsh)"
+(( $+functions[_atuin_search] )) || eval "$(atuin init zsh)"
+
+# EDITOR=nvim makes zsh 5.9 default to vi keymaps; force emacs-style editing so
+# ESC never flips into vi normal mode (which triggers the keymap widgets above).
+bindkey -e
 
 # ── Bun completions ───────────────────────────────────────────────────────────
 [[ -s "$HOME/.bun/_bun" ]] && source "$HOME/.bun/_bun"
@@ -321,3 +335,6 @@ export PATH="/Users/shakedhagag/.local/share/fnm/node-versions/v24.12.0/installa
 
 # Vite+ bin (https://viteplus.dev)
 . "$HOME/.vite-plus/env"
+
+# pnpm script completions for the frame monorepo (installed by frm)
+[ -f "$HOME/.local/share/frm/completions/pnpm.zsh" ] && source "$HOME/.local/share/frm/completions/pnpm.zsh"

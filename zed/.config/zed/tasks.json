@@ -9,7 +9,17 @@
     "reveal_target": "center",
     "show_summary": false,
     "show_command": false,
-    "allow_concurrent_runs": true,
-    "use_new_terminal": true,
+    "allow_concurrent_runs": false,
+    "use_new_terminal": false,
+  },
+  {
+    "label": "yazi",
+    "command": "yazi",
+    "use_new_terminal": false,
+    "allow_concurrent_runs": false,
+    "hide": "always",
+    "reveal": "always",
+    "cwd": "$ZED_DIRNAME",
+    "env": { "EDITOR": "zed --wait" }
   },
 ]

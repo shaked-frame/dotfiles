@@ -1,154 +1,275 @@
 {
-  "React Function Component": {
+  "Functional Component (const)": {
     "prefix": "rfc",
     "body": [
-      "export const ${1:ComponentName} = (${2:props}: {}) => {",
-      "\treturn (",
-      "\t\t<div>",
-      "\t\t\t$0",
-      "\t\t</div>",
-      "\t)",
+      "import type { FC } from 'react';",
+      "",
+      "interface ${1:ComponentName}Props {",
+      "  ${2:propName}: ${3:type};",
+      "}",
+      "",
+      "const ${1:ComponentName}: FC<${1:ComponentName}Props> = ({ ${2:propName} }) => {",
+      "  return (",
+      "    <div>",
+      "      $0",
+      "    </div>",
+      "  );",
+      "};",
+      "",
+      "export default ${1:ComponentName};"
+    ],
+    "description": "TS: React Functional Component"
+  },
+  "Functional Component (function)": {
+    "prefix": "rff",
+    "body": [
+      "interface ${1:ComponentName}Props {",
+      "  ${2:propName}: ${3:type};",
+      "}",
+      "",
+      "export default function ${1:ComponentName}({ ${2:propName} }: ${1:ComponentName}Props) {",
+      "  return (",
+      "    <div>",
+      "      $0",
+      "    </div>",
+      "  );",
       "}"
     ],
-    "description": "Creates a React functional component"
+    "description": "TS: React Functional Component"
   },
-  "React Export Function Component": {
-    "prefix": "rfce",
-    "body": [
-      "export function ${1:ComponentName}() {",
-      "\treturn (",
-      "\t\t<div>",
-      "\t\t\t$0",
-      "\t\t</div>",
-      "\t)",
-      "}"
-    ],
-    "description": "Creates an exported React function component"
-  },
-  "JSX Element": {
-    "prefix": "j",
-    "body": ["<${1:elementName}>", "\t$0", "</${1:elementName}>"],
-    "description": "Creates a JSX element"
-  },
-  "JSX Element Self Closed": {
-    "prefix": "jc",
-    "body": ["<${1:elementName} />"],
-    "description": "Creates a self-closing JSX element"
-  },
-  "JSX Elements Map": {
-    "prefix": "jm",
-    "body": [
-      "{${1:array}.map((item) => <${2:elementName} key={item.id}>",
-      "\t$0",
-      "</${2:elementName}>)}"
-    ],
-    "description": "Maps an array to JSX elements"
-  },
-  "JSX Elements Map With Return": {
-    "prefix": "jmr",
-    "body": [
-      "{${1:array}.map((item) => {",
-      "\treturn <${2:elementName} key={item.id}>",
-      "\t\t$0",
-      "\t</${2:elementName}>",
-      "})}"
-    ],
-    "description": "Maps an array to JSX elements with an explicit return"
-  },
-  "JSX Element Wrap Selection": {
-    "prefix": "jsx wrap selection with element",
-    "body": ["<${1:elementName}>", "\t${2:content}", "</${1:elementName}>"],
-    "description": "Wraps content with a JSX element"
-  },
-  "useState": {
+  "useState Hook": {
     "prefix": "us",
-    "body": ["const [${1:state}, ${2:setState}] = useState(${3:initValue})$0"],
-    "description": "React useState() hook"
+    "body": [
+      "const [${1:state}, set${1:state}] = useState<${3:type}>(${4:initialValue});"
+    ],
+    "description": "useState Hook with TypeScript"
   },
-  "useEffect": {
-    "prefix": "ue",
-    "body": ["useEffect(() => {", "\t$1", "}, [${2:dependencies}])$0"],
-    "description": "React useEffect() hook"
-  },
-  "useEffect With Cleanup": {
-    "prefix": "uec",
+  "useEffect Hook run once at mount": {
+    "prefix": "uem",
     "body": [
       "useEffect(() => {",
-      "\t$1",
-      "",
-      "\treturn () => {",
-      "\t\t$2",
-      "\t}",
-      "}, [${3:dependencies}])$0"
+      "  $0",
+      "}, []);"
     ],
-    "description": "React useEffect() hook with cleanup"
+    "description": "useEffect Hook runs once at mount"
   },
-  "Create Context": {
-    "prefix": "cc",
+  "useEffect Hook runs on every render": {
+    "prefix": "uer",
     "body": [
-      "export const ${1:Context} = createContext<${2:ContextType}>(",
-      "\t(null as any) as ${2:ContextType}",
-      ")"
+      "useEffect(() => {",
+      "  $0",
+      "});"
     ],
-    "description": "Creates a React context"
+    "description": "useEffect Hook runs on every render"
   },
-  "Use Context": {
-    "prefix": "uc",
-    "body": ["const ${1:value} = use(${2:Context})$0"],
-    "description": "React use() hook"
-  },
-  "useRef": {
-    "prefix": "ur",
-    "body": ["const ${1:elName}El = useRef(null)$0"],
-    "description": "React useRef() hook"
-  },
-  "useCallback": {
-    "prefix": "ucb",
+  "useEffect Hook Cleanup": {
+    "prefix": "cleanup",
     "body": [
-      "const ${1:memoizedCallback} = useCallback(",
-      "\t() => {",
-      "\t\t${2:doSomething}(${3:a}, ${4:b})",
-      "\t},",
-      "\t[${5:a}, ${6:b}],",
-      ")$0"
+      "return () => {",
+      " $0",
+      "}"
     ],
-    "description": "React useCallback() hook"
+    "description": "useEffect Hook Cleanup"
+  },
+  "function": {
+    "prefix": "func",
+    "body": [
+      "function ${1:name}(${2:params}: ${3:type}): ${4:returnType} {",
+      "  $0",
+      "}"
+    ],
+    "description": "Function"
   },
   "useMemo": {
-    "prefix": "ume",
+    "prefix": "useMemo",
     "body": [
-      "const ${1:memoizedValue} = useMemo(() => ${2:computeExpensiveValue}(${3:a}, ${4:b}), [${5:a}, ${6:b}])$0"
+      "useMemo(() => {",
+      "  $0",
+      "}, [${1:deps}]);"
     ],
-    "description": "React useMemo() hook"
+    "description": "useMemo Hook"
   },
-  "Create React Hook": {
-    "prefix": "crh",
-    "body": ["export const use${1:HookName} = () => {", "\t$0", "}"],
-    "description": "Creates a React hook"
+  "useCallback": {
+    "prefix": "useCallback",
+    "body": [
+      "useCallback(() => {",
+      "  $0",
+      "}, [${1:deps}]);"
+    ],
+    "description": "useCallback Hook"
   },
-  "Create React Hook With Name": {
-    "prefix": "crhn",
-    "body": ["export const ${1:hookName} = () => {", "\t$0", "}"],
-    "description": "Creates a named React hook"
+  "useRef": {
+    "prefix": "useRef",
+    "body": [
+      "const ${1:ref} = useRef<${2:type}>(${3:initialValue});"
+    ],
+    "description": "useRef Hook"
   },
-  "Describe Block": {
-    "prefix": "desc",
-    "body": ["describe('${1:name}', () => {", "  $0", "})"],
-    "description": "Testing describe block"
+  "useImperativeHandle": {
+    "prefix": "uih",
+    "body": [
+      "useImperativeHandle(ref, () => ({",
+      "  $0",
+      "}), [${1:deps}]);"
+    ],
+    "description": "useImperativeHandle Hook"
   },
-  "Test Block": {
-    "prefix": "test",
-    "body": ["test('should ${1:do something}', () => {", "  $0", "})"],
-    "description": "Testing test block"
+  "useLayoutEffect": {
+    "prefix": "useLayoutEffect",
+    "body": [
+      "useLayoutEffect(() => {",
+      "  $0",
+      "});"
+    ],
+    "description": "useLayoutEffect Hook"
   },
-  "It Block": {
-    "prefix": "tit",
-    "body": ["it('should ${1:do something}', () => {", "  $0", "})"],
-    "description": "Testing it block"
+  "useDebugValue": {
+    "prefix": "useDebugValue",
+    "body": [
+      "useDebugValue(${1:value});"
+    ],
+    "description": "useDebugValue Hook"
   },
-  "It Async Block": {
-    "prefix": "tita",
-    "body": ["it('should ${1:do something}', async () => {", "  $0", "})"],
-    "description": "Testing async it block"
+  "useContext": {
+    "prefix": "useContext",
+    "body": [
+      "useContext(${1:Context});"
+    ],
+    "description": "useContext Hook"
+  },
+  "useReducer": {
+    "prefix": "useReducer",
+    "body": [
+      "const [state, dispatch] = useReducer(${1:reducer}, ${2:initialState});"
+    ],
+    "description": "useReducer Hook"
+  },
+  "Interface": {
+    "prefix": "intr",
+    "body": [
+      "interface ${1:Name} {",
+      "${2:prop}: ${3:type}",
+      "  $0",
+      "}"
+    ],
+    "description": "Interface"
+  },
+  "Type": {
+    "prefix": "typ",
+    "body": [
+      "type ${1:Name} = ${2:type};"
+    ],
+    "description": "Type"
+  },
+  "Enum": {
+    "prefix": "enum",
+    "body": [
+      "enum ${1:Name} {",
+      "  $0",
+      "}"
+    ],
+    "description": "Enum"
+  },
+  "ForwardRef Component": {
+    "prefix": "frc",
+    "body": [
+      "import { forwardRef } from 'react';",
+      "",
+      "interface ${1:ComponentName}Props {",
+      "  ${2:label}?: string;",
+      "}",
+      "",
+      "const ${1:ComponentName} = forwardRef<${4:HTMLDivElement}, ${1:ComponentName}Props>((props, ref) => {",
+      "  const { ${2:label} } = props;",
+      "",
+      "  return (",
+      "    <div ref={ref}>",
+      "      {${2:label}}",
+      "    </div>",
+      "  );",
+      "});",
+      "",
+      "${1:ComponentName}.displayName = '${1:ComponentName}';",
+      "export default ${1:ComponentName};"
+    ],
+    "description": "ForwardRef component with props"
+  },
+  "Custom Hook Template": {
+    "prefix": "hk",
+    "body": [
+      "import { useState } from 'react';",
+      "",
+      "function use${1:Custom}(initialValue: ${2:type}) {",
+      "  const [state, setState] = useState<${2:type}>(initialValue);",
+      "",
+      "  const update = (value: ${2:type}) => {",
+      "    setState(value);",
+      "  };",
+      "",
+      "  return { state, update };",
+      "}",
+      "",
+      "export default use${1:Custom};"
+    ],
+    "description": "Custom hook boilerplate"
+  },
+  "React Context (generic)": {
+    "prefix": "rctx",
+    "body": [
+      "import { createContext, useState, useMemo, useContext, type ReactNode, type Dispatch, type SetStateAction } from 'react';",
+      "",
+      "export interface ${1:ContextName}Value {",
+      "  ${2:state}: ${3:string};",
+      "  ${4:setState}: Dispatch<SetStateAction<${3:string}>>;",
+      "}",
+      "",
+      "export const ${1:ContextName}Context = createContext<${1:ContextName}Value | null>(null);",
+      "",
+      "export function ${1:ContextName}Provider({ children, initial }: { children: ReactNode; initial?: ${3:string} }) {",
+      "  const [${2:state}, ${4:setState}] = useState<${3:string}>(initial as ${3:string});",
+      "  const value = useMemo(() => ({ ${2:state}, ${4:setState} }), [${2:state}]);",
+      "  return (",
+      "    <${1:ContextName}Context.Provider value={value}>",
+      "      {children}",
+      "    </${1:ContextName}Context.Provider>",
+      "  );",
+      "}",
+      "",
+      "export function ${5:use}${1:ContextName}() {",
+      "  const ctx = useContext(${1:ContextName}Context);",
+      "  if (!ctx) throw new Error('${5:use}${1:ContextName} must be used within a ${1:ContextName}Provider');",
+      "  return ctx;",
+      "}",
+      "",
+      "// Example usage:",
+      "// <${1:ContextName}Provider initial={${6:/* initial value */} as ${3:string}}>...</${1:ContextName}Provider>",
+      "// const { ${2:state}, ${4:setState} } = ${5:use}${1:ContextName}();"
+    ],
+    "description": "TS: Generic React Context with Provider and hook"
+  },
+  "useId": {
+    "prefix": "useId",
+    "body": [
+      "const ${1:id} = useId();"
+    ],
+    "description": "useId Hook — stable unique ID for accessibility"
+  },
+  "useTransition": {
+    "prefix": "useTransition",
+    "body": [
+      "const [isPending, startTransition] = useTransition();",
+      "",
+      "startTransition(() => {",
+      "  $0",
+      "});"
+    ],
+    "description": "useTransition Hook — non-blocking state update"
+  },
+  "useDeferredValue": {
+    "prefix": "useDeferredValue",
+    "body": [
+      "const ${1:deferred} = useDeferredValue(${2:value});"
+    ],
+    "description": "useDeferredValue Hook — defer re-rendering for a value"
   }
 }

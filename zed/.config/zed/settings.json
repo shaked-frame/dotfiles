@@ -7,13 +7,39 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "proxy": "",
+  "languages": {
+    "Git Commit": {
+      "colorize_brackets": true
+    }
+  },
+  "code_lens": "on",
+  "lsp": {
+    "vtsls": {
+      "settings": {
+        "typescript": {
+          "updateImportsOnFileMove": {
+            "enabled": "always"
+          }
+        },
+        "javascript": {
+          "updateImportsOnFileMove": {
+            "enabled": "always"
+          }
+        }
+      },
+      "enable_lsp_tasks": true
+    }
+  },
   "lsp_results_location": "picker",
   "semantic_tokens": "combined",
   "edit_predictions": {
+    "allow_data_collection": "no",
     "provider": "copilot",
   },
   "tabs": {
     "git_status": true,
+    "file_icons": true,
   },
   "title_bar": {
     "show_branch_status_icon": true,
@@ -27,6 +53,10 @@
     "coloring": "indent_aware",
   },
   "context_servers": {
+    "linear": {
+      "enabled": true,
+      "url": "https://mcp.linear.app/mcp"
+    },
     "mcp-server-github": {
       "enabled": true,
       "remote": false,
@@ -40,36 +70,6 @@
     "dock": "right",
   },
   "diff_view_style": "split",
-  "lsp": {
-    "tailwindcss-language-server": {
-      "settings": {
-        "classFunctions": ["cn", "clsx", "cva", "cx"],
-        "experimental": {
-          "configFile": "/Users/shakedhagag/frame/frontend/packages/ui/src/styles/globals.css",
-          "classRegex": [
-            ["cva\\(([^)]*)\\)", "[\"'`]([^\"'`]*).*?[\"'`]"],
-            ["cx\\(([^)]*)\\)", "(?:'|\"|`)([^'\"`]*)"],
-            ["cn\\(([^)]*)\\)", "(?:'|\"|`)([^'\"`]*)"],
-          ],
-        },
-      },
-    },
-    "vtsls": {
-      "settings": {
-        "typescript": {
-          "updateImportsOnFileMove": {
-            "enabled": "always",
-          },
-        },
-        "javascript": {
-          "updateImportsOnFileMove": {
-            "enabled": "always",
-          },
-        },
-      },
-      "enable_lsp_tasks": true,
-    },
-  },
   "vim": {
     "show_edit_predictions_in_normal_mode": true,
     "toggle_relative_line_numbers": true,
@@ -80,7 +80,7 @@
   "tab_size": 2,
   "document_symbols": "off",
   "toolbar": {
-    "breadcrumbs": false,
+    "breadcrumbs": true,
   },
   "gutter": {
     "breakpoints": false,
@@ -88,7 +88,9 @@
   "buffer_font_size": 15.0,
   "ui_font_size": 16.0,
   "terminal": {
+    "starts_open": true,
     "font_size": 14.0,
+    "font_family": "IoskeleyMonoTerm Nerd Font",
     "font_fallbacks": ["ZedMono Nerd Font Mono"],
     "button": false,
     "toolbar": {
@@ -101,6 +103,10 @@
   },
   "agent_servers": {
     "pi-acp": {
+      "default_config_options": {
+        "model": "github-copilot/claude-opus-4.8",
+        "thought_level": "high"
+      },
       "type": "registry"
     },
     "claude-acp": {
@@ -141,6 +147,7 @@
   },
   "cli_default_open_behavior": "new_window",
   "agent": {
+    "terminal_init_command": "pi",
     "default_model": {
       "provider": "openai",
       "model": "gpt-5.5",
@@ -155,6 +162,8 @@
     "dock": "right",
   },
   "git_panel": {
+    "group_by": "staging",
+    "tree_view": false,
     "dock": "right",
   },
   "telemetry": {
@@ -172,6 +181,6 @@
     "light": "One Light",
     "dark": "GitHub Dark Colorblind",
   },
-  "buffer_font_family": "CommitMono",
-  "ui_font_family": "Monaspace Neon Var",
+  "buffer_font_family": "Ioskeley Mono",
+  "ui_font_family": "Ioskeley Mono",
 }
