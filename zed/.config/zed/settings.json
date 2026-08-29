@@ -21,9 +21,6 @@
     "JavaScript": {
       "language_servers": ["typescript-ls", "!vtsls", "!typescript-language-server", "..."]
     },
-    "JSX": {
-      "language_servers": ["typescript-ls", "!vtsls", "!typescript-language-server", "..."]
-    }
   },
   "code_lens": "on",
   "lsp": {
@@ -184,7 +181,7 @@
   },
   "icon_theme": {
     "mode": "light",
-    "light": "VSCode Icons for Zed (Dark Official Icons)",
+    "light": "Material Icon Theme",
     "dark": "Material Icon Theme",
   },
   "vim_mode": true,

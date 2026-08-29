@@ -11,9 +11,15 @@ font-family = Ioskeley Mono
 font-size = 16
 
 # Render italics in the Light weight of Ioskeley Mono.
+# Render italics in the Medium weight of Ioskeley Mono.
 # Neovim italicizes comments, keywords and types (see nvim-minimax
 # 'plugin/30_mini.lua'), so this is the face those use.
-font-style-italic = Light Italic
+#
+# Was 'Light Italic', which made comments both dim and thin - the thinnest face
+# in the family, on a 0.93-opacity background, with 'font-thicken' off. Medium
+# sits above the Regular weight of surrounding code, so italic text reads
+# clearly without relying on colour contrast alone.
+font-style-italic = Medium Italic
 
 # NOTE: 'Ioskeley Mono' is a STATIC font family (no variable 'fvar' axes),
 # unlike the previous 'Monaspace Neon Var'. So weights must be chosen by style
