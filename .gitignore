@@ -2,7 +2,6 @@
 .DS_Store
 
 # Editor / plugin runtime state, not configuration
-nvim-minimax/.config/nvim-minimax/nvim.log
 nvim/.config/nvim/nvim.log
 
 # Zed local backups
@@ -17,3 +16,16 @@ herdr/.config/herdr/.plugins.lock
 
 # atuin installer metadata, rewritten by cargo-dist on every upgrade
 atuin/.config/atuin/atuin-receipt.json
+
+# Editor backups left next to stowed configs
+zellij/.config/zellij/*.bak
+
+# Credential belt-and-braces: this repo is public. These are never stowed (see
+# README "Never add these"), but ignore them by name so a future stow/copy of a
+# whole config dir cannot commit a live token.
+**/.npmrc
+**/hosts.yml
+**/auth.json
+**/auth.db*
+**/apps.json
+**/.gitconfig-personal

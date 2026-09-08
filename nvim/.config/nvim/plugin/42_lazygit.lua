@@ -23,7 +23,7 @@ local ensure_nvim_server = function()
 		return vim.v.servername
 	end
 
-	local server = vim.fs.joinpath("/tmp", ("nvim-minimax-%d.sock"):format(vim.fn.getpid()))
+	local server = vim.fs.joinpath("/tmp", ("nvim-%d.sock"):format(vim.fn.getpid()))
 	local ok, result = pcall(vim.fn.serverstart, server)
 	if ok then
 		return result

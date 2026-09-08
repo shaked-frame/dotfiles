@@ -7,12 +7,12 @@
 # -----------------------------------------------------------------------------
 
 # font-family = VictorMono NerdFont Mono
-font-family = Ioskeley Mono
-font-size = 16
+font-family = IoskeleyMonoTerm Nerd Font
+font-size = 14
 
 # Render italics in the Light weight of Ioskeley Mono.
 # Render italics in the Medium weight of Ioskeley Mono.
-# Neovim italicizes comments, keywords and types (see nvim-minimax
+# Neovim italicizes comments, keywords and types (see nvim
 # 'plugin/30_mini.lua'), so this is the face those use.
 #
 # Was 'Light Italic', which made comments both dim and thin - the thinnest face
@@ -32,9 +32,8 @@ font-style-italic = Medium Italic
 # font-style = Light
 # font-variation = wght=300
 
-# font-thicken = true
-
-window-title-font-family = "Maple Mono"
+font-thicken = true
+font-thicken-strength = 70
 
 # -----------------------------------------------------------------------------
 # Window
@@ -43,6 +42,8 @@ background-opacity = 0.93
 background-blur-radius = 50
 maximize = true
 window-padding-balance = true
+window-colorspace = display-p3
+alpha-blending = linear-corrected
 
 
 # -----------------------------------------------------------------------------

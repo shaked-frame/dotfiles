@@ -1,0 +1,170 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/jesseduffield/lazygit/master/schema/config.json
+
+os:
+  editPreset: "nvim-remote"
+  # Sourced before every shell command (`:` prompt, custom commands, editor open).
+  # zsh aliases do NOT expand in that context, only functions - hence the
+  # dedicated file rather than pointing at ~/.zshrc.
+  shellFunctionsFile: ~/.config/zsh/lazygit-functions.zsh
+
+gui:
+  scrollHeight: 10
+  authorColors:
+    'Shaked Hagag': cyan
+    '*': magenta
+  showFileTree: true
+  skipRewordInEditorWarning: true
+  showCommandLog: false
+  # Ghostty and Zed's terminal are both on IoskeleyMonoTerm Nerd Font.
+  nerdFontsVersion: "3"
+  showNumstatInFilesView: true
+  # Match the --date=iso forced in branchLogCmd / allBranchesLogCmds below.
+  timeFormat: "2006-01-02"
+  shortTimeFormat: "15:04"
+  branchColorPatterns:
+    '^(task)/': '#4BADE8'                  # Jira work branches
+    '^(bugfix)/': '#F15B50'                        # conventional, changes behaviour
+    '^(feature)/': '#6A9A22'    # conventional, housekeeping
+git:
+  mainBranches:
+    - main
+  branchLogCmd: git log --graph --color=always --abbrev-commit --decorate --date=iso --pretty=medium {{branchName}} --
+  allBranchesLogCmds:
+    - git log --all --graph --color=always --abbrev-commit --decorate --date=iso --pretty=medium
+  diffRenderers:
+    # No --no-gitconfig: these inherit the [delta] section of ~/.gitconfig, which
+    # is the single source of truth (dark, navigate, line-numbers, hyperlinks,
+    # syntax-theme = TwoDark, tabs = 4). Only lazygit-specific overrides go here:
+    #   --paging=never             lazygit is the pager
+    #   --dark                     explicit; delta's auto-detect is unreliable
+    #                              under lazygit (called out in delta's own docs)
+    #   --hunk-header-style=omit   lazygit already shows the file + position
+    #   --hyperlinks-file-link-format  lazygit-edit:// only resolves inside lazygit,
+    #                              so it must not leak into gitconfig
+    #   --side-by-side             on one renderer only; delta booleans cannot be
+    #                              negated per-invocation, so it can't live in gitconfig
+    - name: delta-side-by-side
+      command: 'delta --paging=never --dark --hunk-header-style=omit --file-modified-label="" --side-by-side --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
+    - name: delta
+      command: 'delta --paging=never --dark --hunk-header-style=omit --file-modified-label="" --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
+    # Needs no external binary. Word-level diffs, good for markdown prose and
+    # single-token renames. Cycle to it with `|`.
+    - type: rawGit
+      args: [--color-words]
+      name: color-words
+  autoFetch: false
+  overrideGpg: true
+# herdr creates worktrees under ~/worktrees as <repo>/<branch-slug>
+# (see [worktrees].directory in ~/.config/herdr/config.toml). This only sets the
+# candidate parent dir if you ever create one from lazygit with `w` - note that
+# path bypasses herdr's workspace registration.
+worktree:
+  defaultPath: ~/worktrees
+update:
+  method: never
+notARepository: 'quit'
+promptToReturnFromSubprocess: false
+disableStartupPopups: true
+keybinding:
+  files:
+    toggleStagedAll: <disabled>
+
+customCommands:
+  - key: '<c-n>'
+    description: 'New branch'
+    context: 'localBranches'
+    prompts:
+      - type: 'menu'
+        key: 'Type'
+        title: 'Branch type'
+        options:
+          - name: 'feature'
+            description: 'Jira ticket branch (work)'
+            value: 'feature'
+            key: 'f'
+          - name: 'task'
+            description: 'Jira ticket branch (work)'
+            value: 'task'
+            key: 't'
+          - name: 'bugfix'
+            description: 'Jira ticket branch (work)'
+            value: 'bugfix'
+            key: 'b'
+          - name: 'feat'
+            description: 'conventional: new feature'
+            value: 'feat'
+            key: 'F'
+          - name: 'fix'
+            description: 'conventional: bug fix'
+            value: 'fix'
+            key: 'x'
+          - name: 'chore'
+            description: 'conventional: maintenance, deps'
+            value: 'chore'
+            key: 'c'
+          - name: 'docs'
+            description: 'conventional: documentation'
+            value: 'docs'
+            key: 'd'
+          - name: 'refactor'
+            description: 'conventional: no behaviour change'
+            value: 'refactor'
+            key: 'r'
+          - name: 'test'
+            description: 'conventional: tests only'
+            value: 'test'
+            key: 's'
+          - name: 'perf'
+            description: 'conventional: performance'
+            value: 'perf'
+            key: 'p'
+          - name: 'ci'
+            description: 'conventional: pipelines, workflows'
+            value: 'ci'
+            key: 'i'
+          - name: 'build'
+            description: 'conventional: build system'
+            value: 'build'
+            key: 'u'
+      - type: 'input'
+        key: 'Ticket'
+        title: 'Ticket number'
+        initialValue: 'frm-'
+        condition: '{{ or (eq .Form.Type "feature") (eq .Form.Type "task") (eq .Form.Type "bugfix") }}'
+      - type: 'input'
+        key: 'Desc'
+        title: 'Short description'
+        condition: '{{ not (or (eq .Form.Type "feature") (eq .Form.Type "task") (eq .Form.Type "bugfix")) }}'
+    command: "git checkout -b \"{{.Form.Type}}/$(printf '%s' '{{.Form.Ticket}}{{.Form.Desc}}' | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')\""
+    loadingText: 'Creating branch'
+
+  - key: '<c-c>'
+    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/claude-haiku-4.5 --thinking low '/commit'"
+    context: 'files'
+    description: 'AI commit with pi'
+    loadingText: 'Generating commit...'
+    output: popup
+    outputTitle: 'pi commit'
+
+  - key: '<c-a>'
+    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/claude-haiku-4.5 --thinking low '/atomic-commit' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.4-mini --thinking low '/atomic-commit'"
+    context: 'files'
+    description: 'AI atomic commits with pi'
+    loadingText: 'Generating atomic commits...'
+    output: popup
+    outputTitle: 'pi atomic commits'
+
+  # <c-g> rather than <c-o>: <ctrl+o> is universal.copyToClipboard, and binding it
+  # here shadowed it in exactly the two panels that need it (copyFileInfoToClipboard,
+  # copyPullRequestURL). <ctrl+g> is unbound in every default context.
+  - key: '<c-g>'
+    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/claude-haiku-4.5 --thinking low '/create-pr {{index .PromptResponses 0}}' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.4-mini --thinking low '/create-pr {{index .PromptResponses 0}}'"
+    context: 'localBranches, files'
+    description: 'AI create PR with pi'
+    prompts:
+      - type: 'input'
+        title: 'Extra context for the PR (optional)'
+        initialValue: ''
+    loadingText: 'Creating pull request...'
+    output: popup
+    outputTitle: 'pi create PR'

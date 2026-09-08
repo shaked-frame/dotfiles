@@ -1,0 +1,18 @@
+os:
+  # The nvim-remote preset (set in config.yml) suspends lazygit whenever $NVIM is
+  # unset - see `suspend` in pkg/config/editor_presets.go. Zed's terminal has no
+  # $NVIM, so lazygit was backgrounding itself before running `zed`, for nothing.
+  # Note this is independent of the `kill` below: suspend is lazygit hiding itself,
+  # the kill is what ends the Zed task so its tab dismisses.
+  editInTerminal: false
+  # Without this, "open directory in editor" falls through to the nvim-remote
+  # template and opens nvim from inside the Zed session.
+  openDirInEditor: "zed -- {{dir}}"
+  # Open the file without --wait (returns immediately), then kill lazygit so
+  # its terminal tab closes right away instead of lingering until the buffer
+  # is closed. Requires relaunching the lazygit task to get back into lg.
+  edit: "zed -- {{filename}} && kill -TERM $PPID"
+  editAtLine: "zed -- {{filename}}:{{line}} && kill -TERM $PPID"
+  # Keep blocking behavior here: some lazygit flows must resume after the
+  # editor closes, so the tab still closes only when the buffer does.
+  editAtLineAndWait: "zed --wait -- {{filename}}:{{line}} && kill -TERM $PPID"

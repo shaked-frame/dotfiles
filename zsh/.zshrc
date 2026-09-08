@@ -138,7 +138,7 @@ bindkey '^[[F' end-of-line
 # ╚══════════════════════════════════════════════════════════════════════════════╝
 
 # General
-alias vim='NVIM_APPNAME=nvim-minimax nvim'
+alias vim='nvim'
 alias oc='opencode'
 alias c='clear'
 alias pn='pnpm'
@@ -236,44 +236,10 @@ function bup() {
   brew doctor
 }
 
-# Bootstrap dependencies in a worktree. Creating and opening the worktree itself
-# is herdr's job (`prefix+shift+g` to create, `prefix+shift+o` to open, or
-# `herdr worktree create --branch <name>`), which also registers it as a
-# workspace and honours `worktrees.directory` from ~/.config/herdr/config.toml.
-#
-# This used to also run `git worktree add` into ~/worktrees/frame-<branch>, a
-# path that matched none of the worktrees actually in use.
-function worktree-setup() {
-  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-    print "Error: not inside a git worktree" >&2
-    return 1
-  fi
-
-  pnpm i && pnpm setup:frontend
-}
-
-# Link .zed settings from main frame clone into a worktree (personal)
-function link-worktree-zed() {
-  local source_dir="$HOME/frame/.zed"
-  local target_dir="$PWD/.zed"
-  local source_settings="$source_dir/settings.json"
-  local target_settings="$target_dir/settings.json"
-
-  if [[ ! -f "$source_settings" ]]; then
-    print "Error: $source_settings does not exist" >&2
-    return 1
-  fi
-
-  mkdir -p "$target_dir"
-
-  if [[ -e "$target_settings" && ! -L "$target_settings" ]]; then
-    print "Error: $target_settings already exists and is not a symlink" >&2
-    return 1
-  fi
-
-  ln -sfn "$source_settings" "$target_settings"
-  print "Linked $target_settings -> $source_settings"
-}
+# Functions shared with lazygit's `:` prompt and custom commands
+# (wired up via os.shellFunctionsFile in ~/.config/lazygit/config.yml).
+# Holds worktree-setup, link-worktree-zed and a pn function.
+source "$HOME/.config/zsh/lazygit-functions.zsh"
 
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                                   PATH                                       ║

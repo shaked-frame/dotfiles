@@ -1,0 +1,66 @@
+[user]
+	name = Shaked Hagag
+	email = shaked@frame.security
+	signingkey = 22758DF495FF66E0
+
+[includeIf "gitdir:~/personal/"]
+	path = ~/.gitconfig-personal
+
+[init]
+	defaultBranch = main
+[coderabbit]
+	machineId = cli/6f19f0407ccd4fb3a06c16117a405847
+[fetch]
+	prune = true
+[alias]
+	fix-refs = !cd \"$(git rev-parse --show-toplevel)\" && rm -rf .git/refs/remotes/origin && mkdir -p .git/refs/remotes/origin && grep -v \" refs/remotes/origin/\" .git/packed-refs > .git/packed-refs.tmp && mv .git/packed-refs.tmp .git/packed-refs && git fetch origin
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+[push]
+	autoSetupRemote = true
+
+# ── delta ─────────────────────────────────────────────────────────────────────
+# Single source of truth for delta, shared between terminal git and lazygit.
+# lazygit deliberately does NOT pass --no-gitconfig, so it inherits everything
+# below and only overrides what has to differ (see git.diffRenderers in
+# ~/.config/lazygit/config.yml): --paging=never, --hunk-header-style=omit,
+# --side-by-side on one renderer, and the lazygit-edit:// file link format.
+[core]
+	pager = delta
+
+[interactive]
+	# Styles the hunks in `git add -p` / `git checkout -p`.
+	diffFilter = delta --color-only
+
+[pager]
+	# With hyperlinks = true below, each blame commit links to GitHub.
+	blame = delta
+
+[delta]
+	# Delta's terminal-background auto-detection does not work in every context;
+	# its docs single out lazygit specifically, so state this explicitly.
+	dark = true
+	# n / N jump between files (and commit boundaries in `git log -p`).
+	# Inert under lazygit, which runs delta with --paging=never.
+	navigate = true
+	line-numbers = true
+	# Commit hashes become links to GitHub/GitLab. lazygit overrides only the
+	# *file* link format, so terminal git keeps delta's default there.
+	hyperlinks = true
+	# bat/delta's One Dark port - matches onedark.nvim and herdr's one-dark.
+	syntax-theme = TwoDark
+	# Matches gui.tabWidth = 4 in lazygit. Delta defaults to 8, which is what
+	# made tabs render at two different widths inside vs outside the diff pane.
+	tabs = 4
+	# NOTE: do not put `side-by-side` here. Delta's boolean flags cannot be
+	# negated per-invocation, and lazygit needs one renderer with it and one
+	# without, so it stays on the lazygit command line.
+
+[merge]
+	# Includes the merge base in conflict markers, which delta renders as two
+	# diffs (base -> ours, base -> theirs).
+	conflictStyle = zdiff3
+
