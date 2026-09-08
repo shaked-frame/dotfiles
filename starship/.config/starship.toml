@@ -15,8 +15,18 @@ truncation_length = 6
 success_symbol = '[➜](bold green)'
 
 [directory.substitutions]
+# ORDER MATTERS. Substitutions are literal (no regex) and applied in the order
+# written, and each one can match the output of an earlier one. Always list the
+# longest prefix first, or a shorter rule will consume it:
+#   '~/frame' before '~/frame-infra'  -> "frm-infra" instead of "infr"
+#   '~/worktrees' before '~/worktrees/frame' -> "wt/frame/..." instead of "wt/..."
 '~/frame-infra' = 'infr'
 '~/frame' = 'frm'
+# herdr lays worktrees out as ~/worktrees/<repo>/<slug>/<repo>, so the repo name
+# appears twice. Collapsing the prefix through the first one gives
+# ~/worktrees/frame/seconday/frame -> wt/seconday/frame
+# Add a sibling line per repo (longest-first) to shorten another repo's worktrees.
+'~/worktrees/frame' = 'wt'
 '~/worktrees' = 'wt'
 
 [git_branch]
