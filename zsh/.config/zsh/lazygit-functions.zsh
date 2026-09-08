@@ -1,17 +1,17 @@
 #!/usr/bin/env zsh
 # Functions shared between an interactive shell and lazygit.
 #
-# lazygit sources this file (os.shellFunctionsFile in ~/.config/lazygit/config.yml)
-# before running any shell command: the `:` prompt, custom commands, and editor
-# open commands. It is deliberately NOT ~/.zshrc - that would re-run zinit,
-# carapace and the rest of init on every `:` command.
+# lazygit sources this file, set by os.shellFunctionsFile in
+# ~/.config/lazygit/config.yml, before running any shell command: the `:` prompt,
+# custom commands, and editor open. Pointing that at ~/.zshrc would re-run zinit,
+# carapace and the rest of init on every `:` command, so it points here instead.
 #
-# zsh caveat: aliases do not expand in lazygit's non-interactive shell. Only
-# functions work here. That is why the git shortcuts in ~/.zshrc stay as aliases
-# (lazygit already does status/diff/push natively, so they buy nothing) and only
-# the things worth reaching for from inside lazygit live in this file.
+# One zsh catch: aliases do not expand in lazygit's non-interactive shell, only
+# functions. The git shortcuts in ~/.zshrc stay as aliases because lazygit already
+# does status, diff and push natively, so they buy nothing here. Only what is
+# worth reaching for from inside lazygit lives in this file.
 #
-# Sourced from ~/.zshrc so both contexts get the same definitions.
+# ~/.zshrc sources it too, so both contexts get the same definitions.
 
 # Bootstrap dependencies in a worktree. Creating and opening the worktree itself
 # is herdr's job (`prefix+shift+g` to create, `prefix+shift+o` to open, or
@@ -87,8 +87,8 @@ function zombie-processes() {
 
   print -r --
   printf '%6s  %-8s  %s\n' COUNT PPID PARENT
-  # NOTE: `cmd` is declared above, not inside the loop. In zsh, `local cmd` on a
-  # parameter that already exists in scope *prints* it, which leaked a stray
+  # `cmd` is declared above, not inside the loop. In zsh, `local cmd` on a
+  # parameter that already exists in scope prints it, which leaked a stray
   # `cmd='...'` line on every iteration after the first.
   ps -ax -o stat=,ppid= \
     | awk '$1 ~ /Z/ { c[$2]++ } END { for (p in c) printf "%d %s\n", c[p], p }' \

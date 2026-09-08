@@ -15,9 +15,9 @@ truncation_length = 6
 success_symbol = '[➜](bold green)'
 
 [directory.substitutions]
-# ORDER MATTERS. Substitutions are literal (no regex) and applied in the order
-# written, and each one can match the output of an earlier one. Always list the
-# longest prefix first, or a shorter rule will consume it:
+# Order matters. Substitutions are literal, no regex, and starship applies them
+# in the order written, so each one can match an earlier one's output. List the
+# longest prefix first or a shorter rule eats it.
 #   '~/frame' before '~/frame-infra'  -> "frm-infra" instead of "infr"
 #   '~/worktrees' before '~/worktrees/frame' -> "wt/frame/..." instead of "wt/..."
 '~/frame-infra' = 'infr'

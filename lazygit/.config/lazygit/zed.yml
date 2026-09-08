@@ -1,9 +1,9 @@
 os:
-  # The nvim-remote preset (set in config.yml) suspends lazygit whenever $NVIM is
-  # unset - see `suspend` in pkg/config/editor_presets.go. Zed's terminal has no
-  # $NVIM, so lazygit was backgrounding itself before running `zed`, for nothing.
-  # Note this is independent of the `kill` below: suspend is lazygit hiding itself,
-  # the kill is what ends the Zed task so its tab dismisses.
+  # The nvim-remote preset in config.yml suspends lazygit whenever $NVIM is
+  # unset. See `suspend` in pkg/config/editor_presets.go. Zed's terminal has no
+  # $NVIM, so lazygit backgrounded itself before running `zed`, for nothing.
+  # This is separate from the `kill` below. Suspend hides lazygit. The kill ends
+  # the Zed task so its tab dismisses.
   editInTerminal: false
   # Without this, "open directory in editor" falls through to the nvim-remote
   # template and opens nvim from inside the Zed session.

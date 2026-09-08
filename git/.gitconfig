@@ -23,10 +23,10 @@
 	autoSetupRemote = true
 
 # ── delta ─────────────────────────────────────────────────────────────────────
-# Single source of truth for delta, shared between terminal git and lazygit.
-# lazygit deliberately does NOT pass --no-gitconfig, so it inherits everything
-# below and only overrides what has to differ (see git.diffRenderers in
-# ~/.config/lazygit/config.yml): --paging=never, --hunk-header-style=omit,
+# Delta config lives here only, shared between terminal git and lazygit.
+# lazygit omits --no-gitconfig on purpose, so it inherits everything below and
+# overrides only what has to differ. See git.diffRenderers in
+# ~/.config/lazygit/config.yml for --paging=never, --hunk-header-style=omit,
 # --side-by-side on one renderer, and the lazygit-edit:// file link format.
 [core]
 	pager = delta
@@ -55,9 +55,9 @@
 	# Matches gui.tabWidth = 4 in lazygit. Delta defaults to 8, which is what
 	# made tabs render at two different widths inside vs outside the diff pane.
 	tabs = 4
-	# NOTE: do not put `side-by-side` here. Delta's boolean flags cannot be
-	# negated per-invocation, and lazygit needs one renderer with it and one
-	# without, so it stays on the lazygit command line.
+	# Do not put `side-by-side` here. Delta cannot negate a boolean per run, and
+	# lazygit needs one renderer with it and one without, so it stays on the
+	# lazygit command line.
 
 [merge]
 	# Includes the merge base in conflict markers, which delta renders as two

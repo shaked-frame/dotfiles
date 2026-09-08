@@ -20,9 +20,9 @@ atuin/.config/atuin/atuin-receipt.json
 # Editor backups left next to stowed configs
 zellij/.config/zellij/*.bak
 
-# Credential belt-and-braces: this repo is public. These are never stowed (see
-# README "Never add these"), but ignore them by name so a future stow/copy of a
-# whole config dir cannot commit a live token.
+# This repo is public. Nothing below is stowed, see README "Never add these",
+# but ignore them by name anyway so copying a whole config dir later cannot
+# commit a live token.
 **/.npmrc
 **/hosts.yml
 **/auth.json

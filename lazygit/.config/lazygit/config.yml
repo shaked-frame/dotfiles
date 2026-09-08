@@ -2,9 +2,9 @@
 
 os:
   editPreset: "nvim-remote"
-  # Sourced before every shell command (`:` prompt, custom commands, editor open).
-  # zsh aliases do NOT expand in that context, only functions - hence the
-  # dedicated file rather than pointing at ~/.zshrc.
+  # lazygit sources this before every shell command: the `:` prompt, custom
+  # commands, and editor open. zsh expands functions there but not aliases, so
+  # this points at a dedicated file instead of ~/.zshrc.
   shellFunctionsFile: ~/.config/zsh/lazygit-functions.zsh
 
 gui:
@@ -32,32 +32,33 @@ git:
   allBranchesLogCmds:
     - git log --all --graph --color=always --abbrev-commit --decorate --date=iso --pretty=medium
   diffRenderers:
-    # No --no-gitconfig: these inherit the [delta] section of ~/.gitconfig, which
-    # is the single source of truth (dark, navigate, line-numbers, hyperlinks,
-    # syntax-theme = TwoDark, tabs = 4). Only lazygit-specific overrides go here:
+    # These omit --no-gitconfig on purpose, so they inherit [delta] from
+    # ~/.gitconfig: dark, navigate, line-numbers, hyperlinks,
+    # syntax-theme = TwoDark, tabs = 4. Everything below is a lazygit-only
+    # override.
     #   --paging=never             lazygit is the pager
-    #   --dark                     explicit; delta's auto-detect is unreliable
-    #                              under lazygit (called out in delta's own docs)
-    #   --hunk-header-style=omit   lazygit already shows the file + position
-    #   --hyperlinks-file-link-format  lazygit-edit:// only resolves inside lazygit,
-    #                              so it must not leak into gitconfig
-    #   --side-by-side             on one renderer only; delta booleans cannot be
-    #                              negated per-invocation, so it can't live in gitconfig
+    #   --dark                     delta's background auto-detect misfires
+    #                              under lazygit; its docs say to set this
+    #   --hunk-header-style=omit   lazygit already shows file and position
+    #   --hyperlinks-file-link-format  lazygit-edit:// resolves only inside
+    #                              lazygit, so gitconfig must not carry it
+    #   --side-by-side             one renderer only; delta cannot negate a
+    #                              boolean per run, so gitconfig cannot hold it
     - name: delta-side-by-side
       command: 'delta --paging=never --dark --hunk-header-style=omit --file-modified-label="" --side-by-side --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
     - name: delta
       command: 'delta --paging=never --dark --hunk-header-style=omit --file-modified-label="" --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
-    # Needs no external binary. Word-level diffs, good for markdown prose and
+    # Needs no extra binary. Word-level diffs, good for markdown prose and
     # single-token renames. Cycle to it with `|`.
     - type: rawGit
       args: [--color-words]
       name: color-words
   autoFetch: false
   overrideGpg: true
-# herdr creates worktrees under ~/worktrees as <repo>/<branch-slug>
-# (see [worktrees].directory in ~/.config/herdr/config.toml). This only sets the
-# candidate parent dir if you ever create one from lazygit with `w` - note that
-# path bypasses herdr's workspace registration.
+# herdr creates worktrees under ~/worktrees as <repo>/<branch-slug>, set by
+# [worktrees].directory in ~/.config/herdr/config.toml. This only supplies the
+# candidate parent directory when you create one from lazygit with `w`, which
+# skips herdr's workspace registration.
 worktree:
   defaultPath: ~/worktrees
 update:
@@ -138,8 +139,25 @@ customCommands:
     command: "git checkout -b \"{{.Form.Type}}/$(printf '%s' '{{.Form.Ticket}}{{.Form.Desc}}' | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')\""
     loadingText: 'Creating branch'
 
+  # Model choice for the pi commands below.
+  #
+  # Median wall time on an identical commit-message task, 3 runs each,
+  # --thinking low, no tools:
+  #   github-copilot/gpt-5.4-mini        2.2s  <- primary
+  #   github-copilot/mai-code-1.1-flash  3.4s
+  #   openai-codex/gpt-5.3-codex-spark   4.3s  returned empty output, unusable
+  #   github-copilot/claude-haiku-4.5    5.6s  previous primary
+  #   openai-codex/gpt-5.4-mini          6.8s  <- fallback
+  #
+  # The fallback after `||` uses a different provider rather than the next
+  # fastest model. It runs only when the primary fails on auth, a rate limit, or
+  # a Copilot outage, and a second github-copilot entry would fail alongside it.
+  # Those 6.8s cost nothing on the normal path.
+  #
+  # --model bypasses the `enabledModels` allowlist in ~/.pi/agent/settings.json,
+  # so these run without being listed there.
   - key: '<c-c>'
-    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/claude-haiku-4.5 --thinking low '/commit'"
+    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/commit' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.4-mini --thinking low '/commit'"
     context: 'files'
     description: 'AI commit with pi'
     loadingText: 'Generating commit...'
@@ -147,18 +165,18 @@ customCommands:
     outputTitle: 'pi commit'
 
   - key: '<c-a>'
-    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/claude-haiku-4.5 --thinking low '/atomic-commit' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.4-mini --thinking low '/atomic-commit'"
+    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/atomic-commit' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.4-mini --thinking low '/atomic-commit'"
     context: 'files'
     description: 'AI atomic commits with pi'
     loadingText: 'Generating atomic commits...'
     output: popup
     outputTitle: 'pi atomic commits'
 
-  # <c-g> rather than <c-o>: <ctrl+o> is universal.copyToClipboard, and binding it
-  # here shadowed it in exactly the two panels that need it (copyFileInfoToClipboard,
-  # copyPullRequestURL). <ctrl+g> is unbound in every default context.
+  # This was <c-o>, which is universal.copyToClipboard. Binding it here shadowed
+  # copyToClipboard in the two panels that need it, for copyFileInfoToClipboard
+  # and copyPullRequestURL. <ctrl+g> is unbound in every default context.
   - key: '<c-g>'
-    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/claude-haiku-4.5 --thinking low '/create-pr {{index .PromptResponses 0}}' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.4-mini --thinking low '/create-pr {{index .PromptResponses 0}}'"
+    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/create-pr {{index .PromptResponses 0}}' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.4-mini --thinking low '/create-pr {{index .PromptResponses 0}}'"
     context: 'localBranches, files'
     description: 'AI create PR with pi'
     prompts:
