@@ -52,6 +52,10 @@
       "rev": "df4792accde9db0043121f32628bcf8e645d9aea",
       "src": "https://github.com/navarasu/onedark.nvim"
     },
+    "schemastore.nvim": {
+      "rev": "05e938c0aa5dfbdbb11972fa4c8a85f27f402ba0",
+      "src": "https://github.com/b0o/schemastore.nvim"
+    },
     "sidekick.nvim": {
       "rev": "208e1c5b8170c01fd1d07df0139322a76479b235",
       "src": "https://github.com/folke/sidekick.nvim"

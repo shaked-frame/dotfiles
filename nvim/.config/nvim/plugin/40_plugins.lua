@@ -77,11 +77,32 @@ now_if_args(function()
     -- - Visit 'SUPPORTED_LANGUAGES.md' file at
     --   https://github.com/nvim-treesitter/nvim-treesitter/blob/main
   }
+  -- Checking only the parser binary is not enough. `install()` also copies
+  -- (usually as symlinks) that language's query files into a directory on
+  -- 'runtimepath'. When those go stale, say after switching Neovim data
+  -- directories, the parser file still exists but the highlight query
+  -- resolves to nothing. Every buffer for that language then renders with
+  -- zero syntax highlighting, and `:checkhealth` plus `require('nvim-treesitter')`
+  -- both report nothing wrong. Checking the query as well as the parser
+  -- makes that failure self-heal on the next startup instead of sitting
+  -- there unnoticed.
   local isnt_installed = function(lang)
-    return #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) == 0
+    local has_parser = #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) > 0
+    local has_query = vim.treesitter.query.get(lang, 'highlights') ~= nil
+    return not (has_parser and has_query)
   end
   local to_install = vim.tbl_filter(isnt_installed, languages)
-  if #to_install > 0 then require('nvim-treesitter').install(to_install) end
+  if #to_install > 0 then require('nvim-treesitter').install(to_install, { force = true }) end
+
+  -- 'jsonc' (comments-allowed JSON: 'tsconfig.json', '.eslintrc.json',
+  -- 'settings.json', etc.) has no tree-sitter grammar of its own.
+  -- `vim.treesitter.language.get_filetypes('json')` below only reports
+  -- filetypes Neovim already ties to a parser, and by default that's just
+  -- 'json'. Without this line, every 'jsonc' buffer skips the `FileType`
+  -- autocommand below and never gets tree-sitter highlighting. Registering
+  -- it here makes 'jsonc' resolve to the 'json' parser, both for that
+  -- lookup and for `vim.treesitter.start()`'s own language detection.
+  vim.treesitter.language.register('json', 'jsonc')
 
   -- Enable tree-sitter after opening a file for a target language
   local filetypes = {}
@@ -131,7 +152,13 @@ end
 -- Troubleshooting:
 -- - Run `:checkhealth vim.lsp` to see potential issues.
 now_if_args(function()
-  add({ 'https://github.com/neovim/nvim-lspconfig' })
+  add({
+    'https://github.com/neovim/nvim-lspconfig',
+    -- Feeds 'jsonls' (and 'yamlls', if enabled later) the SchemaStore catalog,
+    -- so files like 'package.json' / 'tsconfig.json' get schema-driven
+    -- completion, hover docs, and validation. Wired in 'after/lsp/jsonls.lua'.
+    'https://github.com/b0o/schemastore.nvim',
+  })
 
   -- Use `:h vim.lsp.enable()` to automatically enable language server based on
   -- the rules provided by 'nvim-lspconfig'.
@@ -148,6 +175,9 @@ now_if_args(function()
     -- is a deprecated shim that just forwards to 'tsc'.
     'tsc',
     'tailwindcss',
+    -- 'vscode-json-language-server' (Mason package: 'json-lsp'). Handles
+    -- 'json' and 'jsonc' filetypes; schema wiring lives in 'after/lsp/jsonls.lua'.
+    'jsonls',
     'copilot',
     -- Linting, via the oxc toolchain. 'oxlint --lsp' reports diagnostics as a
     -- language server, so no separate lint plugin (nvim-lint / none-ls) is
@@ -353,6 +383,19 @@ Config.now(function()
       Comment = { fg = '$light_grey' },
       SpecialComment = { fg = '$light_grey' },
       ['@comment'] = { fg = '$light_grey' },
+
+      -- JSX/TSX tag names default to `purple` here. nvim-treesitter's 'jsx'
+      -- query captures custom components as `@tag` (uppercase names) and
+      -- native elements like `<div>` as `@tag.builtin`, and onedark.nvim
+      -- colors both the same. Zed's One Dark instead renders every JSX tag
+      -- name in `blue`, matching plain identifiers and types. That reads
+      -- better in a file full of similarly named nested components
+      -- (`Dialog`, `DialogContent`, `DialogHeader`, and so on), since
+      -- purple already carries keyword weight. `@tag.attribute` (prop
+      -- names) and `@tag.delimiter` (`<`, `/>`, etc.) are left on their
+      -- defaults.
+      ['@tag'] = { fg = '$blue' },
+      ['@tag.builtin'] = { fg = '$blue' },
     },
   })
   require('onedark').load()
