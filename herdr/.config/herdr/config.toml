@@ -106,6 +106,19 @@ description = "scratch terminal"
 width = "80%"
 height = "80%"
 
+# Toggle the coding agent pane in the current tab (zoom it fullscreen, or
+# back to the split) regardless of which pane currently has focus. Resolves
+# "the agent" dynamically via `herdr agent list`, scoped to this workspace
+# and tab, so it works without hardcoding a pane ID. Requires `jq`.
+# NOTE: avoid `alt+<letter>` here - Raycast (and similar launchers) tend to
+# register those as OS-level global hotkeys, which intercept the keypress
+# before it ever reaches the terminal, regardless of Herdr's prefix state.
+[[keys.command]]
+key = "prefix+shift+a"
+type = "shell"
+command = "herdr pane zoom --toggle --pane \"$(herdr agent list | jq -r --arg ws \"$HERDR_ACTIVE_WORKSPACE_ID\" --arg tab \"$HERDR_ACTIVE_TAB_ID\" '[.result.agents[] | select(.workspace_id==$ws and .tab_id==$tab)][0].pane_id // empty')\""
+description = "Toggle agent pane (zoom)"
+
 #------------------------------------------
 # UI
 #------------------------------------------

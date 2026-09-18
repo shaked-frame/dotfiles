@@ -901,7 +901,11 @@ later(function() require('mini.splitjoin').setup() end)
 -- - `:h MiniSurround-builtin-surroundings` - list of all supported surroundings
 -- - `:h MiniSurround-surrounding-specification` - examples of custom surroundings
 -- - `:h MiniSurround-vim-surround-config` - alternative set of action mappings
-later(function() require('mini.surround').setup() end)
+--
+-- NOTE: `highlight` mapping is disabled ('') because its default `sh` collides
+-- with our own "move buffer to left split" mapping in 'plugin/20_keymaps.lua'.
+-- Disabling it also removes its `shl`/`shn` (highlight prev/next) derivatives.
+later(function() require('mini.surround').setup({ mappings = { highlight = '' } }) end)
 
 -- Highlight and remove trailspace. Temporarily stops highlighting in Insert mode
 -- to reduce noise when typing. Example usage:

@@ -48,6 +48,11 @@ git:
       command: 'delta --paging=never --dark --hunk-header-style=omit --file-modified-label="" --side-by-side --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
     - name: delta
       command: 'delta --paging=never --dark --hunk-header-style=omit --file-modified-label="" --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
+    # Syntax-aware structural diff for code. Unlike delta, difftastic takes
+    # over diff generation rather than formatting Git's line-based output.
+    - name: difftastic
+      type: extDiff
+      command: 'difft --color=always --context={{diffContext}}'
     # Needs no extra binary. Word-level diffs, good for markdown prose and
     # single-token renames. Cycle to it with `|`.
     - type: rawGit
@@ -136,7 +141,7 @@ customCommands:
         key: 'Desc'
         title: 'Short description'
         condition: '{{ not (or (eq .Form.Type "feature") (eq .Form.Type "task") (eq .Form.Type "bugfix")) }}'
-    command: "git checkout -b \"{{.Form.Type}}/$(printf '%s' '{{.Form.Ticket}}{{.Form.Desc}}' | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')\""
+    command: "git checkout -b \"{{.Form.Type}}/$(printf '%s' '{{.Form.Ticket}}{{.Form.Desc}}' | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')\" \"{{.SelectedLocalBranch.Name}}\""
     loadingText: 'Creating branch'
 
   # Model choice for the pi commands below.

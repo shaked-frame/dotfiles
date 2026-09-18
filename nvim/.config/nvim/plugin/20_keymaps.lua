@@ -80,10 +80,62 @@ nmap('<Esc>', function()
 end, 'Clear highlights')
 
 -- Splits (Zed: `s s` SplitDown, `s v` SplitAndMoveRight, `s h`/`s l` move item)
+
+-- Runs `split_cmd` (e.g. 'vsplit', 'leftabove vsplit'), then moves the
+-- buffer that was active *before* the split into the new window and
+-- restores the original window to its alternate buffer (or a blank buffer
+-- if there is none). Without this, Vim's split commands just show the same
+-- buffer in both windows instead of "moving" it.
+local function split_and_move(split_cmd)
+  local orig_win = vim.api.nvim_get_current_win()
+  local alt_buf = vim.fn.bufnr('#')
+  vim.cmd(split_cmd)
+  local new_win = vim.api.nvim_get_current_win()
+  vim.api.nvim_set_current_win(orig_win)
+  if alt_buf > 0 and vim.fn.buflisted(alt_buf) == 1 then
+    vim.cmd('buffer ' .. alt_buf)
+  else
+    vim.cmd('enew')
+  end
+  vim.api.nvim_set_current_win(new_win)
+end
+
+-- Moves the current window's buffer one step to the right/left, swapping
+-- places with whichever window is directionally adjacent (`wincmd h`/`l`,
+-- which is layout-aware). This matches Zed's "move pane" behavior of
+-- stepping one slot at a time. With 3+ windows, `wincmd L`/`H` would instead
+-- jump straight to the outer edge, skipping past any window in between.
+-- If this is the only window, fall back to creating a fresh split and
+-- moving the buffer into it, rather than duplicating it into both.
+local function move_to_side(dir) -- dir: 'h' (left) or 'l' (right)
+  if #vim.api.nvim_tabpage_list_wins(0) == 1 then
+    split_and_move(dir == 'l' and 'vsplit' or 'leftabove vsplit')
+    return
+  end
+  local cur_win = vim.api.nvim_get_current_win()
+  vim.cmd('wincmd ' .. dir)
+  local neighbor_win = vim.api.nvim_get_current_win()
+  if neighbor_win == cur_win then return end -- already at the outer edge
+
+  local cur_buf = vim.api.nvim_win_get_buf(cur_win)
+  local neighbor_buf = vim.api.nvim_win_get_buf(neighbor_win)
+  -- Save each window's view (cursor, topline, etc.) before swapping buffers,
+  -- so the cursor position travels with its buffer instead of staying put.
+  local cur_view = vim.api.nvim_win_call(cur_win, vim.fn.winsaveview)
+  local neighbor_view = vim.api.nvim_win_call(neighbor_win, vim.fn.winsaveview)
+
+  vim.api.nvim_win_set_buf(cur_win, neighbor_buf)
+  vim.api.nvim_win_set_buf(neighbor_win, cur_buf)
+  vim.api.nvim_win_call(cur_win, function() vim.fn.winrestview(neighbor_view) end)
+  vim.api.nvim_win_call(neighbor_win, function() vim.fn.winrestview(cur_view) end)
+
+  vim.api.nvim_set_current_win(neighbor_win) -- focus follows the moved buffer
+end
+
 nmap('ss', '<Cmd>split<CR>', 'Split horizontally')
-nmap('sv', '<Cmd>vsplit<CR>', 'Split vertically')
-nmap('sl', '<Cmd>wincmd L<CR>', 'Move buffer to right split')
-nmap('sh', '<Cmd>wincmd H<CR>', 'Move buffer to left split')
+nmap('sv', function() split_and_move('vsplit') end, 'Split and move buffer right')
+nmap('sl', function() move_to_side('l') end, 'Move buffer to right split')
+nmap('sh', function() move_to_side('h') end, 'Move buffer to left split')
 
 -- Jump to a word (Zed: `g w` = HelixJumpToWord)
 nmap('gw', function() MiniJump2d.start(MiniJump2d.builtin_opts.word_start) end, 'Jump to word')
@@ -262,6 +314,11 @@ nmap_leader('bW', '<Cmd>lua MiniBufremove.wipeout(0, true)<CR>', 'Wipeout!')
 local edit_plugin_file = function(filename)
   return string.format('<Cmd>edit %s/plugin/%s<CR>', vim.fn.stdpath('config'), filename)
 end
+-- Sources a 'plugin/' config file by absolute path (not `%`), so it works
+-- regardless of the current buffer or working directory.
+local source_plugin_file = function(filename)
+  return string.format('<Cmd>source %s/plugin/%s<CR>', vim.fn.stdpath('config'), filename)
+end
 local explore_at_file = '<Cmd>lua MiniFiles.open(vim.api.nvim_buf_get_name(0))<CR>'
 local explore_quickfix = function()
   vim.cmd(vim.fn.getqflist({ winid = true }).winid ~= 0 and 'cclose' or 'copen')
@@ -281,6 +338,7 @@ nmap_leader('eo', edit_plugin_file('10_options.lua'),       'Options config')
 nmap_leader('ep', edit_plugin_file('40_plugins.lua'),       'Plugins config')
 nmap_leader('eq', explore_quickfix,                         'Quickfix list')
 nmap_leader('eQ', explore_locations,                        'Location list')
+nmap_leader('eR', source_plugin_file('20_keymaps.lua'),     'Reload keymaps')
 
 -- f is for 'Fuzzy Find'. Common usage:
 -- - `<Leader>ff` - find files; for best performance requires `ripgrep`
@@ -377,6 +435,12 @@ xmap_leader('lf', '<Cmd>lua require("conform").format()<CR>', 'Format selection'
 -- prefix is free. See 'plugin/30_mini.lua'.
 nmap_leader('m',  '<Cmd>lua MiniMisc.zoom()<CR>',           'Zoom toggle')
 nmap_leader('mf', '<Cmd>Pick git_files scope="modified"<CR>', 'Modified files')
+
+-- Window sizing standalone mappings (Zed: `space =` EqualizePanes,
+-- `space shift-m` Maximize). `M` is an uppercase alias for the same zoom
+-- toggle as `<Leader>m` above, kept separate in case `m` group grows.
+nmap_leader('=', '<Cmd>wincmd =<CR>',             'Equalize window sizes')
+nmap_leader('M', '<Cmd>lua MiniMisc.zoom()<CR>', 'Maximize (zoom) window')
 
 -- r is for 'Replace' (project-wide search and replace via 'grug-far.nvim')
 nmap_leader('rr', '<Cmd>GrugFar<CR>',             'Search and replace')

@@ -7,6 +7,9 @@
 // custom settings, run `zed: open default settings` from the
 // command palette (cmd-shift-p / ctrl-shift-p)
 {
+  "cursor_animation": {
+    "enabled": true
+  },
   "disable_ai": false,
   "reveal_if_open": true,
   "proxy": "",
@@ -120,7 +123,7 @@
   "gutter": {
     "breakpoints": false,
   },
-  "buffer_font_size": 15.0,
+  "buffer_font_size": 14.0,
   "ui_font_size": 16.0,
   "terminal": {
     "starts_open": true,
@@ -184,8 +187,10 @@
   "agent": {
     "terminal_init_command": "pi",
     "default_model": {
-      "provider": "openai",
-      "model": "gpt-5.5",
+      "effort": "high",
+      "enable_thinking": true,
+      "provider": "zed.dev",
+      "model": "gpt-5.6-sol",
     },
     "flexible": false,
     "sidebar_side": "left",

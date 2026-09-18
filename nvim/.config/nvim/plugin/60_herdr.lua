@@ -97,9 +97,11 @@ end
 
 -- Agents =====================================================================
 
---- Pick a live Herdr agent, then call `fn(agent_name)`.
+--- Pick a live Herdr agent, then call `fn(agent)` with its `AgentInfo` table
+--- (see `herdr api schema`) — notably `.name` (may be nil) and `.pane_id`
+--- (always set, needed for pane-level commands like `pane send-text`).
 ---@param prompt string
----@param fn fun(name: string)
+---@param fn fun(agent: table)
 local function with_agent(prompt, fn)
   if not in_herdr() then return end
 
@@ -112,7 +114,7 @@ local function with_agent(prompt, fn)
 
   -- With a single agent there is nothing to choose.
   if #agents == 1 then
-    fn(agents[1].name or agents[1].pane_id)
+    fn(agents[1])
     return
   end
 
@@ -130,7 +132,7 @@ local function with_agent(prompt, fn)
         a.agent_status or '?',
         a.cwd and vim.fn.fnamemodify(a.cwd, ':~') or ''
       ),
-      name = a.name or a.pane_id,
+      agent = a,
     })
   end
 
@@ -138,16 +140,30 @@ local function with_agent(prompt, fn)
     source = {
       items = items,
       name = prompt,
-      choose = function(item) vim.schedule(function() fn(item.name) end) end,
+      choose = function(item) vim.schedule(function() fn(item.agent) end) end,
     },
   })
 end
 
---- Send text to a chosen agent. Not `--wait`: Neovim should not block.
+--- Type text into a chosen agent's input WITHOUT submitting it, then focus
+--- that pane so you can add more and press Enter yourself. Uses the pane-level
+--- `send-text` (vs. `agent prompt`, which always appends Enter and submits).
+local function attach_to_agent(text, what)
+  with_agent('Herdr agents -> ' .. what, function(agent)
+    if herdr({ 'pane', 'send-text', agent.pane_id, text }) then
+      herdr({ 'agent', 'focus', agent.name or agent.pane_id })
+      vim.notify('Attached ' .. what .. ' to ' .. (agent.name or agent.pane_id) .. ' (not sent)')
+    end
+  end)
+end
+
+--- Send text to a chosen agent and submit it immediately. Not `--wait`:
+--- Neovim should not block.
 local function send_to_agent(text, what)
-  with_agent('Herdr agents -> ' .. what, function(name)
-    if herdr({ 'agent', 'prompt', name, text }) then
-      vim.notify('Sent ' .. what .. ' to ' .. name)
+  with_agent('Herdr agents -> ' .. what, function(agent)
+    local target = agent.name or agent.pane_id
+    if herdr({ 'agent', 'prompt', target, text }) then
+      vim.notify('Sent ' .. what .. ' to ' .. target)
     end
   end)
 end
@@ -168,30 +184,55 @@ local function visual_selection()
   return table.concat(lines, '\n')
 end
 
+-- Context message builders, shared between the "attach" (no submit) and
+-- "send" (submit) mapping of each kind below. Return `nil` when there is
+-- nothing sensible to attach/send (e.g. an unnamed buffer for `af`/`aF`, or
+-- an empty Visual selection for `av`/`aV`).
+local function file_message()
+  local path = relative_path()
+  return path and ('Look at `' .. path .. '`.') or nil
+end
+
+local function location_message()
+  local path = relative_path() or '[scratch]'
+  return string.format('Look at `%s` around line %d.', path, vim.fn.line('.'))
+end
+
+local function selection_message()
+  local path = relative_path() or '[scratch]'
+  local selection = visual_selection()
+  if selection == '' then return nil end
+  return string.format('In `%s`:\n\n```\n%s\n```', path, selection)
+end
+
 -- Mappings ===================================================================
 
 -- stylua: ignore start
 vim.keymap.set('n', '<Leader>gw', pick_worktree, { desc = 'Worktrees (Herdr)' })
 
 vim.keymap.set('n', '<Leader>aa', function()
-  with_agent('Herdr agents -> focus', function(name) herdr({ 'agent', 'focus', name }) end)
+  with_agent('Herdr agents -> focus', function(agent) herdr({ 'agent', 'focus', agent.name or agent.pane_id }) end)
 end, { desc = 'Focus agent' })
 
+-- Lowercase attaches context to the agent's input WITHOUT submitting it (and
+-- focuses that pane so you can add more and press Enter yourself). Uppercase
+-- keeps the old behavior of sending it immediately. See `attach_to_agent()`
+-- and `send_to_agent()` above.
 vim.keymap.set('n', '<Leader>af', function()
-  local path = relative_path()
-  if path then send_to_agent('Look at `' .. path .. '`.', 'file') end
+  local m = file_message(); if m then attach_to_agent(m, 'file') end
+end, { desc = 'Attach file to agent' })
+vim.keymap.set('n', '<Leader>aF', function()
+  local m = file_message(); if m then send_to_agent(m, 'file') end
 end, { desc = 'Send file to agent' })
 
-vim.keymap.set('n', '<Leader>at', function()
-  local path = relative_path() or '[scratch]'
-  send_to_agent(string.format('Look at `%s` around line %d.', path, vim.fn.line('.')), 'location')
-end, { desc = 'Send location to agent' })
+vim.keymap.set('n', '<Leader>at', function() attach_to_agent(location_message(), 'location') end, { desc = 'Attach location to agent' })
+vim.keymap.set('n', '<Leader>aT', function() send_to_agent(location_message(), 'location') end,   { desc = 'Send location to agent' })
 
 vim.keymap.set('x', '<Leader>av', function()
-  local path = relative_path() or '[scratch]'
-  local selection = visual_selection()
-  if selection == '' then return end
-  send_to_agent(string.format('In `%s`:\n\n```\n%s\n```', path, selection), 'selection')
+  local m = selection_message(); if m then attach_to_agent(m, 'selection') end
+end, { desc = 'Attach selection to agent' })
+vim.keymap.set('x', '<Leader>aV', function()
+  local m = selection_message(); if m then send_to_agent(m, 'selection') end
 end, { desc = 'Send selection to agent' })
 
 vim.keymap.set('n', '<Leader>ap', function()

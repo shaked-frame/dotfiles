@@ -2,7 +2,9 @@
 -- │ Sidekick: inline completion  │
 -- └──────────────────────────────┘
 --
--- Scope deliberately reduced to inline completion ("ghost text") only.
+-- Scope deliberately reduced to inline completion ("ghost text", Insert mode)
+-- and Next Edit Suggestions (NES, Normal mode) - sidekick's two Tab-driven
+-- suggestion surfaces. See below for why they need separate mappings.
 --
 -- 'sidekick.nvim' can also run agent CLIs inside Neovim, but that duplicates
 -- Herdr, which is the terminal workspace manager already in use here and does
@@ -43,6 +45,13 @@ later(function()
     return '<Tab>'
   end, { expr = true, desc = 'Completion / inline completion / tab' })
 
-  -- NOTE: Normal mode `<Tab>` is deliberately NOT mapped. Doing so shadows the
-  -- built-in `<C-i>` (jump forward in the jumplist), since they are the same key.
+  -- NOTE: unlike Insert mode above, the fallback here is `<C-i>`, not a
+  -- literal `<Tab>` - Normal mode has no "insert a tab" behavior; `<Tab>` and
+  -- `<C-i>` are the same keycode, and the built-in default for that keycode
+  -- in Normal mode is jump-forward in the jumplist. Without this fallback,
+  -- mapping `<Tab>` at all would silently shadow that built-in.
+  vim.keymap.set('n', '<Tab>', function()
+    if require('sidekick').nes_jump_or_apply() then return end
+    return '<C-i>'
+  end, { expr = true, desc = 'Goto/Apply Next Edit Suggestion' })
 end)

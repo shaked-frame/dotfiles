@@ -219,6 +219,7 @@
     "context": "Editor",
     "bindings": {
       "ctrl-alt-cmd-|": "editor::GoToDiagnostic",
+      "ctrl-alt-cmd-shift-p": "editor::GoToHunk",
     },
   },
   {
