@@ -80,6 +80,9 @@
       "space f f": "file_finder::Toggle",
       // Open recent project
       "space f p": "projects::OpenRecent",
+      "space x X": "diagnostics::Deploy",
+      "space g w": "git::Worktree",
+      "space g u": "git::ViewUncommittedChanges",
       "space g g": [
         "task::Spawn",
         { "task_name": "LazyGit", "reveal_target": "center" },
