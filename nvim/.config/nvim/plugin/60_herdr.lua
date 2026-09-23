@@ -10,9 +10,10 @@
 --
 -- Cross-worktree switching therefore belongs to Herdr, not Neovim: use
 -- `prefix+w` (workspace picker), `prefix+shift+o` (open worktree) or
--- `prefix+shift+g` (create worktree). The mappings below exist so the same
--- actions are reachable without leaving Neovim, mirroring the Zed bindings
--- (`space g w` -> git::Worktree, `space a *` -> agent).
+-- `prefix+shift+g` (create worktree). `<Leader>gw` below exists so opening a
+-- worktree is reachable without leaving Neovim (`space g w` -> git::Worktree).
+-- Agent keymaps (`space a *`) live in the dispatcher 'plugin/44_agent.lua';
+-- this file is its Herdr adapter.
 --
 -- Everything here shells out to the `herdr` CLI, which talks to the running
 -- server over a socket. There is no Neovim plugin for Herdr, and no Herdr
@@ -168,76 +169,21 @@ local function send_to_agent(text, what)
   end)
 end
 
-local function relative_path()
-  local path = vim.api.nvim_buf_get_name(0)
-  if path == '' then return nil end
-  return vim.fn.fnamemodify(path, ':.')
-end
-
-local function visual_selection()
-  local mode = vim.fn.mode()
-  if mode == 'v' or mode == 'V' or mode == '\22' then
-    vim.cmd('normal! \27') -- leave Visual so the '< '> marks are set
-  end
-
-  local lines = vim.fn.getregion(vim.fn.getpos("'<"), vim.fn.getpos("'>"), { type = vim.fn.visualmode() })
-  return table.concat(lines, '\n')
-end
-
--- Context message builders, shared between the "attach" (no submit) and
--- "send" (submit) mapping of each kind below. Return `nil` when there is
--- nothing sensible to attach/send (e.g. an unnamed buffer for `af`/`aF`, or
--- an empty Visual selection for `av`/`aV`).
-local function file_message()
-  local path = relative_path()
-  return path and ('Look at `' .. path .. '`.') or nil
-end
-
-local function location_message()
-  local path = relative_path() or '[scratch]'
-  return string.format('Look at `%s` around line %d.', path, vim.fn.line('.'))
-end
-
-local function selection_message()
-  local path = relative_path() or '[scratch]'
-  local selection = visual_selection()
-  if selection == '' then return nil end
-  return string.format('In `%s`:\n\n```\n%s\n```', path, selection)
-end
+-- Adapter ====================================================================
+-- Implements the `Config.Agent` interface declared in 'plugin/44_agent.lua'
+-- (focus/attach/send over backend-agnostic context text). The `<Leader>a*`
+-- keymaps live in the dispatcher; this file owns only Herdr mechanics.
+-- Removal: delete this file and the dispatcher falls back to sidekick.
+Config.AgentHerdr = {
+  focus = function()
+    with_agent('Herdr agents -> focus', function(agent) herdr({ 'agent', 'focus', agent.name or agent.pane_id }) end)
+  end,
+  attach = attach_to_agent,
+  send = send_to_agent,
+}
 
 -- Mappings ===================================================================
 
 -- stylua: ignore start
 vim.keymap.set('n', '<Leader>gw', pick_worktree, { desc = 'Worktrees (Herdr)' })
-
-vim.keymap.set('n', '<Leader>aa', function()
-  with_agent('Herdr agents -> focus', function(agent) herdr({ 'agent', 'focus', agent.name or agent.pane_id }) end)
-end, { desc = 'Focus agent' })
-
--- Lowercase attaches context to the agent's input WITHOUT submitting it (and
--- focuses that pane so you can add more and press Enter yourself). Uppercase
--- keeps the old behavior of sending it immediately. See `attach_to_agent()`
--- and `send_to_agent()` above.
-vim.keymap.set('n', '<Leader>af', function()
-  local m = file_message(); if m then attach_to_agent(m, 'file') end
-end, { desc = 'Attach file to agent' })
-vim.keymap.set('n', '<Leader>aF', function()
-  local m = file_message(); if m then send_to_agent(m, 'file') end
-end, { desc = 'Send file to agent' })
-
-vim.keymap.set('n', '<Leader>at', function() attach_to_agent(location_message(), 'location') end, { desc = 'Attach location to agent' })
-vim.keymap.set('n', '<Leader>aT', function() send_to_agent(location_message(), 'location') end,   { desc = 'Send location to agent' })
-
-vim.keymap.set('x', '<Leader>av', function()
-  local m = selection_message(); if m then attach_to_agent(m, 'selection') end
-end, { desc = 'Attach selection to agent' })
-vim.keymap.set('x', '<Leader>aV', function()
-  local m = selection_message(); if m then send_to_agent(m, 'selection') end
-end, { desc = 'Send selection to agent' })
-
-vim.keymap.set('n', '<Leader>ap', function()
-  vim.ui.input({ prompt = 'Prompt agent: ' }, function(text)
-    if text and text ~= '' then send_to_agent(text, 'prompt') end
-  end)
-end, { desc = 'Prompt agent' })
 -- stylua: ignore end

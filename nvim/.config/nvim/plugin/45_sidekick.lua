@@ -6,11 +6,12 @@
 -- and Next Edit Suggestions (NES, Normal mode) - sidekick's two Tab-driven
 -- suggestion surfaces. See below for why they need separate mappings.
 --
--- 'sidekick.nvim' can also run agent CLIs inside Neovim, but that duplicates
--- Herdr, which is the terminal workspace manager already in use here and does
--- it better: Herdr panes survive Neovim restarts and detach, and Herdr tracks
--- agent lifecycle state (idle / working / blocked / done) via its installed
--- integrations. Agent mappings therefore drive Herdr - see 'plugin/60_herdr.lua'.
+-- 'sidekick.nvim' can also run agent CLIs inside Neovim. Inside Herdr that
+-- duplicates Herdr, which does it better: Herdr panes survive Neovim restarts
+-- and detach, and Herdr tracks agent lifecycle state (idle / working /
+-- blocked / done) via its installed integrations. The unified `<Leader>a*`
+-- keymaps live in the dispatcher 'plugin/44_agent.lua' (adapters:
+-- 'plugin/60_herdr.lua', 'plugin/46_sidekick_cli.lua').
 --
 -- Sidekick's session persistence is also a no-op here regardless: it supports
 -- only tmux and zellij backends ('sidekick/config.lua' validates exactly those)
@@ -24,7 +25,16 @@ later(function()
 
   require('sidekick').setup({
     -- Herdr owns session persistence; don't let sidekick try to manage one.
-    cli = { mux = { enabled = false } },
+    -- `picker` + `tools` are consumed outside Herdr by 'plugin/46_sidekick_cli.lua'.
+    cli = {
+      mux = { enabled = false },
+      picker = 'snacks',
+      tools = {
+        opencode = {}, -- primary: matches ~/.config/opencode (MCPs, commands, skills)
+        claude = {}, -- fallback for hardest reasoning tasks
+        codex = {},
+      },
+    },
   })
 
   -- `<Tab>` in Insert mode, in priority order:
