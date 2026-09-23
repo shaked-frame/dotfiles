@@ -149,8 +149,10 @@ kitty_graphics = true
 # Worktrees
 #------------------------------------------
 # Root directory for worktrees Herdr creates, as <repo>/<branch-slug>.
-# Default is "~/.herdr/worktrees"; this matches the existing ~/worktrees habit
-# (and the `worktree` shell function in .zshrc).
+# Default is "~/.herdr/worktrees"; this matches the existing ~/worktrees habit.
+# After creating/opening, bootstrap with `worktree-setup` (pnpm install) and
+# `link-worktree-zed` (.zed settings link) from
+# `zsh/.config/zsh/lazygit-functions.zsh`. Full flow: `docs/worktree-flow.md`.
 #
 # NOTE: pre-existing worktrees under ~/frame/.worktrees/ are unaffected - this
 # only decides where NEW ones land. `herdr worktree list` still finds all of

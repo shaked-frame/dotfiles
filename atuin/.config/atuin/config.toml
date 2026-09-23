@@ -280,7 +280,8 @@ records = true
 
 [ai]
 enabled = true
-model = "fast"
+# model = "gpt-4o-mini"  # only valid with your local atuin-ai-server; unset = hosted default
+# endpoint = "http://localhost:8080"  # uncomment to use your local atuin-ai-server
 ## The list of enabled filter modes, in order of priority.
 ## The "workspace" mode is skipped when not in a workspace or workspaces = false.
 ## Default filter mode can be overridden with the filter_mode setting.
