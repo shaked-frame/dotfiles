@@ -12,6 +12,9 @@
 -- so mappings below reliably take precedence.
 --
 -- Keep this file as small as possible: prefer non-conflicting keys where you can.
+--
+-- Ordering matters here (this file must sort after what it overrides):
+-- see the scheduling contract in 'init.lua'.
 
 local later = Config.later
 
