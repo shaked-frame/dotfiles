@@ -265,6 +265,10 @@ later(function()
       toml = { 'oxfmt' },
     },
   })
+
+  -- Signal to the format-on-save autocmd in 'plugin/10_options.lua' that
+  -- setup ran; saves before this are a no-op (see scheduling contract).
+  Config.conform_ready = true
 end)
 
 -- Snippets ===================================================================

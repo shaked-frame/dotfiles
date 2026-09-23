@@ -311,11 +311,22 @@ now_if_args(function()
   -- Add common bookmarks for every explorer. Example usage inside explorer:
   -- - `'c` to navigate into your config directory
   -- - `g?` to see available bookmarks
+  --
+  -- Frame repo bookmarks (root detection lives in `Config.frame_root()`,
+  -- see 'init.lua', so the sentinel and walk live in exactly one place):
+  -- - `'a` frontend/apps/web, `'f` frontend/, `'p` frontend/packages/
+  -- NOTE: vimpack plugins moved to `'P` to free `'p` for packages.
   local add_marks = function()
     MiniFiles.set_bookmark('c', vim.fn.stdpath('config'), { desc = 'Config' })
     local vimpack_plugins = vim.fn.stdpath('data') .. '/site/pack/core/opt'
-    MiniFiles.set_bookmark('p', vimpack_plugins, { desc = 'Plugins' })
+    MiniFiles.set_bookmark('P', vimpack_plugins, { desc = 'Plugins' })
     MiniFiles.set_bookmark('w', vim.fn.getcwd, { desc = 'Working directory' })
+    local root = Config.frame_root()
+    if root ~= nil then
+      MiniFiles.set_bookmark('a', root .. '/frontend/apps/web', { desc = 'Web app' })
+      MiniFiles.set_bookmark('f', root .. '/frontend', { desc = 'Frontend' })
+      MiniFiles.set_bookmark('p', root .. '/frontend/packages', { desc = 'Packages' })
+    end
   end
   Config.new_autocmd('User', 'MiniFilesExplorerOpen', add_marks, 'Add bookmarks')
 end)

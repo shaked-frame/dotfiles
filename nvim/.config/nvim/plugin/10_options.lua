@@ -105,7 +105,12 @@ Config.new_autocmd('FileType', nil, f, "Proper 'formatoptions'")
 vim.lsp.document_color.enable(false)
 
 -- Format on save via 'conform.nvim'. See 'plugin/40_plugins.lua' for formatters.
-local format_on_save = function(args) require('conform').format({ bufnr = args.buf }) end
+-- Guarded by `Config.conform_ready` (see scheduling contract in 'init.lua'):
+-- a save before conform's deferred setup is a no-op, not an error.
+local format_on_save = function(args)
+  if not Config.conform_ready then return end
+  require('conform').format({ bufnr = args.buf })
+end
 Config.new_autocmd('BufWritePre', '*', format_on_save, 'Format on save')
 
 -- There are other autocommands created by 'mini.basics'. See 'plugin/30_mini.lua'.

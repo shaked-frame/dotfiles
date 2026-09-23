@@ -18,49 +18,9 @@ local nmap = function(lhs, rhs, desc)
   vim.keymap.set('n', lhs, rhs, { desc = desc })
 end
 
--- Buffer picker that allows deleting a buffer with `<C-d>` without closing it
-local list_buffer_picker_items = function(include_current, include_unlisted)
-  -- `nvim_exec2` rather than the deprecated `nvim_exec`
-  local cmd = 'buffers' .. (include_unlisted and '!' or '')
-  local buffers_output = vim.api.nvim_exec2(cmd, { output = true }).output
-  local cur_buf_id = vim.api.nvim_get_current_buf()
-  local items = {}
-
-  for _, l in ipairs(vim.split(buffers_output, '\n')) do
-    local buf_str, name = l:match('^%s*%d+'), l:match('"(.*)"')
-    local buf_id = tonumber(buf_str)
-    if buf_id ~= nil and (include_current or buf_id ~= cur_buf_id) then
-      table.insert(items, { text = name, bufnr = buf_id })
-    end
-  end
-
-  return items
-end
-
-local pick_buffers = function()
-  local pick = require('mini.pick')
-  local local_opts = { include_current = true, include_unlisted = false }
-
-  local delete_current = function()
-    local matches = pick.get_picker_matches()
-    local current = matches and matches.current or nil
-    local bufnr = current and current.bufnr or nil
-    if not (bufnr and vim.api.nvim_buf_is_valid(bufnr)) then return end
-
-    MiniBufremove.delete(bufnr)
-
-    if not pick.is_picker_active() then return end
-
-    local items = list_buffer_picker_items(local_opts.include_current, local_opts.include_unlisted)
-    if #items == 0 then return true end
-    pick.set_picker_items(items)
-  end
-
-  pick.builtin.buffers(local_opts, {
-    mappings = { delete_buffer = { char = '<C-d>', func = delete_current } },
-  })
-end
-
+-- Picker and split mechanics live in 'plugin/21_pickers.lua'
+-- (`Config.Pickers`) and 'plugin/22_splits.lua' (`Config.Splits`).
+-- This file stays a thin keymap catalog.
 -- Paste linewise before/after current line
 -- Usage: `yiw` to yank a word and `]p` to put it on the next line.
 nmap('[p', '<Cmd>exe "iput! " . v:register<CR>', 'Paste Above')
@@ -71,7 +31,7 @@ nmap('H', '<Cmd>bprevious<CR>', 'Previous buffer')
 nmap('L', '<Cmd>bnext<CR>', 'Next buffer')
 
 -- Buffer picker (Zed: `space space` = tab_switcher::Toggle)
-nmap('<Leader><Leader>', pick_buffers, 'Buffers')
+nmap('<Leader><Leader>', function() Config.Pickers.buffers() end, 'Buffers')
 
 -- Clear search highlight and LSP reference highlights
 nmap('<Esc>', function()
@@ -81,61 +41,12 @@ end, 'Clear highlights')
 
 -- Splits (Zed: `s s` SplitDown, `s v` SplitAndMoveRight, `s h`/`s l` move item)
 
--- Runs `split_cmd` (e.g. 'vsplit', 'leftabove vsplit'), then moves the
--- buffer that was active *before* the split into the new window and
--- restores the original window to its alternate buffer (or a blank buffer
--- if there is none). Without this, Vim's split commands just show the same
--- buffer in both windows instead of "moving" it.
-local function split_and_move(split_cmd)
-  local orig_win = vim.api.nvim_get_current_win()
-  local alt_buf = vim.fn.bufnr('#')
-  vim.cmd(split_cmd)
-  local new_win = vim.api.nvim_get_current_win()
-  vim.api.nvim_set_current_win(orig_win)
-  if alt_buf > 0 and vim.fn.buflisted(alt_buf) == 1 then
-    vim.cmd('buffer ' .. alt_buf)
-  else
-    vim.cmd('enew')
-  end
-  vim.api.nvim_set_current_win(new_win)
-end
-
--- Moves the current window's buffer one step to the right/left, swapping
--- places with whichever window is directionally adjacent (`wincmd h`/`l`,
--- which is layout-aware). This matches Zed's "move pane" behavior of
--- stepping one slot at a time. With 3+ windows, `wincmd L`/`H` would instead
--- jump straight to the outer edge, skipping past any window in between.
--- If this is the only window, fall back to creating a fresh split and
--- moving the buffer into it, rather than duplicating it into both.
-local function move_to_side(dir) -- dir: 'h' (left) or 'l' (right)
-  if #vim.api.nvim_tabpage_list_wins(0) == 1 then
-    split_and_move(dir == 'l' and 'vsplit' or 'leftabove vsplit')
-    return
-  end
-  local cur_win = vim.api.nvim_get_current_win()
-  vim.cmd('wincmd ' .. dir)
-  local neighbor_win = vim.api.nvim_get_current_win()
-  if neighbor_win == cur_win then return end -- already at the outer edge
-
-  local cur_buf = vim.api.nvim_win_get_buf(cur_win)
-  local neighbor_buf = vim.api.nvim_win_get_buf(neighbor_win)
-  -- Save each window's view (cursor, topline, etc.) before swapping buffers,
-  -- so the cursor position travels with its buffer instead of staying put.
-  local cur_view = vim.api.nvim_win_call(cur_win, vim.fn.winsaveview)
-  local neighbor_view = vim.api.nvim_win_call(neighbor_win, vim.fn.winsaveview)
-
-  vim.api.nvim_win_set_buf(cur_win, neighbor_buf)
-  vim.api.nvim_win_set_buf(neighbor_win, cur_buf)
-  vim.api.nvim_win_call(cur_win, function() vim.fn.winrestview(neighbor_view) end)
-  vim.api.nvim_win_call(neighbor_win, function() vim.fn.winrestview(cur_view) end)
-
-  vim.api.nvim_set_current_win(neighbor_win) -- focus follows the moved buffer
-end
+-- Split mechanics live in 'plugin/22_splits.lua' (`Config.Splits`).
 
 nmap('ss', '<Cmd>split<CR>', 'Split horizontally')
-nmap('sv', function() split_and_move('vsplit') end, 'Split and move buffer right')
-nmap('sl', function() move_to_side('l') end, 'Move buffer to right split')
-nmap('sh', function() move_to_side('h') end, 'Move buffer to left split')
+nmap('sv', function() Config.Splits.split_and_move('vsplit') end, 'Split and move buffer right')
+nmap('sl', function() Config.Splits.move_to_side('l') end, 'Move buffer to right split')
+nmap('sh', function() Config.Splits.move_to_side('h') end, 'Move buffer to left split')
 
 -- Jump to a word (Zed: `g w` = HelixJumpToWord)
 nmap('gw', function() MiniJump2d.start(MiniJump2d.builtin_opts.word_start) end, 'Jump to word')
@@ -351,27 +262,23 @@ nmap_leader('eR', source_plugin_file('20_keymaps.lua'),     'Reload keymaps')
 local pick_added_hunks_buf = '<Cmd>Pick git_hunks path="%" scope="staged"<CR>'
 local pick_workspace_symbols_live = '<Cmd>Pick lsp scope="workspace_symbol_live"<CR>'
 
--- Find files including hidden/ignored ones, and follow symlinks. `--follow` is
--- important for stow-managed dotfiles: '~/.config/*' are symlinks into
--- '~/dotfiles', which `rg` will not descend into by default.
-local pick_files_all = function()
-  local command = { 'rg', '--files', '--hidden', '--no-ignore', '--follow', '--glob', '!.git/**' }
-  MiniPick.builtin.cli({ command = command }, { source = { name = 'Files (all)', cwd = vim.fn.getcwd() } })
-end
+-- File finders live in 'plugin/21_pickers.lua' (`Config.Pickers`).
 
 nmap_leader('f/', '<Cmd>Pick history scope="/"<CR>',            '"/" history')
 nmap_leader('f:', '<Cmd>Pick history scope=":"<CR>',            '":" history')
 nmap_leader('fa', '<Cmd>Pick git_hunks scope="staged"<CR>',     'Added hunks (all)')
 nmap_leader('fA', pick_added_hunks_buf,                         'Added hunks (buf)')
-nmap_leader('fb', pick_buffers,                                 'Buffers')
+nmap_leader('fb', function() Config.Pickers.buffers() end,                 'Buffers')
 nmap_leader('fc', '<Cmd>Pick git_commits<CR>',                  'Commits (all)')
 nmap_leader('fC', '<Cmd>Pick git_commits path="%"<CR>',         'Commits (buf)')
 nmap_leader('fd', '<Cmd>Pick diagnostic scope="all"<CR>',       'Diagnostic workspace')
 nmap_leader('fD', '<Cmd>Pick diagnostic scope="current"<CR>',   'Diagnostic buffer')
 nmap_leader('ff', '<Cmd>Pick files<CR>',                        'Files')
-nmap_leader('fF', pick_files_all,                               'Files (hidden+ignored)')
+nmap_leader('fF', function() Config.Pickers.files_all() end,               'Files (hidden+ignored)')
 nmap_leader('fg', '<Cmd>Pick grep_live<CR>',                    'Grep live')
 nmap_leader('fG', '<Cmd>Pick grep pattern="<cword>"<CR>',       'Grep current word')
+nmap_leader('fe', function() Config.Pickers.frontend_files() end,         'Files (frontend)')
+nmap_leader('fE', function() Config.Pickers.frontend_grep() end,          'Grep (frontend)')
 nmap_leader('fh', '<Cmd>Pick help<CR>',                         'Help tags')
 nmap_leader('fH', '<Cmd>Pick hl_groups<CR>',                    'Highlight groups')
 nmap_leader('fl', '<Cmd>Pick buf_lines scope="all"<CR>',        'Lines (all)')
@@ -479,16 +386,8 @@ nmap_leader('tt', '<Cmd>vertical term<CR>',   'Terminal (vertical)')
 -- - `<Leader>vv` - add    "core" label to current file.
 -- - `<Leader>vV` - remove "core" label to current file.
 -- - `<Leader>vc` - pick among all files with "core" label.
-local make_pick_core = function(cwd, desc)
-  return function()
-    local sort_latest = MiniVisits.gen_sort.default({ recency_weight = 1 })
-    local local_opts = { cwd = cwd, filter = 'core', sort = sort_latest }
-    MiniExtra.pickers.visit_paths(local_opts, { source = { name = desc } })
-  end
-end
-
-nmap_leader('vc', make_pick_core('',  'Core visits (all)'),       'Core visits (all)')
-nmap_leader('vC', make_pick_core(nil, 'Core visits (cwd)'),       'Core visits (cwd)')
+nmap_leader('vc', function() Config.Pickers.core_visits('', 'Core visits (all)') end,  'Core visits (all)')
+nmap_leader('vC', function() Config.Pickers.core_visits(nil, 'Core visits (cwd)') end, 'Core visits (cwd)')
 nmap_leader('vv', '<Cmd>lua MiniVisits.add_label("core")<CR>',    'Add "core" label')
 nmap_leader('vV', '<Cmd>lua MiniVisits.remove_label("core")<CR>', 'Remove "core" label')
 nmap_leader('vl', '<Cmd>lua MiniVisits.add_label()<CR>',          'Add label')

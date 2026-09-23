@@ -94,6 +94,25 @@ Config.on_packchanged = function(plugin_name, kinds, callback, desc)
   Config.new_autocmd('PackChanged', '*', f, desc)
 end
 
+-- Frame repo locator: nearest ancestor (up from cwd) holding
+-- 'frontend/apps/web'. Covers '~/frame' and any
+-- '~/worktrees/frame/<name>/frame' checkout. Returns nil outside frame repos.
+-- Shared by 'plugin/20_keymaps.lua' (scoped finders) and
+-- 'plugin/30_mini.lua' (explorer bookmarks) so the sentinel, walk direction,
+-- and lower bound live in exactly one place. The optional argument (defaulting
+-- to cwd) keeps the walk testable through this interface.
+Config.frame_root = function(cwd)
+  local home = vim.env.HOME or vim.fn.expand('~')
+  local dir = cwd or vim.fn.getcwd()
+  while dir and dir ~= '' and dir ~= '/' and #dir >= #home do
+    if vim.fn.isdirectory(dir .. '/frontend/apps/web') == 1 then return dir end
+    local parent = vim.fn.fnamemodify(dir, ':h')
+    if parent == dir then break end
+    dir = parent
+  end
+  return nil
+end
+
 -- 'mini.nvim' - all-in-one plugin powering most MiniMax features.
 -- See 'plugin/30_mini.lua' for how it is used.
 -- Load now to have 'mini.misc' available for custom loading helpers.
@@ -121,3 +140,39 @@ Config.later = function(f) misc.safely('later', f) end
 Config.now_if_args = vim.fn.argc(-1) > 0 and Config.now or Config.later
 Config.on_event = function(ev, f) misc.safely('event:' .. ev, f) end
 Config.on_filetype = function(ft, f) misc.safely('filetype:' .. ft, f) end
+
+-- ┌─────────────────────┐
+-- │ Scheduling contract │
+-- └─────────────────────┘
+--
+-- Ordering in this config is load-bearing. Two rules everything depends on:
+-- 1. Files in 'plugin/' source alphabetically: 10_options < 20_keymaps <
+--    21_pickers < 22_splits < 30_mini < 40_plugins < 44_agent < 45_sidekick <
+--    46_sidekick_cli < 50_overrides < 60_herdr.
+--    Slice files (21/22) must sort after their keymap catalog (20) is fine,
+--    but keymaps may only reference `Config.Pickers` / `Config.Splits` inside
+--    function bodies (press time) — never as a bare value at source time,
+--    when the slices may not have been sourced yet.
+-- 2. `Config.later()` callbacks run in registration order, so a `later()`
+--    registered in a later-sourced file runs after earlier ones.
+-- 3. `Config.now_if_args()` runs now only when Neovim starts with file
+--    arguments (otherwise it is `later()`); anything needed for first draw
+--    on the dashboard must use `now()`, not `now_if_args()`.
+--
+-- Shared `Config` fields (writer -> reader; reads must happen after writes):
+-- - `leader_group_clues`: written at source time in 'plugin/20_keymaps.lua',
+--   read deferred in `later()` by 'plugin/30_mini.lua' (mini.clue setup).
+-- - `AgentHerdr` / `AgentSidekick`: written by adapter files (source time for
+--   Herdr, `later()` for sidekick), read at press time by the dispatcher
+--   'plugin/44_agent.lua' — never at source time.
+-- - `conform_ready`: written by 'plugin/40_plugins.lua' after
+--   `require('conform').setup()`, read by the format-on-save autocmd in
+--   'plugin/10_options.lua', so a save before setup is a no-op, not an error.
+--
+-- Consequences (do not break without updating all sides):
+-- - 'plugin/50_overrides.lua' ("mappings that must win last") must keep a
+--   filename sorting after every file whose mappings it overrides (notably
+--   'plugin/30_mini.lua').
+-- - Mason's bin dir is prepended to $PATH eagerly at source time in
+--   'plugin/40_plugins.lua' because `require('mason').setup()` itself runs
+--   deferred; a server spawned before that would otherwise miss Mason binaries.
