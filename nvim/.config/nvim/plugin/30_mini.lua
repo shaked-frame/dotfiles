@@ -570,7 +570,21 @@ later(function() require('mini.comment').setup() end)
 -- - `:h MiniDiff-overview` - overview of how module works
 -- - `:h MiniDiff-diff-summary` - available summary information
 -- - `:h MiniDiff.gen_source` - available built-in sources
-later(function() require('mini.diff').setup() end)
+-- Zed-style gutter bars: without this the style auto-picks 'number' (because
+-- 'number' is set in 'plugin/10_options.lua'), coloring the line numbers
+-- instead of drawing bars left of them. `MiniDiffSignAdd/Change/Delete`
+-- colors come from `Added`/`Changed`/`Removed` (green/amber/red in onedark).
+later(function()
+  require('mini.diff').setup({
+    view = {
+      style = 'sign',
+      signs = { add = '▍', change = '▍', delete = '▍' },
+    },
+    -- Cyclic hunk navigation everywhere (`[h`/`]h`, `Hyper+p`): wrap past
+    -- the last hunk back to the first (mini.diff notifies on wrap).
+    options = { wrap_goto = true },
+  })
+end)
 
 -- Git integration for more straightforward Git actions based on Neovim's state.
 -- It is not meant as a fully featured Git client, only to provide helpers that

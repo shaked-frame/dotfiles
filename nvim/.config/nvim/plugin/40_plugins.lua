@@ -179,6 +179,11 @@ now_if_args(function()
     -- 'json' and 'jsonc' filetypes; schema wiring lives in 'after/lsp/jsonls.lua'.
     'jsonls',
     'copilot',
+    -- Prose lint (spelling + grammar with code actions) for markdown.
+    -- Mason package: 'harper-ls'. Complements the built-in `spell` flagging
+    -- in 'after/ftplugin/markdown.lua', which has no hover or actions.
+    -- Configured in 'after/lsp/harper_ls.lua'.
+    'harper_ls',
     -- Linting, via the oxc toolchain. 'oxlint --lsp' reports diagnostics as a
     -- language server, so no separate lint plugin (nvim-lint / none-ls) is
     -- needed. Formatting is handled by 'oxfmt' through conform above rather
@@ -263,6 +268,8 @@ later(function()
       json = { 'oxfmt' },
       jsonc = { 'oxfmt' },
       toml = { 'oxfmt' },
+      -- Needs `:Mason` install of `prettierd` (no md formatter yet).
+      markdown = { 'prettierd' },
     },
   })
 
@@ -293,6 +300,8 @@ end)
 -- - 'inc-rename.nvim' - live preview while renaming via LSP (`<Leader>lr`)
 -- - 'trouble.nvim'    - pretty diagnostics/quickfix/reference lists (`<Leader>x*`)
 -- - 'grug-far.nvim'   - project-wide search and replace (`<Leader>r*`)
+-- - 'diffview.nvim'   - all touched files rendered side by side (`<Leader>gu`);
+--   needs 'plenary.nvim' as a dependency
 later(function()
   add({
     'https://github.com/gbprod/yanky.nvim',
@@ -300,12 +309,36 @@ later(function()
     'https://github.com/smjonas/inc-rename.nvim',
     'https://github.com/folke/trouble.nvim',
     'https://github.com/MagicDuck/grug-far.nvim',
+    'https://github.com/nvim-lua/plenary.nvim',
+    'https://github.com/sindrets/diffview.nvim',
   })
 
   require('yanky').setup()
   require('inc_rename').setup()
   require('trouble').setup()
   require('grug-far').setup()
+  require('diffview').setup({
+    keymaps = {
+      -- `<Leader>e` (Explore) and `<Leader>b` (Buffer) are whole prefix groups
+      -- here; diffview's buffer-local focus/toggle-files would shadow them
+      -- inside every diffview buffer. Disabled so the groups keep working.
+      -- Deliberately kept: `<tab>` file cycling (NES-Tab yields inside diffs),
+      -- `-`/`s` staging, `L` log, `S`/`U`/`X` stage-all/unstage/restore —
+      -- the panel's own job. Press `g?` in any diffview buffer for its keys.
+      view = {
+        { 'n', '<leader>e', false },
+        { 'n', '<leader>b', false },
+      },
+      file_panel = {
+        { 'n', '<leader>e', false },
+        { 'n', '<leader>b', false },
+      },
+      file_history_panel = {
+        { 'n', '<leader>e', false },
+        { 'n', '<leader>b', false },
+      },
+    },
+  })
 
   -- 'dial.nvim' needs a mapping per mode/kind
   --
@@ -400,6 +433,10 @@ Config.now(function()
       -- defaults.
       ['@tag'] = { fg = '$blue' },
       ['@tag.builtin'] = { fg = '$blue' },
+
+      -- Active buffer tab text in function-name blue (mini.tabline only).
+      ['MiniTablineCurrent'] = { fg = '$blue' },
+      ['MiniTablineModifiedCurrent'] = { fg = '$blue' },
     },
   })
   require('onedark').load()

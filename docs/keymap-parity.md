@@ -19,12 +19,14 @@ and were not found in Zed's keymap — treat as unconfirmed.
 | ✓ `s h` / `s l` MoveItemToPaneInDirection | `sh` / `sl` move buffer to split | nvim steps one slot via `wincmd h/l` swap |
 | ✓ `g w` vim::HelixJumpToWord | `gw` MiniJump2d word start | |
 | ✓ `g r r` editor::FindAllReferences | `grr` LSP references picker | nvim needs `50_overrides` (mini.operators owns `gr`) |
+| ✓ `g r a` editor::ToggleCodeActions | `gra` code action (also `<Leader>la`) | `timeoutlen` pause after `gr` (replace operator); `graq`/`grai` still work typed fast |
 | ✓ `space m` workspace::ToggleZoom | `<Leader>m` / `<Leader>M` / `<Leader>oz` zoom | nvim `mini.map` stays disabled to free `m` |
 | ✓ `space m f` git::OpenModifiedFiles | `<Leader>mf` modified files | |
 | ✓ `alt-tab` editor::AcceptNextWordEditPrediction | `<C-l>` accept inline completion word | different chord, same idea |
 | ✓ `ctrl-h/j/k/l` workspace::ActivatePane* | `<C-h/j/k/l>` window nav (mini.basics) | per-layer chords; see `docs/pane-chords.md` |
 | ✓ `ctrl-alt-cmd-^&*(` ResizePane* | Hyper `8/7/9/0` resize window | different chord families |
 | ✓ `ctrl-alt-cmd-\|` editor::GoToDiagnostic | Hyper `\` next diagnostic | different chord families |
+| ✓ `ctrl-alt-cmd-shift-p` editor::GoToHunk | `Hyper+p` next hunk (also `[h`/`]h`) |
 | ~ `space =` EqualizePanes | `<Leader>=` equalize windows | not found in Zed keymap — unconfirmed |
 | ~ `space shift-m` Maximize | `<Leader>M` zoom | not found in Zed keymap — unconfirmed |
 | ~ `f7`/`f8` diff hunk nav | `[h` / `]h` MiniDiff hunks | not found in Zed keymap — unconfirmed |

@@ -26,7 +26,7 @@ new_cwd = "follow"  # new panes/tabs inherit the current working directory
 # Key Mappings (tmux-style)
 #------------------------------------------
 [keys]
-prefix = "ctrl+a"
+prefix = "f12"
 
 # Panes: vim navigation, tmux-style splits
 # Panes: vim navigation, tmux-style splits
@@ -40,10 +40,10 @@ focus_pane_down = ["prefix+j", "ctrl+alt+j"]
 focus_pane_up = ["prefix+k", "ctrl+alt+k"]
 focus_pane_right = ["prefix+l", "ctrl+alt+l"]
 
-split_horizontal = "prefix+-"            # stacked split
-split_vertical = "prefix+|"              # side-by-side split
+split_horizontal = ["prefix+-", "ctrl+alt+shift+d"]  # stacked split
+split_vertical = ["prefix+|", "ctrl+alt+d"]          # side-by-side split
 close_pane = "prefix+x"
-zoom = "prefix+z"
+zoom = ["prefix+z", "ctrl+alt+z"]
 resize_mode = "prefix+r"
 rename_pane = "prefix+shift+p"
 last_pane = "prefix+a"                   # like `bind a last-window`
@@ -51,9 +51,9 @@ cycle_pane_next = "prefix+tab"
 cycle_pane_previous = "prefix+shift+tab"
 
 # Tabs (tmux windows)
-new_tab = "prefix+c"
-next_tab = "prefix+n"
-previous_tab = "prefix+p"
+new_tab = ["prefix+c", "ctrl+alt+c"]
+next_tab = ["prefix+n", "ctrl+alt+]"]
+previous_tab = ["prefix+p", "ctrl+alt+["]
 rename_tab = "prefix+shift+t"
 close_tab = "prefix+shift+x"
 switch_tab = "prefix+1..9"
@@ -65,21 +65,26 @@ open_worktree = "prefix+shift+o"        # pick an existing worktree to open
 # Use `herdr worktree remove` when that is actually intended.
 
 # Workspaces (tmux sessions)
+# Worktree-backed workspaces ~= Zed window per worktree. F12 thumb key = prefix.
+# ctrl+alt+* are direct, no prefix needed.
 new_workspace = "prefix+shift+n"
 rename_workspace = "prefix+shift+w"
 close_workspace = "prefix+shift+d"
-workspace_picker = "prefix+w"
+workspace_picker = ["prefix+w", "ctrl+alt+w"]
 switch_workspace = "prefix+shift+1..9"
-previous_workspace = "prefix+alt+p"
-next_workspace = "prefix+alt+n"
+previous_workspace = ["prefix+alt+p", "ctrl+alt+p"]
+next_workspace = ["prefix+alt+n", "ctrl+alt+n"]
+previous_agent = "ctrl+alt+i"
+next_agent = "ctrl+alt+o"
+focus_agent = "ctrl+alt+1..9"
 
 # Misc
 help = "prefix+?"
 settings = "prefix+comma"
 detach = "prefix+d"
 reload_config = "prefix+shift+r"
-toggle_sidebar = "prefix+b"
-goto = "prefix+g"
+toggle_sidebar = ["prefix+b", "ctrl+alt+b"]
+goto = ["prefix+g", "ctrl+alt+g"]
 edit_scrollback = "prefix+e"
 
 # Navigate mode: vim keys
@@ -118,6 +123,17 @@ key = "prefix+shift+a"
 type = "shell"
 command = "herdr pane zoom --toggle --pane \"$(herdr agent list | jq -r --arg ws \"$HERDR_ACTIVE_WORKSPACE_ID\" --arg tab \"$HERDR_ACTIVE_TAB_ID\" '[.result.agents[] | select(.workspace_id==$ws and .tab_id==$tab)][0].pane_id // empty')\""
 description = "Toggle agent pane (zoom)"
+
+# Toggle between the "Terminal" tab and the "Vim" tab in the current
+# workspace: from anywhere -> Terminal, from Terminal -> back to Vim.
+# Prefix match covers "Term" (main) and "Terminal" (secondary/third).
+# Requires `jq`. NOTE: `cmd` chords need the outer terminal to deliver them;
+# if Ghostty/macOS eats `cmd+j`, free it there or pick another chord.
+[[keys.command]]
+key = "cmd+j"
+type = "shell"
+command = "TARGET=\"$(herdr tab list --workspace \"$HERDR_ACTIVE_WORKSPACE_ID\" | jq -r --arg t \"$HERDR_ACTIVE_TAB_ID\" '(.result.tabs | map(select(.tab_id==$t))[0].label // \"\") as $cur | if ($cur | ascii_downcase | startswith(\"term\")) then ([.result.tabs[] | select(.label // \"\" | ascii_downcase | startswith(\"vim\"))][0].tab_id // empty) else ([.result.tabs[] | select(.label // \"\" | ascii_downcase | startswith(\"term\"))][0].tab_id // empty) end')\"; [ -n \"$TARGET\" ] && herdr tab focus \"$TARGET\""
+description = "Toggle Terminal/Vim tab"
 
 #------------------------------------------
 # UI

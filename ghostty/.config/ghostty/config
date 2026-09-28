@@ -106,6 +106,27 @@ keybind = alt+right=text:\x1b[1;3C
 keybind = cmd+left=text:\x1b[H
 keybind = cmd+right=text:\x1b[F
 
+# Hyper key (ZSA Voyager sends Super+Ctrl+Alt+Shift as one chord)
+# Force raw CSI-u bytes so the full modifier set reaches the pane even when
+# the app inside never negotiated kitty keyboard: Super-modified keys have no
+# legacy encoding, so without this the chord arrives as nothing.
+# Modifiers shift+alt+ctrl+super encode as 15 (1+2+4+8, plus one).
+# - Hyper+8/7/9/0 (digits 56/55/57/48) -> nvim window resize (`H('8')` etc.)
+# - Hyper+\ (backslash 92) -> nvim next diagnostic (`H('\\')`)
+# - Hyper+p (112) -> nvim next hunk (`H('p')`)
+# NOTE: letter triggers must be UPPERCASE here (`P`, not `p`) — with Shift
+# held Ghostty matches the produced case. Symbols use physical names
+# (`backslash`) regardless of their shifted form. Verified 2026-09-23:
+# lowercase `p` parsed but never fired; uppercase fires immediately.
+# Blast radius is narrow on purpose: shells ignore CSI-u, Herdr binds no Super
+# chords (so it forwards them), and Zed is a separate app, unaffected.
+keybind = super+ctrl+alt+shift+8=text:\x1b[56;15u
+keybind = super+ctrl+alt+shift+7=text:\x1b[55;15u
+keybind = super+ctrl+alt+shift+9=text:\x1b[57;15u
+keybind = super+ctrl+alt+shift+0=text:\x1b[48;15u
+keybind = super+ctrl+alt+shift+backslash=text:\x1b[92;15u
+keybind = super+ctrl+alt+shift+P=text:\x1b[112;15u
+
 # tmux window switching
 # keybind = ctrl+tab=text:\x01L
 # keybind = ctrl+shift+tab=text:\x01H

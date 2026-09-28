@@ -29,6 +29,56 @@ later(function()
     cli = {
       mux = { enabled = false },
       picker = 'snacks',
+      -- Custom prompt library, sent via `<Leader>aP` (see
+      -- 'plugin/46_sidekick_cli.lua'). Merged over sidekick's built-ins
+      -- (`changes`, `diagnostics`, `explain`, `fix`, `optimize`, `review`,
+      -- `tests`, ...). Values are templates with `{context}` variables
+      -- (`{this}` file-or-selection, `{file}`, `{position}`, `{line}`,
+      -- `{selection}`, `{diagnostics}`, `{function}`, `{class}`, ...) or
+      -- `function(ctx)` returning the prompt text.
+      prompts = {
+        find_bugs = 'Find bugs in {this}. For each bug give the file and line.',
+        simplify = 'Simplify {this} without changing its behavior.',
+        -- Opencode slash commands (`~/.config/opencode/command/`): sending
+        -- `/name` as chat input runs the command, so the library can trigger
+        -- them. `{this}` becomes the command's `$ARGUMENTS`.
+        create_pr = '/create-pr {this}',
+      },
+      win = {
+        keys = {
+          -- `<D-r>` mirrors the global 'Focus agent' mapping
+          -- ('plugin/44_agent.lua'), but that one is Normal-mode only so it
+          -- never fires inside the chat terminal. This buffer-local variant
+          -- closes the chat from Terminal and Normal mode.
+          hide_cmd_r = { '<D-r>', 'hide', mode = 'nt', desc = 'Hide sidekick chat' },
+          -- Wheel in terminal-Normal mode scrolls Neovim's viewport, moving
+          -- the *entire* agent UI (input box included) instead of just the
+          -- transcript. Per `:h terminal-input`, wheel events are only
+          -- forwarded to the app (which scrolls just the conversation, input
+          -- pinned) in Terminal mode. Terminal-mode wheel is deliberately
+          -- untouched: a mapping there would *stop* forwarding. Viewport
+          -- scroll of a fullscreen TUI is never useful (no scrollback
+          -- content), so nothing is lost.
+          --
+          -- Focus-aware: a wheel over the chat while it is focused re-enters
+          -- Terminal mode and forwards the event to the agent. A wheel that
+          -- merely hovers the unfocused chat is swallowed (`''`) so the pane
+          -- stays in place - an unguarded `<Cmd>startinsert` here would run
+          -- in the *focused* code window and drop it into Insert mode.
+          wheel_up = { '<ScrollWheelUp>', function()
+            if vim.api.nvim_get_current_win() == vim.fn.getmousepos().winid then
+              return '<Cmd>startinsert<CR><ScrollWheelUp>'
+            end
+            return ''
+          end, mode = 'n', expr = true, desc = 'Forward wheel to agent' },
+          wheel_down = { '<ScrollWheelDown>', function()
+            if vim.api.nvim_get_current_win() == vim.fn.getmousepos().winid then
+              return '<Cmd>startinsert<CR><ScrollWheelDown>'
+            end
+            return ''
+          end, mode = 'n', expr = true, desc = 'Forward wheel to agent' },
+        },
+      },
       tools = {
         opencode = {}, -- primary: matches ~/.config/opencode (MCPs, commands, skills)
         claude = {}, -- fallback for hardest reasoning tasks

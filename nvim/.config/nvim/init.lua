@@ -148,7 +148,7 @@ Config.on_filetype = function(ft, f) misc.safely('filetype:' .. ft, f) end
 -- Ordering in this config is load-bearing. Two rules everything depends on:
 -- 1. Files in 'plugin/' source alphabetically: 10_options < 20_keymaps <
 --    21_pickers < 22_splits < 30_mini < 40_plugins < 44_agent < 45_sidekick <
---    46_sidekick_cli < 50_overrides < 60_herdr.
+--    46_sidekick_cli < 47_markdown < 50_overrides < 60_herdr.
 --    Slice files (21/22) must sort after their keymap catalog (20) is fine,
 --    but keymaps may only reference `Config.Pickers` / `Config.Splits` inside
 --    function bodies (press time) — never as a bare value at source time,

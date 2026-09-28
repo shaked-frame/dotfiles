@@ -33,9 +33,9 @@ local function in_herdr()
   return false
 end
 
---- Run a herdr CLI command and decode its JSON response.
+--- Run a herdr CLI command.
 ---@param args string[]
----@return table|nil
+---@return boolean success, table|nil body decoded JSON body (nil when the command prints none)
 local function herdr(args)
   local cmd = vim.list_extend({ 'herdr' }, args)
   local out = vim.system(cmd, { text = true }):wait()
@@ -43,12 +43,16 @@ local function herdr(args)
   if out.code ~= 0 then
     -- Server errors arrive as JSON on stderr with status 1; syntax errors use 2.
     vim.notify('herdr ' .. table.concat(args, ' ') .. '\n' .. (out.stderr or ''), vim.log.levels.ERROR)
-    return nil
+    return false
   end
 
-  local ok, decoded = pcall(vim.json.decode, out.stdout or '')
-  if not ok then return nil end
-  return decoded
+  -- Success output is not always JSON (`pane send-text`, `agent focus`
+  -- print nothing); only the exit code signals success. Gating callers on
+  -- the decoded body would silently skip follow-ups like focusing the agent.
+  if out.stdout == nil or out.stdout:match('^%s*$') then return true end
+  local ok, decoded = pcall(vim.json.decode, out.stdout)
+  if not ok then return true end
+  return true, decoded
 end
 
 -- Worktrees ==================================================================
@@ -61,7 +65,7 @@ end
 local function pick_worktree()
   if not in_herdr() then return end
 
-  local res = herdr({ 'worktree', 'list' })
+  local res = select(2, herdr({ 'worktree', 'list' }))
   local worktrees = res and res.result and res.result.worktrees
   if not worktrees or #worktrees == 0 then
     vim.notify('No Git worktrees found', vim.log.levels.WARN)
@@ -101,15 +105,31 @@ end
 --- Pick a live Herdr agent, then call `fn(agent)` with its `AgentInfo` table
 --- (see `herdr api schema`) — notably `.name` (may be nil) and `.pane_id`
 --- (always set, needed for pane-level commands like `pane send-text`).
+---
+--- Candidates are filtered to exclude:
+--- - `opencode` agents: that's the assistant you're chatting with in a
+---   terminal pane (this very Neovim session may sit right next to one in
+---   the same workspace) - never a valid hand-off target for editor context.
+--- - Agents outside the current Herdr workspace: Neovim's own pane gets
+---   `$HERDR_WORKSPACE_ID` injected just like any other Herdr-managed pane
+---   (see `herdr --skill`), so unrelated projects/worktrees running in other
+---   workspaces don't clutter the picker.
 ---@param prompt string
 ---@param fn fun(agent: table)
 local function with_agent(prompt, fn)
   if not in_herdr() then return end
 
-  local res = herdr({ 'agent', 'list' })
-  local agents = res and res.result and res.result.agents
-  if not agents or #agents == 0 then
-    vim.notify('No live Herdr agents. Start one with `herdr agent start`.', vim.log.levels.WARN)
+  local res = select(2, herdr({ 'agent', 'list' }))
+  local all_agents = res and res.result and res.result.agents or {}
+
+  local ws = vim.env.HERDR_WORKSPACE_ID
+  local agents = vim.tbl_filter(function(a)
+    if a.agent == 'opencode' or a.display_agent == 'opencode' then return false end
+    return not ws or a.workspace_id == ws
+  end, all_agents)
+
+  if #agents == 0 then
+    vim.notify('No live Herdr agents in this workspace. Start one with `herdr agent start`.', vim.log.levels.WARN)
     return
   end
 

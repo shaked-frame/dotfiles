@@ -8,9 +8,12 @@
 
 -- Use this section to add custom general mappings. See `:h vim.keymap.set()`.
 
--- Hyper key alias (ZSA Voyager sends <M-C-S-D-*>)
--- Define <H-*> as shorthand for <M-C-S-D-*>
-local H = function(key) return '<M-C-S-D-' .. key .. '>' end
+-- Hyper key alias (ZSA Voyager sends <M-C-S-D-*>).
+-- NOTE: nvim decodes the Shift bit away (verified via Insert-mode `Ctrl-V`):
+-- Shift folds into case for letters (`Hyper+p` arrives as `<M-C-D-P>`, so
+-- pass an UPPERCASE letter) and is dropped for the rest (`Hyper+\` arrives
+-- as `<M-C-D-\>`). Map the decoded form, not the sent form.
+local H = function(key) return '<M-C-D-' .. key .. '>' end
 
 -- An example helper to create a Normal mode mapping
 local nmap = function(lhs, rhs, desc)
@@ -64,14 +67,22 @@ nmap('gD', '<Cmd>lua vim.lsp.buf.declaration()<CR>', 'Go to declaration')
 nmap('gy', '<Cmd>lua vim.lsp.buf.type_definition()<CR>', 'Go to type definition')
 nmap('grr', pick_lsp_references, 'References')
 nmap('gri', '<Cmd>lua vim.lsp.buf.implementation()<CR>', 'Go to implementation')
+-- `gra` code action (Zed muscle memory, and Neovim's own default, see `:h gra`).
+-- NOTE: `gr` alone is the "replace" operator from 'mini.operators', so after
+-- typing `gr` there is a `timeoutlen` pause before `gra` fires. Longer `gr..`
+-- sequences (`graq` replace-around-quote, `grai` replace-around-indent) still
+-- work when typed without hesitation.
+nmap('gra', '<Cmd>lua vim.lsp.buf.code_action()<CR>', 'Actions')
 
 -- Make $ and ^ go to actual start/end of line (including whitespace)
 vim.keymap.set({ 'n', 'v' }, '$', 'g_', { desc = 'End of line (last char)' })
 vim.keymap.set({ 'n', 'v' }, '^', '0', { desc = 'Start of line (column 0)' })
 
 -- Git hunk navigation (Zed: `f7`/`f8` in the diff view)
-nmap('[h', '<Cmd>lua MiniDiff.goto_hunk("prev")<CR>', 'Previous hunk')
-nmap(']h', '<Cmd>lua MiniDiff.goto_hunk("next")<CR>', 'Next hunk')
+nmap('[h', '<Cmd>lua MiniDiff.goto_hunk("prev")<CR>zz', 'Previous hunk')
+nmap(']h', '<Cmd>lua MiniDiff.goto_hunk("next")<CR>zz', 'Next hunk')
+-- Hyper+p next hunk (Zed: `ctrl-alt-cmd-shift-p` GoToHunk)
+nmap(H('P'), '<Cmd>lua MiniDiff.goto_hunk("next")<CR>zz', 'Next hunk')
 
 -- Window resizing with Hyper key (Zed: `ctrl-alt-cmd-^&*(` = ResizePane*)
 nmap(H('8'), '<Cmd>vertical resize +5<CR>', 'Increase window width')
@@ -80,7 +91,10 @@ nmap(H('9'), '<Cmd>resize +3<CR>', 'Increase window height')
 nmap(H('0'), '<Cmd>resize -3<CR>', 'Decrease window height')
 
 -- Diagnostic navigation with Hyper key (Zed: `ctrl-alt-cmd-|` = GoToDiagnostic)
-nmap(H('\\'), function() vim.diagnostic.jump({ count = 1, float = true }) end, 'Next diagnostic')
+nmap(H('\\'), function()
+  vim.diagnostic.jump({ count = 1, float = true, wrap = true })
+  vim.cmd('normal! zz')
+end, 'Next diagnostic')
 
 -- Toggle terminal with Ctrl-/
 local toggle_terminal = function()
@@ -277,6 +291,16 @@ nmap_leader('ff', '<Cmd>Pick files<CR>',                        'Files')
 nmap_leader('fF', function() Config.Pickers.files_all() end,               'Files (hidden+ignored)')
 nmap_leader('fg', '<Cmd>Pick grep_live<CR>',                    'Grep live')
 nmap_leader('fG', '<Cmd>Pick grep pattern="<cword>"<CR>',       'Grep current word')
+xmap_leader('fg', function()
+  local mode = vim.fn.mode()
+  if mode == 'v' or mode == 'V' or mode == '\22' then
+    vim.cmd('normal! \27') -- leave Visual so the '< '> marks are set
+  end
+  local lines = vim.fn.getregion(vim.fn.getpos("'<"), vim.fn.getpos("'>"), { type = vim.fn.visualmode() })
+  local text = table.concat(lines, ' '):gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
+  if text == '' then return end
+  require('mini.pick').builtin.grep({ pattern = text })
+end, 'Grep selection')
 nmap_leader('fe', function() Config.Pickers.frontend_files() end,         'Files (frontend)')
 nmap_leader('fE', function() Config.Pickers.frontend_grep() end,          'Grep (frontend)')
 nmap_leader('fh', '<Cmd>Pick help<CR>',                         'Help tags')
@@ -305,13 +329,36 @@ nmap_leader('gA', '<Cmd>Git diff --cached -- %<CR>',        'Added diff buffer')
 nmap_leader('gb', '<Cmd>Git blame -- %<CR>',                'Blame buffer')
 nmap_leader('gc', '<Cmd>Git commit<CR>',                    'Commit')
 nmap_leader('gC', '<Cmd>Git commit --amend<CR>',            'Commit amend')
+-- Same as `gh` (Apply hunks = stage with the default Git source), but under
+-- the Leader menu so it is discoverable: `gh` lives under bare `g`, not here.
+xmap_leader('gc', function()
+  local mode = vim.fn.mode()
+  if mode == 'v' or mode == 'V' or mode == '\22' then
+    vim.cmd('normal! \27') -- leave Visual so the '< '> marks are set
+  end
+  local ok, err = pcall(
+    MiniDiff.do_hunks,
+    vim.api.nvim_get_current_buf(),
+    'apply',
+    { line_start = vim.fn.line("'<"), line_end = vim.fn.line("'>") }
+  )
+  if not ok then vim.notify(tostring(err), vim.log.levels.WARN) end
+end, 'Stage selection')
 nmap_leader('gd', '<Cmd>Git diff<CR>',                      'Diff')
 nmap_leader('gD', '<Cmd>Git diff -- %<CR>',                 'Diff buffer')
 nmap_leader('gl', '<Cmd>' .. git_log_cmd .. '<CR>',         'Log')
 nmap_leader('gL', '<Cmd>' .. git_log_buf_cmd .. '<CR>',     'Log buffer')
 nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>', 'Toggle overlay')
 nmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>',  'Show at cursor')
-nmap_leader('gu', '<Cmd>Git diff HEAD<CR>',                 'Uncommitted changes')
+nmap_leader('gu', function()
+  -- Toggle: close the view when open (`:q` alone cannot take it down).
+  local ok, lib = pcall(require, 'diffview.lib')
+  if ok and lib.get_current_view() then
+    vim.cmd('DiffviewClose')
+  else
+    vim.cmd('DiffviewOpen')
+  end
+end, 'Uncommitted changes')
 
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 
