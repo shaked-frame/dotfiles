@@ -93,6 +93,34 @@ navigate_pane_down = "j"
 navigate_pane_up = "k"
 navigate_pane_right = "l"
 
+# vim-herdr-navigation: seamless ctrl+h/j/k/l across herdr panes and Vim splits.
+# The plugin action forwards the key into Vim when the focused pane runs
+# Vim/Neovim, otherwise it moves herdr pane focus. Editor side is wired in
+# nvim/after/plugin/herdr-navigation.lua. Requires `jq` for Vim detection.
+[[keys.command]]
+key = "ctrl+h"
+type = "plugin_action"
+command = "vim-herdr-navigation.left"
+description = "navigate left (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+j"
+type = "plugin_action"
+command = "vim-herdr-navigation.down"
+description = "navigate down (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+k"
+type = "plugin_action"
+command = "vim-herdr-navigation.up"
+description = "navigate up (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+l"
+type = "plugin_action"
+command = "vim-herdr-navigation.right"
+description = "navigate right (vim/herdr)"
+
 # lazygit popup
 [[keys.command]]
 key = "prefix+alt+g"
@@ -135,13 +163,34 @@ type = "shell"
 command = "TARGET=\"$(herdr tab list --workspace \"$HERDR_ACTIVE_WORKSPACE_ID\" | jq -r --arg t \"$HERDR_ACTIVE_TAB_ID\" '(.result.tabs | map(select(.tab_id==$t))[0].label // \"\") as $cur | if ($cur | ascii_downcase | startswith(\"term\")) then ([.result.tabs[] | select(.label // \"\" | ascii_downcase | startswith(\"vim\"))][0].tab_id // empty) else ([.result.tabs[] | select(.label // \"\" | ascii_downcase | startswith(\"term\"))][0].tab_id // empty) end')\"; [ -n \"$TARGET\" ] && herdr tab focus \"$TARGET\""
 description = "Toggle Terminal/Vim tab"
 
+# Move the workspace's agent pane between the Claude tab and a Vim-tab split
+# (toggle): Claude tab -> split right in Vim; Vim split -> back to Claude tab
+# (recreated if it closed when its last pane left). Moving preserves the live
+# agent process - closing the pane and reopening would kill its session.
+# Requires `jq`.
+[[keys.command]]
+key = ["prefix+shift+v", "ctrl+alt+v"]
+type = "shell"
+command = "WS=\"$HERDR_ACTIVE_WORKSPACE_ID\"; TABS=\"$(herdr tab list --workspace \"$WS\")\"; AT=\"$(herdr agent list | jq -r --arg ws \"$WS\" '[.result.agents[] | select(.workspace_id==$ws)][0] | [.pane_id, .tab_id] | @tsv')\"; PANE=\"$(printf %s \"$AT\" | cut -f1)\"; ATAB=\"$(printf %s \"$AT\" | cut -f2)\"; VIM=\"$(printf %s \"$TABS\" | jq -r '[.result.tabs[] | select(.label==\"Vim\")][0].tab_id // empty')\"; CLAUDE=\"$(printf %s \"$TABS\" | jq -r '[.result.tabs[] | select(.label==\"Claude\")][0].tab_id // empty')\"; if [ -z \"$PANE\" ]; then exit 0; fi; if [ \"$ATAB\" = \"$VIM\" ]; then if [ -n \"$CLAUDE\" ]; then herdr pane move \"$PANE\" --tab \"$CLAUDE\" --split right --focus; else herdr pane move \"$PANE\" --new-tab --workspace \"$WS\" --label \"Claude\" --focus; fi; else if [ -n \"$VIM\" ]; then herdr pane move \"$PANE\" --tab \"$VIM\" --split right --focus; fi; fi"
+description = "Move agent pane Claude-tab <-> Vim split"
+
+# Minimize the agent pane (toggle): zooms the first non-agent pane of the
+# current tab fullscreen, so the agent is invisible but keeps running.
+# Press again to restore the split layout. (A herdr-level `cmd+r` would
+# swallow nvim's `<D-r>` Focus-agent/hide-chat, so this uses `m` instead.)
+[[keys.command]]
+key = ["prefix+shift+m", "ctrl+alt+m", "shift+esc"]
+type = "shell"
+command = "PANE=\"$(herdr pane list --workspace \"$HERDR_ACTIVE_WORKSPACE_ID\" | jq -r --arg tab \"$HERDR_ACTIVE_TAB_ID\" '[.result.panes[] | select(.tab_id==$tab and (has(\"agent\") | not))][0].pane_id // empty')\"; [ -n \"$PANE\" ] && herdr pane zoom --toggle --pane \"$PANE\""
+description = "Minimize agent pane (zoom editor)"
+
 #------------------------------------------
 # UI
 #------------------------------------------
 [ui]
-accent = "#cba6f7"
-pane_borders = true
-pane_gaps = true
+accent = "#61afef"
+pane_borders = "off"
+pane_gaps = false
 show_agent_labels_on_pane_borders = true
 hide_tab_bar_when_single_tab = true
 confirm_close = true
@@ -150,7 +199,7 @@ mouse_capture = true
 
 agent_panel_sort = "spaces"
 [ui.toast]
-delivery = "system"
+delivery = "terminal"
 delay_seconds = 1
 
 [ui.sound]

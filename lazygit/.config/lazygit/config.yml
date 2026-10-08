@@ -6,12 +6,8 @@ os:
   # commands, and editor open. zsh expands functions there but not aliases, so
   # this points at a dedicated file instead of ~/.zshrc.
   shellFunctionsFile: ~/.config/zsh/lazygit-functions.zsh
-
 gui:
   scrollHeight: 10
-  authorColors:
-    'Shaked Hagag': cyan
-    '*': magenta
   showFileTree: true
   skipRewordInEditorWarning: true
   showCommandLog: false
@@ -21,10 +17,19 @@ gui:
   # Match the --date=iso forced in branchLogCmd / allBranchesLogCmds below.
   timeFormat: "2006-01-02"
   shortTimeFormat: "15:04"
-  branchColorPatterns:
-    '^(task)/': '#4BADE8'                  # Jira work branches
-    '^(bugfix)/': '#F15B50'                        # conventional, changes behaviour
-    '^(feature)/': '#6A9A22'    # conventional, housekeeping
+  theme:
+    # Default 'blue' background washes out branch/file text (e.g. #4BADE8 on
+    # blue). '#3E4451' is Atom One Dark's selection grey (Ghostty theme is
+    # Atom One Dark): visible cursor, foreground colours stay readable.
+    selectedLineBgColor:
+      - '#3E4451'
+    authorColors:
+      'Shaked Hagag': cyan
+      '*': magenta
+    branchColorPatterns:
+      '^(task)/': '#4BADE8' # Jira work branches
+      '^(bugfix)/': '#F15B50' # conventional, changes behaviour
+      '^(feature)/': '#6A9A22' # conventional, housekeeping
 git:
   mainBranches:
     - main
@@ -74,7 +79,6 @@ disableStartupPopups: true
 keybinding:
   files:
     toggleStagedAll: <disabled>
-
 customCommands:
   - key: '<c-n>'
     description: 'New branch'
@@ -143,45 +147,43 @@ customCommands:
         condition: '{{ not (or (eq .Form.Type "feature") (eq .Form.Type "task") (eq .Form.Type "bugfix")) }}'
     command: "git checkout -b \"{{.Form.Type}}/$(printf '%s' '{{.Form.Ticket}}{{.Form.Desc}}' | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')\" \"{{.SelectedLocalBranch.Name}}\""
     loadingText: 'Creating branch'
-
-  # Model choice for the pi commands below.
-  #
-  # Median wall time on an identical commit-message task, 3 runs each,
-  # --thinking low, no tools:
-  #   github-copilot/gpt-5.4-mini        2.2s  <- primary
-  #   github-copilot/mai-code-1.1-flash  3.4s
-  #   openai-codex/gpt-5.3-codex-spark   4.3s  returned empty output, unusable
-  #   github-copilot/claude-haiku-4.5    5.6s  previous primary
-  #   openai-codex/gpt-5.4-mini          6.8s  <- fallback
+  # Model choice for the pi commands below. Benchmarked 2026-10-04,
+  # trivial prompt, 3 runs each, --thinking low, -ne -ns -xt edit,write:
+  #   github-copilot/gpt-5.4-mini   1.8/1.5/1.6s  <- primary (fastest, stable)
+  #   github-copilot/mai-code-1.1-flash 1.5/1.7/6.2s (one outlier, rejected)
+  #   github-copilot/gpt-5.6-luna   2.5/2.2/1.5s
+  #   github-copilot/gemini-3.8-flash 4.6/2.8/2.9s
+  #   github-copilot/gpt-5-mini     3.4/3.3/2.2s
+  #   openai-codex/gpt-5.5          5.1/5.2/6.1s  <- fallback (fastest codex)
+  #   openai-codex/gpt-6-luna       5.3/5.7/5.0s
+  #   openai-codex/gpt-5.6-luna     6.6/6.8/5.5s
+  #   openai-codex/gpt-5.6-sol      11.7/11.2/9.7s (rejected)
   #
   # The fallback after `||` uses a different provider rather than the next
   # fastest model. It runs only when the primary fails on auth, a rate limit, or
   # a Copilot outage, and a second github-copilot entry would fail alongside it.
-  # Those 6.8s cost nothing on the normal path.
   #
   # --model bypasses the `enabledModels` allowlist in ~/.pi/agent/settings.json,
   # so these run without being listed there.
   - key: '<c-c>'
-    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/commit' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.4-mini --thinking low '/commit'"
+    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/commit' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.5 --thinking low '/commit'"
     context: 'files'
     description: 'AI commit with pi'
     loadingText: 'Generating commit...'
     output: popup
     outputTitle: 'pi commit'
-
   - key: '<c-a>'
-    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/atomic-commit' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.4-mini --thinking low '/atomic-commit'"
+    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/atomic-commit' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.5 --thinking low '/atomic-commit'"
     context: 'files'
     description: 'AI atomic commits with pi'
     loadingText: 'Generating atomic commits...'
     output: popup
     outputTitle: 'pi atomic commits'
-
   # This was <c-o>, which is universal.copyToClipboard. Binding it here shadowed
   # copyToClipboard in the two panels that need it, for copyFileInfoToClipboard
   # and copyPullRequestURL. <ctrl+g> is unbound in every default context.
   - key: '<c-g>'
-    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/create-pr {{index .PromptResponses 0}}' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.4-mini --thinking low '/create-pr {{index .PromptResponses 0}}'"
+    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/create-pr {{index .PromptResponses 0}}' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.5 --thinking low '/create-pr {{index .PromptResponses 0}}'"
     context: 'localBranches, files'
     description: 'AI create PR with pi'
     prompts:

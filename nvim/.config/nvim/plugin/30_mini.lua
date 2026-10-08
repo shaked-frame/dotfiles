@@ -306,7 +306,96 @@ end)
 -- - `:h MiniFiles-examples` - examples of common setups
 now_if_args(function()
   -- Enable directory/file preview
-  require('mini.files').setup({ windows = { preview = true } })
+  --
+  -- Git status marks, gitsigns-style: changed entries swap the blank after
+  -- the file icon for a status symbol (`M` modified, `A` staged/added,
+  -- `D` deleted, `R` renamed, `?` untracked) and get status-colored text.
+  -- Statuses come from one `git status --porcelain` per shown directory,
+  -- cached for 2 seconds (navigation stays snappy; outside changes appear
+  -- on revisit). Directories aggregate: worst status of their content wins.
+  local git_hl = { M = 'MiniFilesGitModified', A = 'MiniFilesGitAdded', D = 'MiniFilesGitDeleted', R = 'MiniFilesGitRenamed', ['?'] = 'MiniFilesGitUntracked' }
+  for group, link in pairs({
+    MiniFilesGitModified = 'DiffChange',
+    MiniFilesGitAdded = 'DiffAdd',
+    MiniFilesGitDeleted = 'DiffDelete',
+    MiniFilesGitRenamed = 'DiffChange',
+    MiniFilesGitUntracked = 'Comment',
+  }) do
+    vim.api.nvim_set_hl(0, group, { link = link })
+  end
+  local git_cache = {}
+  local git_changes = function(dir)
+    -- Array of `{ path = <absolute path>, status = 'M'|'A'|'D'|'R'|'?' }`
+    -- for everything changed under `dir`. NOTE: `git status --porcelain`
+    -- prints paths relative to the repo root (unlike `--short`), so resolve
+    -- the root explicitly instead of assuming dir-relative output.
+    local now = vim.uv.now()
+    local cached = git_cache[dir]
+    if cached ~= nil and now - cached.at < 2000 then return cached.items end
+    local items = {}
+    local root_res = vim.system({ 'git', '-C', dir, 'rev-parse', '--show-toplevel' }):wait()
+    if root_res.code == 0 then
+      local root = (root_res.stdout or ''):gsub('%s+$', '')
+      -- NOTE: `vim.fn.system()` mangles NULs (to 0x01), so `-z` parsing
+      -- needs `vim.system()`, which preserves raw bytes.
+      local res = vim.system({ 'git', '-C', dir, 'status', '--porcelain=v1', '-z', '--untracked-files=normal', '--', '.' }):wait()
+      if res.code == 0 then
+        local chunks = {}
+        for c in (res.stdout or ''):gmatch('[^%z]+') do table.insert(chunks, c) end
+        local i = 1
+        while i <= #chunks do
+          local status, path = chunks[i]:match('^(..) (.*)$')
+          if path == nil then break end
+          i = i + 1
+          if status:sub(1, 1) == 'R' or status:sub(1, 1) == 'C' then
+            path = chunks[i] -- rename/copy: next chunk is the new path
+            i = i + 1
+          end
+          if path ~= nil then
+            path = path:gsub('/$', '') -- untracked dirs come as `name/`
+            local x, y = status:sub(1, 1), status:sub(2, 2)
+            local s = (y ~= ' ' and y ~= '?') and y or (x ~= ' ' and x or (y == '?' and '?' or nil))
+            if s == 'T' or s == 'U' then s = 'M' end
+            if s ~= nil then table.insert(items, { path = root .. '/' .. path, status = s }) end
+          end
+        end
+      end
+    end
+    git_cache[dir] = { at = now, items = items }
+    return items
+  end
+  local git_symbol = function(fs_entry)
+    local dir = fs_entry.path:match('^(.*)/[^/]+$')
+    if dir == nil then return nil end
+    -- Worst status wins when a directory aggregates several changes.
+    local rank = { M = 4, D = 3, A = 2, R = 1, ['?'] = 0 }
+    local best, best_rank = nil, -1
+    for _, item in ipairs(git_changes(dir)) do
+      if item.path == fs_entry.path or item.path:sub(1, #fs_entry.path + 1) == fs_entry.path .. '/' then
+        local r = rank[item.status] or 0
+        if r > best_rank then best, best_rank = item.status, r end
+      end
+    end
+    return best
+  end
+  require('mini.files').setup({
+    windows = { preview = true, width_focus = 35, width_preview = 75 },
+    content = {
+      prefix = function(fs_entry)
+        local icon, hl = MiniFiles.default_prefix(fs_entry)
+        local s = git_symbol(fs_entry)
+        -- Dedicated git column ahead of the (mini.icons) file icon, so both
+        -- survive: `M <icon> name`. Blank column when clean keeps names aligned.
+        if s == nil then return '  ' .. icon, hl end
+        return s .. ' ' .. icon, git_hl[s] or hl
+      end,
+      highlight = function(fs_entry)
+        local s = git_symbol(fs_entry)
+        if s == nil then return MiniFiles.default_highlight(fs_entry) end
+        return git_hl[s] or MiniFiles.default_highlight(fs_entry)
+      end,
+    },
+  })
 
   -- Add common bookmarks for every explorer. Example usage inside explorer:
   -- - `'c` to navigate into your config directory
@@ -583,6 +672,10 @@ later(function()
     -- Cyclic hunk navigation everywhere (`[h`/`]h`, `Hyper+p`): wrap past
     -- the last hunk back to the first (mini.diff notifies on wrap).
     options = { wrap_goto = true },
+    -- `[h`/`]h` are owned by 'plugin/20_keymaps.lua' (same jump + `zz`
+    -- centering): don't let the defaults clobber them. `[H`/`]H`
+    -- first/last-hunk jumps stay on.
+    mappings = { goto_prev = '', goto_next = '' },
   })
 end)
 

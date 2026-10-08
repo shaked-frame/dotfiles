@@ -203,30 +203,36 @@ now_if_args(function()
 
     vim.lsp.inline_completion.enable(true, { bufnr = bufnr })
 
-    -- Accept inline completion word-by-word with `<C-l>`
-    -- (Zed: `alt-tab` = editor::AcceptNextWordEditPrediction)
-    vim.keymap.set('i', '<C-l>', function()
-      local ok = vim.lsp.inline_completion.get({
-        bufnr = bufnr,
-        on_accept = function(item)
-          local ins = item.insert_text
-          local text = type(ins) == 'table' and ins.value or ins
-          if type(text) ~= 'string' or text == '' then return item end
+    -- Accept inline completion word-by-word, one word per press
+    -- (Zed: `alt-tab` = editor::AcceptNextWordEditPrediction).
+    -- `<C-l>` is the primary binding; `<M-Tab>` is Option+Tab (Ghostty sends
+    -- it as Alt+Tab with `macos-option-as-alt = true`).
+    local accept_word = function(fallback)
+      return function()
+        local ok = vim.lsp.inline_completion.get({
+          bufnr = bufnr,
+          on_accept = function(item)
+            local ins = item.insert_text
+            local text = type(ins) == 'table' and ins.value or ins
+            if type(text) ~= 'string' or text == '' then return item end
 
-          -- Accept first word (+ trailing spaces for natural repeated presses)
-          local chunk = text:match('^%s*%S+%s*')
-          if not chunk or chunk == '' then return item end
+            -- Accept first word (+ trailing spaces for natural repeated presses)
+            local chunk = text:match('^%s*%S+%s*')
+            if not chunk or chunk == '' then return item end
 
-          if type(ins) == 'table' then
-            item.insert_text = vim.tbl_extend('force', ins, { value = chunk })
-          else
-            item.insert_text = chunk
-          end
-          return item
-        end,
-      })
-      return ok and '' or '<C-l>'
-    end, { expr = true, buffer = bufnr, desc = 'Accept inline completion word' })
+            if type(ins) == 'table' then
+              item.insert_text = vim.tbl_extend('force', ins, { value = chunk })
+            else
+              item.insert_text = chunk
+            end
+            return item
+          end,
+        })
+        return ok and '' or fallback
+      end
+    end
+    vim.keymap.set('i', '<C-l>', accept_word('<C-l>'), { expr = true, buffer = bufnr, desc = 'Accept inline completion word' })
+    vim.keymap.set('i', '<M-Tab>', accept_word('<M-Tab>'), { expr = true, buffer = bufnr, desc = 'Accept inline completion word' })
   end
 
   Config.new_autocmd('LspAttach', nil, enable_inline_completion, 'Enable inline completion')

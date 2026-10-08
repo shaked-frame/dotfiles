@@ -94,8 +94,8 @@ later(function()
   -- 2. Otherwise try to accept inline completion ("ghost text").
   -- 3. Otherwise insert a literal <Tab>.
   --
-  -- To accept inline completion one word at a time instead, use `<C-l>`
-  -- (set up in 'plugin/40_plugins.lua' on `LspAttach`).
+  -- To accept inline completion one word at a time instead, use `<C-l>` or
+  -- Option+Tab (`<M-Tab>`; set up in 'plugin/40_plugins.lua' on `LspAttach`).
   vim.keymap.set('i', '<Tab>', function()
     if vim.fn.pumvisible() == 1 then return '<C-n>' end
 
