@@ -19,12 +19,20 @@ local later = Config.later
 later(function()
   add({ 'https://github.com/MeanderingProgrammer/render-markdown.nvim' })
 
-  -- Parse MDX with the markdown grammar (overlaps enough for rendering).
-  vim.treesitter.language.register('markdown', 'mdx')
-  local ts_start_mdx = function(ev) vim.treesitter.start(ev.buf) end
-  Config.new_autocmd('FileType', { 'mdx' }, ts_start_mdx, 'Start tree-sitter for MDX')
+  -- Parse MDX and Octo (GitHub PR/comment) buffers with the markdown grammar.
+  vim.treesitter.language.register('markdown', { 'mdx', 'octo' })
+  local ts_start = function(ev) vim.treesitter.start(ev.buf) end
+  Config.new_autocmd('FileType', { 'mdx', 'octo' }, ts_start, 'Start tree-sitter for MDX/Octo')
 
   require('render-markdown').setup({
-    file_types = { 'markdown', 'mdx' },
+    file_types = { 'markdown', 'mdx', 'octo' },
+    html = {
+      tag = {
+        details = { icon = '' },
+        summary = { icon = '▸ ', highlight = 'RenderMarkdownH6' },
+        a = { icon = '󰌹 ', highlight = 'RenderMarkdownLink' },
+        img = { icon = '󰥶 ', highlight = 'RenderMarkdownLink' },
+      },
+    },
   })
 end)

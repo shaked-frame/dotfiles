@@ -71,6 +71,9 @@ now_if_args(function()
     'json',
     'css',
     'bash',
+    -- Lets 'render-markdown.nvim' hide HTML comments and tags in Markdown,
+    -- e.g. bot boilerplate in GitHub PR bodies and comments (Octo).
+    'html',
     -- Add here more languages with which you want to use tree-sitter
     -- To see available languages:
     -- - Execute `:=require('nvim-treesitter').get_available()`
@@ -426,6 +429,15 @@ Config.now(function()
       Comment = { fg = '$light_grey' },
       SpecialComment = { fg = '$light_grey' },
       ['@comment'] = { fg = '$light_grey' },
+
+      -- Diff colours from delta's dark defaults (as in lazygit), so Neovim's
+      -- diff mode (Octo reviews, diffview) reads the same. `fg = 'none'`
+      -- keeps syntax highlighting on changed lines; DiffText is delta's
+      -- word-level emphasis.
+      DiffAdd = { fg = 'none', bg = '#002800' },
+      DiffDelete = { fg = '#5c6370', bg = '#3f0001' },
+      DiffChange = { fg = 'none', bg = '#2a2f38' },
+      DiffText = { fg = 'none', bg = '#006000' },
 
       -- JSX/TSX tag names default to `purple` here. nvim-treesitter's 'jsx'
       -- query captures custom components as `@tag` (uppercase names) and

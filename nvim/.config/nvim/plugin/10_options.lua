@@ -60,7 +60,11 @@ vim.o.wrap           = false      -- Don't visually wrap lines (toggle with \w)
 vim.o.cursorlineopt  = 'screenline,number' -- Show cursor line per screen line
 
 -- Special UI symbols. More is set via 'mini.basics' later.
-vim.o.fillchars = 'eob: ,fold:╌'
+vim.o.fillchars = 'eob: ,fold:╌,diff:╱'
+
+-- Diff mode closer to delta: histogram algorithm, word-level inline emphasis.
+vim.opt.diffopt:remove('inline:char')
+vim.opt.diffopt:append({ 'algorithm:histogram', 'inline:word' })
 vim.o.listchars = 'extends:…,nbsp:␣,precedes:…,tab:> '
 
 -- Folds (see `:h fold-commands`, `:h zM`, `:h zR`, `:h zA`, `:h zj`)
