@@ -20,8 +20,11 @@ vim.cmd('setlocal spell wrap')
 
 -- Folds come from the global tree-sitter setup in 'plugin/10_options.lua'.
 
--- Disable built-in `gO` mapping in favor of 'mini.basics'
-vim.keymap.del('n', 'gO', { buffer = 0 })
+-- Disable buffer-local `gO` (outline view) in favor of 'mini.basics'.
+-- Guarded: hover floats (`K`) also get `filetype=markdown`, but treesitter
+-- may not start there, so no buffer-local mapping exists and bare `del`
+-- throws E31 and aborts the float.
+pcall(vim.keymap.del, 'n', 'gO', { buf = 0 })
 
 -- Set markdown-specific surrounding in 'mini.surround'
 vim.b.minisurround_config = {

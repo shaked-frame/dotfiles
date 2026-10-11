@@ -29,6 +29,10 @@ Config.later(function()
     reviews = { show_virtual_text = false },
   })
 
+  -- Review windows ship with `foldlevel = 0`, which collapses every fold, and
+  -- the local right-side buffer keeps it in later windows. Keep folds open.
+  require('octo.reviews.file-entry').FileEntry.winopts.foldlevel = 99
+
   -- octo clears a fresh buffer's undo history with `:normal`, which throws
   -- E565 when its async load lands while text is locked (typing in the
   -- `<Leader>gpl` picker). Retry until the lock is gone.

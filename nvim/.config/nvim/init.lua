@@ -65,6 +65,14 @@
 -- It is a global variable which can be use both as `_G.Config` and `Config`
 _G.Config = {}
 
+-- Never load netrw (directory browser + `gx` handler): 'mini.files' owns
+-- directory browsing and `gx` is a built-in default mapping in Nvim 0.12.
+-- Skips its startup cost and its attack surface (e.g. the NetrwBookHistSave
+-- code-injection fix in 0.12.6). Must stay here: runtime plugins load right
+-- after 'init.lua', so setting this in 'plugin/' is too late.
+vim.g.loaded_netrw = 1
+vim.g.loaded_netrwPlugin = 1
+
 -- Define custom autocommand group and helper to create an autocommand.
 -- Autocommands are Neovim's way to define actions that are executed on events
 -- (like creating a buffer, setting an option, etc.).
