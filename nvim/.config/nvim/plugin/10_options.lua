@@ -60,7 +60,7 @@ vim.o.wrap           = false      -- Don't visually wrap lines (toggle with \w)
 vim.o.cursorlineopt  = 'screenline,number' -- Show cursor line per screen line
 
 -- Special UI symbols. More is set via 'mini.basics' later.
-vim.o.fillchars = 'eob: ,fold:╌,diff:╱'
+vim.o.fillchars = 'eob: ,fold:╌,foldopen:,foldclose:,diff:╱'
 
 -- Diff mode closer to delta: histogram algorithm, word-level inline emphasis.
 vim.opt.diffopt:remove('inline:char')
@@ -68,10 +68,48 @@ vim.opt.diffopt:append({ 'algorithm:histogram', 'inline:word' })
 vim.o.listchars = 'extends:…,nbsp:␣,precedes:…,tab:> '
 
 -- Folds (see `:h fold-commands`, `:h zM`, `:h zR`, `:h zA`, `:h zj`)
-vim.o.foldlevel   = 10       -- Fold nothing by default; set to 0 or 1 to fold
-vim.o.foldmethod  = 'indent' -- Fold based on indent level
-vim.o.foldnestmax = 10       -- Limit number of fold levels
-vim.o.foldtext    = ''       -- Show text under fold with its highlighting
+-- Left-click a chevron (or use `za` / `zc` / `zo`) to toggle.
+vim.o.foldenable     = true  -- Allow folding at all (`zi` toggles this)
+vim.o.foldlevel      = 99    -- Open everything by default ...
+vim.o.foldlevelstart = 99    -- ... including on first window open
+vim.o.foldcolumn     = '0'   -- No native fold column; chevrons live in 'statuscolumn'
+vim.o.foldmethod     = 'expr'   -- Default: syntax-aware folds ...
+vim.o.foldexpr       = 'v:lua.vim.treesitter.foldexpr()' -- ... via tree-sitter
+vim.o.foldnestmax    = 10    -- Limit number of fold levels
+vim.o.foldtext       = ''    -- Show text under fold with its highlighting
+
+-- Fold chevrons, parent lines only. The native fold column marks every line
+-- inside a fold (a wall of chevrons); this custom 'statuscolumn' keeps one
+-- subtle column instead: a chevron appears only on the line that *opens* a
+-- fold (`foldlevel` rises there), everything else stays blank. `%s` and `%l`
+-- preserve the sign gutter and the (relative) line numbers as before.
+Config.fold_chevron_for = function(lnum)
+  local level = vim.fn.foldlevel(lnum)
+  if level == 0 then return ' ' end
+  if lnum > 1 and level <= vim.fn.foldlevel(lnum - 1) then return ' ' end
+  return vim.fn.foldclosed(lnum) == -1 and '' or ''
+end
+Config.fold_chevron = function() return Config.fold_chevron_for(vim.v.lnum) end
+
+-- Left-click a chevron toggles the fold on the clicked line.
+Config.fold_chevron_click = function(_, _, button, _)
+  if button ~= 'l' then return end
+  local mouse = vim.fn.getmousepos()
+  if mouse.winid == 0 or mouse.line == 0 then return end
+  vim.api.nvim_win_call(mouse.winid, function()
+    vim.api.nvim_win_set_cursor(mouse.winid, { mouse.line, 0 })
+    vim.cmd('normal! za')
+  end)
+end
+
+vim.o.statuscolumn = '%s %#LineNr#%@v:lua.Config.fold_chevron_click@%{v:lua.Config.fold_chevron()}%T%=%l '
+
+-- Mute closed folds to match the chevron (`LineNr`): the whole closed-fold
+-- line, filler dashes included, uses the `Folded` group, which onedark paints
+-- loudly. Re-applied on every colorscheme change (which wipes custom links).
+local mute_folded = function() vim.api.nvim_set_hl(0, 'Folded', { link = 'LineNr' }) end
+Config.new_autocmd('ColorScheme', nil, mute_folded, 'Mute closed folds')
+mute_folded()
 
 -- Editing ====================================================================
 vim.o.autoindent    = true    -- Use auto indent
@@ -105,6 +143,25 @@ vim.o.completetimeout = 100                             -- Limit sources delay
 -- Do on `FileType` to always override these changes from filetype plugins.
 local f = function() vim.cmd('setlocal formatoptions-=c formatoptions-=o') end
 Config.new_autocmd('FileType', nil, f, "Proper 'formatoptions'")
+
+-- Fall back to indent folds when tree-sitter can't provide syntax folds.
+-- `vim.treesitter.foldexpr()` yields no folds without both a parser binary and
+-- a `folds` query (e.g. plain text ships a parser but no folds query), so such
+-- buffers would lose folding entirely without this. Buffers with both are
+-- pinned back to `expr` so a reused buffer never stays stuck on `indent`.
+local fold_fallback = function(ev)
+  local ft = vim.bo[ev.buf].filetype
+  if ft == '' then return end
+  local lang = vim.treesitter.language.get_lang(ft) or ft
+  local has_parser = #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) > 0
+  local has_folds = vim.treesitter.query.get(lang, 'folds') ~= nil
+  if has_parser and has_folds then
+    vim.cmd('setlocal foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr()')
+  else
+    vim.cmd('setlocal foldmethod=indent')
+  end
+end
+Config.new_autocmd('FileType', '*', fold_fallback, 'Treesitter folds with indent fallback')
 
 -- Don't let LSP servers colorize text (e.g. CSS color values)
 vim.lsp.document_color.enable(false)

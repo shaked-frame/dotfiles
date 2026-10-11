@@ -22,8 +22,41 @@ Config.later(function()
     picker = 'snacks',
     enable_builtin = true,
     use_timeline_icons = false,
+    -- Comment icon in the sign column on lines with review threads
+    -- (yellow = pending). Off by default in octo.
+    ui = { use_signcolumn = true },
+    comment_icon = '\239\129\181', -- nf-fa-comment (U+F075)
     reviews = { show_virtual_text = false },
   })
+
+  -- octo clears a fresh buffer's undo history with `:normal`, which throws
+  -- E565 when its async load lands while text is locked (typing in the
+  -- `<Leader>gpl` picker). Retry until the lock is gone.
+  local octo_utils = require('octo.utils')
+  local clear_history = octo_utils.clear_history
+  local function clear_history_when_unlocked(bufnr, attempts)
+    if not vim.api.nvim_buf_is_valid(bufnr) then return end
+    local undolevels = vim.o.undolevels
+    local ok, err = pcall(vim.api.nvim_buf_call, bufnr, clear_history)
+    if ok then return end
+    vim.o.undolevels = undolevels
+    if attempts == 0 or not tostring(err):match('E565') then error(err) end
+    vim.defer_fn(function() clear_history_when_unlocked(bufnr, attempts - 1) end, 50)
+  end
+  octo_utils.clear_history = function() clear_history_when_unlocked(vim.api.nvim_get_current_buf(), 20) end
+
+  -- A line can carry several threads, and octo places all their signs at the
+  -- same priority, so a resolved one can hide your pending comment. Place
+  -- pending signs above the rest.
+  local signs = require('octo.ui.signs')
+  local place = signs.place
+  signs.place = function(name, bufnr, line)
+    if line and name:match('_pending$') and require('octo.config').values.ui.use_signcolumn then
+      pcall(vim.fn.sign_place, 0, 'octo_ns', name, bufnr, { lnum = line + 1, priority = 20 })
+      return
+    end
+    place(name, bufnr, line)
+  end
 end)
 
 -- Review diff buffers ('octo://<repo>/review/<id>/file/<side>/<path>') get a
@@ -101,15 +134,32 @@ local show_pending_comments = function()
   end)
 end
 
+-- Octo fetches from GitHub before showing anything; keep a notification up
+-- until the first octo:// buffer appears (or 30s pass, e.g. on an error).
+local with_loading = function(cmd, message)
+  return function()
+    local id = MiniNotify.add(message)
+    local done = false
+    local finish = function()
+      if done then return end
+      done = true
+      MiniNotify.remove(id)
+    end
+    vim.api.nvim_create_autocmd('BufWinEnter', { pattern = 'octo://*', once = true, callback = finish })
+    vim.defer_fn(finish, 30000)
+    vim.cmd(cmd)
+  end
+end
+
 local nmap_leader = function(suffix, rhs, desc)
   vim.keymap.set('n', '<Leader>' .. suffix, rhs, { desc = desc })
 end
 
-nmap_leader('gpp', '<Cmd>Octo pr<CR>',              'PR for current branch')
-nmap_leader('gpl', '<Cmd>Octo pr list<CR>',         'List PRs')
-nmap_leader('gps', '<Cmd>Octo pr search<CR>',       'Search PRs')
-nmap_leader('gpr', '<Cmd>Octo review resume<CR>',   'Resume pending review')
-nmap_leader('gpR', '<Cmd>Octo review start<CR>',    'Start review')
+nmap_leader('gpp', with_loading('Octo pr', 'Loading PR…'),                          'PR for current branch')
+nmap_leader('gpl', '<Cmd>Octo pr list<CR>',                                          'List PRs')
+nmap_leader('gps', '<Cmd>Octo pr search<CR>',                                        'Search PRs')
+nmap_leader('gpr', with_loading('Octo review resume', 'Loading pending review…'), 'Resume pending review')
+nmap_leader('gpR', with_loading('Octo review start', 'Starting review…'),         'Start review')
 nmap_leader('gpc', '<Cmd>Octo review comments<CR>', 'Pending review comments')
 nmap_leader('gpq', show_pending_comments,           'Pending comments in Trouble')
 nmap_leader('gpS', '<Cmd>Octo review submit<CR>',   'Submit review')

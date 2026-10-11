@@ -18,8 +18,7 @@
 -- Enable spelling and wrap for window
 vim.cmd('setlocal spell wrap')
 
--- Fold with tree-sitter
-vim.cmd('setlocal foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr()')
+-- Folds come from the global tree-sitter setup in 'plugin/10_options.lua'.
 
 -- Disable built-in `gO` mapping in favor of 'mini.basics'
 vim.keymap.del('n', 'gO', { buffer = 0 })

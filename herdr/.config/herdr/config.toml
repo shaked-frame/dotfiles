@@ -188,8 +188,18 @@ description = "Minimize agent pane (zoom editor)"
 # UI
 #------------------------------------------
 [ui]
-accent = "#61afef"
-pane_borders = "off"
+# Muted to match Neovim's separator gray (onedark `FloatBorder`/`LineNr`).
+# NOTE: this is the only border-brightness knob Herdr exposes, and it also
+# drives the other accent UI (navigation highlights, tab markers, agent
+# labels on borders) - they all go subtle together. Revert to "#61afef"
+# to get the bright blue back.
+accent = "#5c6370"
+# Interior dividers only: shared-edge splitters with no outside frame
+# (tmux-style). `auto` skips the frame on a lone pane while
+# `pane_outer_borders = false` drops the outer edge; gaps stay off so
+# neighbors share one divider line instead of two separated borders.
+pane_borders = "auto"
+pane_outer_borders = false
 pane_gaps = false
 show_agent_labels_on_pane_borders = true
 hide_tab_bar_when_single_tab = true
