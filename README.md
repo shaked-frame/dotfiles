@@ -23,6 +23,7 @@ Layout mirrors the target tree: `<package>/.config/<name>/...` links to
 | `lazygit` | `.config/lazygit` |
 | `nvim` | `.config/nvim` |
 | `starship` | `.config/starship.toml` |
+| `worktrunk` | `.config/worktrunk/config.toml` |
 | `yazi` | `.config/yazi` |
 | `zed` | `.config/zed` |
 | `zellij` | `.config/zellij/config.kdl` |

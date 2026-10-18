@@ -14,6 +14,9 @@ herdr/.config/herdr/*.sock
 herdr/.config/herdr/session.json
 herdr/.config/herdr/.plugins.lock
 
+# worktrunk local command approvals - config.toml only
+worktrunk/.config/worktrunk/approvals.toml
+
 # atuin installer metadata, rewritten by cargo-dist on every upgrade
 atuin/.config/atuin/atuin-receipt.json
 
