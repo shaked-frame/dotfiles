@@ -37,6 +37,10 @@ local now_if_args, later = Config.now_if_args, Config.later
 --   `vimdoc`, `markdown`, etc.), manually install them via 'nvim-treesitter'
 --   with `:TSInstall <language>`. Be sure to have necessary system dependencies
 --   (see MiniMax README section for software requirements).
+-- Neovim detects no `*.mdx` filetype out of the box; register it at source
+-- time so `nvim foo.mdx` fires `FileType mdx` during startup.
+vim.filetype.add({ extension = { mdx = 'mdx' } })
+
 now_if_args(function()
   -- Define hook to update tree-sitter parsers after plugin is updated
   local ts_update = function() vim.cmd('TSUpdate') end
@@ -45,7 +49,13 @@ now_if_args(function()
   add({
     'https://github.com/nvim-treesitter/nvim-treesitter',
     'https://github.com/nvim-treesitter/nvim-treesitter-textobjects',
+    'https://github.com/nvim-treesitter/nvim-treesitter-context',
     'https://github.com/windwp/nvim-ts-autotag',
+  })
+
+  require('treesitter-context').setup({
+    max_lines = 3,
+    multiline_threshold = 1,
   })
 
   -- Define languages which will have parsers installed and auto enabled
@@ -97,25 +107,58 @@ now_if_args(function()
   local to_install = vim.tbl_filter(isnt_installed, languages)
   if #to_install > 0 then require('nvim-treesitter').install(to_install, { force = true }) end
 
-  -- 'jsonc' (comments-allowed JSON: 'tsconfig.json', '.eslintrc.json',
-  -- 'settings.json', etc.) has no tree-sitter grammar of its own.
-  -- `vim.treesitter.language.get_filetypes('json')` below only reports
-  -- filetypes Neovim already ties to a parser, and by default that's just
-  -- 'json'. Without this line, every 'jsonc' buffer skips the `FileType`
-  -- autocommand below and never gets tree-sitter highlighting. Registering
-  -- it here makes 'jsonc' resolve to the 'json' parser, both for that
-  -- lookup and for `vim.treesitter.start()`'s own language detection.
+  -- Language aliases must be registered before building `ts_filetypes` and
+  -- evaluating fold queries:
+  -- - 'jsonc' uses the 'json' grammar.
+  -- - 'mdx' and 'octo' (GitHub PR/comment buffers) use the 'markdown' grammar.
   vim.treesitter.language.register('json', 'jsonc')
+  vim.treesitter.language.register('markdown', { 'mdx', 'octo' })
 
-  -- Enable tree-sitter after opening a file for a target language
-  local filetypes = {}
+  local ts_filetypes = {}
   for _, lang in ipairs(languages) do
     for _, ft in ipairs(vim.treesitter.language.get_filetypes(lang)) do
-      table.insert(filetypes, ft)
+      ts_filetypes[ft] = true
     end
   end
-  local ts_start = function(ev) vim.treesitter.start(ev.buf) end
-  Config.new_autocmd('FileType', filetypes, ts_start, 'Start tree-sitter')
+
+  -- Unified buffer lifecycle: start tree-sitter for supported filetypes and
+  -- configure syntax folds when both a parser binary and `folds` query exist,
+  -- falling back to `indent` folds otherwise.
+  local attach_treesitter_and_folds = function(ev)
+    local buf = ev.buf
+    if not (buf and vim.api.nvim_buf_is_valid(buf)) then return end
+    local ft = vim.bo[buf].filetype
+    if ft == '' then return end
+    if ts_filetypes[ft] then pcall(vim.treesitter.start, buf) end
+
+    local lang = vim.treesitter.language.get_lang(ft) or ft
+    local has_parser = #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) > 0
+    local has_folds = vim.treesitter.query.get(lang, 'folds') ~= nil
+    local use_expr = has_parser and has_folds
+
+    if buf == vim.api.nvim_get_current_buf() then
+      if use_expr then
+        vim.cmd('setlocal foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr()')
+      else
+        vim.cmd('setlocal foldmethod=indent')
+      end
+    end
+    for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+      if use_expr then
+        vim.wo[win].foldmethod = 'expr'
+        vim.wo[win].foldexpr = 'v:lua.vim.treesitter.foldexpr()'
+      else
+        vim.wo[win].foldmethod = 'indent'
+      end
+    end
+  end
+
+  Config.new_autocmd('FileType', '*', attach_treesitter_and_folds, 'Start tree-sitter and configure folds')
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buf) and vim.bo[buf].filetype ~= '' then
+      attach_treesitter_and_folds({ buf = buf })
+    end
+  end
 
   -- Auto close/rename HTML and JSX tags
   require('nvim-ts-autotag').setup()
@@ -302,12 +345,55 @@ later(function()
   add({ 'https://github.com/kdheepak/lazygit.nvim' })
 end)
 
+-- Snacks & Markdown rendering ================================================
+--
+-- 'snacks.nvim' is shared across 'octo.nvim' (`picker = 'snacks'`),
+-- 'sidekick.nvim' (`picker = 'snacks'` + `<M-a>` send action), and Oil's
+-- `snacks.rename` LSP hook in 'plugin/24_explorer.lua'.
+-- 'render-markdown.nvim' renders Markdown, MDX, and Octo buffers in-place.
+later(function()
+  add({
+    'https://github.com/folke/snacks.nvim',
+    'https://github.com/MeanderingProgrammer/render-markdown.nvim',
+  })
+
+  require('snacks').setup({
+    picker = {
+      actions = {
+        sidekick_send = function(...)
+          return require('sidekick.cli.picker.snacks').send(...)
+        end,
+      },
+      win = {
+        input = {
+          keys = {
+            ['<a-a>'] = { 'sidekick_send', mode = { 'n', 'i' } },
+          },
+        },
+      },
+    },
+  })
+
+  require('render-markdown').setup({
+    file_types = { 'markdown', 'mdx', 'octo' },
+    html = {
+      tag = {
+        details = { icon = '' },
+        summary = { icon = '▸ ', highlight = 'RenderMarkdownH6' },
+        a = { icon = '󰌹 ', highlight = 'RenderMarkdownLink' },
+        img = { icon = '󰥶 ', highlight = 'RenderMarkdownLink' },
+      },
+    },
+  })
+end)
+
 -- Editing extras =============================================================
 
 -- - 'yanky.nvim'      - yank ring: cycle through previous yanks after pasting
 -- - 'dial.nvim'       - smarter `<C-a>`/`<C-x>` increment/decrement
 -- - 'inc-rename.nvim' - live preview while renaming via LSP (`<Leader>lr`)
 -- - 'trouble.nvim'    - pretty diagnostics/quickfix/reference lists (`<Leader>x*`)
+-- - 'quicker.nvim'    - editable quickfix buffers with expandable context (`<Leader>eq`)
 -- - 'grug-far.nvim'   - project-wide search and replace (`<Leader>r*`)
 -- - 'diffview.nvim'   - all touched files rendered side by side (`<Leader>gu`);
 --   needs 'plenary.nvim' as a dependency
@@ -317,6 +403,7 @@ later(function()
     'https://github.com/monaqa/dial.nvim',
     'https://github.com/smjonas/inc-rename.nvim',
     'https://github.com/folke/trouble.nvim',
+    'https://github.com/stevearc/quicker.nvim',
     'https://github.com/MagicDuck/grug-far.nvim',
     'https://github.com/nvim-lua/plenary.nvim',
     'https://github.com/sindrets/diffview.nvim',
@@ -325,6 +412,20 @@ later(function()
   require('yanky').setup()
   require('inc_rename').setup()
   require('trouble').setup()
+  require('quicker').setup({
+    keys = {
+      {
+        '>',
+        function() require('quicker').expand({ before = 2, after = 2, add_to_existing = true }) end,
+        desc = 'Expand quickfix context',
+      },
+      {
+        '<',
+        function() require('quicker').collapse() end,
+        desc = 'Collapse quickfix context',
+      },
+    },
+  })
   require('grug-far').setup()
   require('diffview').setup({
     keymaps = {
@@ -416,6 +517,7 @@ Config.now(function()
     -- desaturates everything (bg #1f2329, fg #a0a8b7), which is why it did not
     -- look like One Dark.
     style = 'dark',
+    transparent = true,
 
     -- One Dark's own comment colour is only 2.32:1 against its background,
     -- below the 3:1 WCAG floor for UI text - so authentic does not mean legible.
@@ -458,4 +560,10 @@ Config.now(function()
     },
   })
   require('onedark').load()
+
+  Config.toggle_transparency = function()
+    local onedark = require('onedark')
+    onedark.set_options('transparent', not vim.g.onedark_config.transparent)
+    onedark.load()
+  end
 end)

@@ -12,9 +12,8 @@
 -- comment, `<C-c>` close the review tab. `:Octo actions` lists everything.
 
 Config.later(function()
-  -- Snacks is otherwise only loaded outside Herdr ('plugin/46_sidekick_cli.lua').
+  -- Snacks is loaded and configured in 'plugin/40_plugins.lua'.
   vim.pack.add({
-    'https://github.com/folke/snacks.nvim',
     'https://github.com/pwntester/octo.nvim',
   })
 

@@ -28,7 +28,7 @@
 -- meaningless outside one, and Herdr's own guidance is not to drive the focused
 -- session from outside it, so fail loudly rather than silently doing nothing.
 local function in_herdr()
-  if vim.env.HERDR_ENV == '1' then return true end
+  if Config.Agent and Config.Agent.in_herdr and Config.Agent.in_herdr() then return true end
   vim.notify('Not inside a Herdr pane (HERDR_ENV is unset)', vim.log.levels.WARN)
   return false
 end
@@ -191,16 +191,18 @@ end
 
 -- Adapter ====================================================================
 -- Implements the `Config.Agent` interface declared in 'plugin/44_agent.lua'
--- (focus/attach/send over backend-agnostic context text). The `<Leader>a*`
+-- (focus/attach/send over adapter-agnostic context text). The `<Leader>a*`
 -- keymaps live in the dispatcher; this file owns only Herdr mechanics.
 -- Removal: delete this file and the dispatcher falls back to sidekick.
-Config.AgentHerdr = {
-  focus = function()
-    with_agent('Herdr agents -> focus', function(agent) herdr({ 'agent', 'focus', agent.name or agent.pane_id }) end)
-  end,
-  attach = attach_to_agent,
-  send = send_to_agent,
-}
+if Config.Agent and Config.Agent.register then
+  Config.Agent.register('herdr', {
+    focus = function()
+      with_agent('Herdr agents -> focus', function(agent) herdr({ 'agent', 'focus', agent.name or agent.pane_id }) end)
+    end,
+    attach = attach_to_agent,
+    send = send_to_agent,
+  })
+end
 
 -- Mappings ===================================================================
 

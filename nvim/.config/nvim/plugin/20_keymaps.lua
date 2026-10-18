@@ -67,6 +67,16 @@ nmap('gD', '<Cmd>lua vim.lsp.buf.declaration()<CR>', 'Go to declaration')
 nmap('gy', '<Cmd>lua vim.lsp.buf.type_definition()<CR>', 'Go to type definition')
 nmap('grr', pick_lsp_references, 'References')
 nmap('gri', '<Cmd>lua vim.lsp.buf.implementation()<CR>', 'Go to implementation')
+nmap('K', function()
+  local line = vim.api.nvim_win_get_cursor(0)[1] - 1
+  local diagnostics = vim.diagnostic.get(0, { lnum = line })
+
+  if #diagnostics > 0 then
+    vim.diagnostic.open_float({ scope = 'line' })
+  else
+    vim.lsp.buf.hover()
+  end
+end, 'Show diagnostics or hover')
 -- `gra` code action (Zed muscle memory, and Neovim's own default, see `:h gra`).
 -- NOTE: `gr` alone is the "replace" operator from 'mini.operators', so after
 -- typing `gr` there is a `timeoutlen` pause before `gra` fires. Longer `gr..`
@@ -96,33 +106,9 @@ nmap(H('\\'), function()
   vim.cmd('normal! zz')
 end, 'Next diagnostic')
 
--- Toggle terminal with Ctrl-/
-local toggle_terminal = function()
-  local term_winid = nil
-
-  for _, win in ipairs(vim.api.nvim_list_wins()) do
-    local buf = vim.api.nvim_win_get_buf(win)
-    if vim.bo[buf].buftype == 'terminal' then
-      term_winid = win
-      break
-    end
-  end
-
-  if term_winid then
-    -- Terminal exists: close it if we are in it, otherwise focus it
-    if vim.api.nvim_get_current_win() == term_winid then
-      vim.api.nvim_win_close(term_winid, false)
-    else
-      vim.api.nvim_set_current_win(term_winid)
-      vim.cmd('startinsert')
-    end
-  else
-    vim.cmd('horizontal term')
-    vim.cmd('resize 15')
-  end
-end
-
-vim.keymap.set({ 'n', 't' }, '<C-/>', toggle_terminal, { desc = 'Toggle terminal' })
+-- Toggle the persistent terminal dock with Ctrl-/. Mechanics live in
+-- 'plugin/23_terminal.lua' (`Config.Terminal`).
+vim.keymap.set({ 'n', 't' }, '<C-/>', function() Config.Terminal.toggle() end, { desc = 'Toggle terminal dock' })
 
 -- Navigate windows directly from Terminal mode with `<C-hjkl>`
 -- (Zed: `ctrl-hjkl` = workspace::ActivatePane*)
@@ -131,18 +117,9 @@ vim.keymap.set('t', '<C-j>', [[<C-\><C-n><C-w>j]], { desc = 'Go to lower window'
 vim.keymap.set('t', '<C-k>', [[<C-\><C-n><C-w>k]], { desc = 'Go to upper window' })
 vim.keymap.set('t', '<C-l>', [[<C-\><C-n><C-w>l]], { desc = 'Go to right window' })
 
--- Open the file explorer at the current file with `-`, like 'oil.nvim'/netrw.
--- Passing `true` makes 'mini.files' restore its previous state (including marks
--- and bookmarks) instead of opening fresh.
-nmap('-', function()
-  local path = vim.api.nvim_buf_get_name(0)
-  if path == '' then
-    MiniFiles.open()
-    return
-  end
-
-  MiniFiles.open(path, true)
-end, 'Explore at file')
+-- Open the active file explorer (`Config.explorer` in 'init.lua') at the
+-- current file with `-`.
+nmap('-', function() Config.Explorer.open_at_file() end, 'Explore at file')
 
 -- Many general mappings are created by 'mini.basics'. See 'plugin/30_mini.lua'
 
@@ -190,6 +167,7 @@ Config.leader_group_clues = {
   { mode = 'n', keys = '<Leader>x', desc = '+Trouble' },
 
   { mode = 'x', keys = '<Leader>a', desc = '+AI' },
+  { mode = 'x', keys = '<Leader>f', desc = '+Find' },
   { mode = 'x', keys = '<Leader>g', desc = '+Git' },
   { mode = 'x', keys = '<Leader>l', desc = '+Language' },
 }
@@ -245,7 +223,6 @@ end
 local source_plugin_file = function(filename)
   return string.format('<Cmd>source %s/plugin/%s<CR>', vim.fn.stdpath('config'), filename)
 end
-local explore_at_file = '<Cmd>lua MiniFiles.open(vim.api.nvim_buf_get_name(0))<CR>'
 local explore_quickfix = function()
   vim.cmd(vim.fn.getqflist({ winid = true }).winid ~= 0 and 'cclose' or 'copen')
 end
@@ -254,8 +231,8 @@ local explore_locations = function()
 end
 
 nmap_leader('eb', '<Cmd>Pick lsp scope="document_symbol"<CR>', 'Outline (symbols)')
-nmap_leader('ed', '<Cmd>lua MiniFiles.open()<CR>',          'Directory')
-nmap_leader('ef', explore_at_file,                          'File directory')
+nmap_leader('ed', function() Config.Explorer.open_cwd() end,     'Directory')
+nmap_leader('ef', function() Config.Explorer.open_at_file() end, 'File directory')
 nmap_leader('ei', '<Cmd>edit $MYVIMRC<CR>',                 'init.lua')
 nmap_leader('ek', edit_plugin_file('20_keymaps.lua'),       'Keymaps config')
 nmap_leader('em', edit_plugin_file('30_mini.lua'),          'MINI config')
@@ -377,7 +354,11 @@ nmap_leader('lf', '<Cmd>lua require("conform").format()<CR>',   'Format')
 nmap_leader('li', '<Cmd>lua vim.lsp.buf.implementation()<CR>',  'Implementation')
 nmap_leader('lh', '<Cmd>lua vim.lsp.buf.hover()<CR>',           'Hover')
 nmap_leader('ll', '<Cmd>lua vim.lsp.codelens.run()<CR>',        'Lens')
-nmap_leader('lr', '<Cmd>IncRename <C-r><C-w><CR>',              'Rename')
+-- inc-rename's recommended mapping: leave the cmdline open (no trailing
+-- `<CR>`) so its live preview runs while typing. Auto-executing would
+-- rename to the same name and skip the preview the plugin exists for.
+vim.keymap.set('n', '<Leader>lr', function() return ':IncRename ' .. vim.fn.expand('<cword>') end,
+  { expr = true, desc = 'Rename' })
 nmap_leader('lR', pick_lsp_references,                          'References')
 nmap_leader('ls', '<Cmd>lua vim.lsp.buf.definition()<CR>',      'Source definition')
 nmap_leader('lt', '<Cmd>lua vim.lsp.buf.type_definition()<CR>', 'Type definition')
@@ -409,10 +390,14 @@ nmap_leader('xl', '<Cmd>Trouble loclist toggle<CR>',                  'Location 
 nmap_leader('xr', '<Cmd>Trouble lsp_references toggle<CR>',           'References')
 
 -- o is for 'Other'. Common usage:
+-- - `<Leader>ob` - toggle transparent background
+-- - `<Leader>oc` - toggle sticky treesitter context header
 -- - `<Leader>oz` - toggle between "zoomed" and regular view of current buffer
-nmap_leader('or', '<Cmd>lua MiniMisc.resize_window()<CR>', 'Resize to default width')
-nmap_leader('ot', '<Cmd>lua MiniTrailspace.trim()<CR>',    'Trim trailspace')
-nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',          'Zoom toggle')
+nmap_leader('ob', function() Config.toggle_transparency() end,        'Transparent background')
+nmap_leader('oc', '<Cmd>TSContext toggle<CR>',                        'Treesitter context')
+nmap_leader('or', '<Cmd>lua MiniMisc.resize_window()<CR>',            'Resize to default width')
+nmap_leader('ot', '<Cmd>lua MiniTrailspace.trim()<CR>',               'Trim trailspace')
+nmap_leader('oz', '<Cmd>lua MiniMisc.zoom()<CR>',                     'Zoom toggle')
 
 -- s is for 'Session'. Common usage:
 -- - `<Leader>sn` - start new session
@@ -426,9 +411,15 @@ nmap_leader('sr', '<Cmd>lua MiniSessions.select("read")<CR>',   'Read')
 nmap_leader('sR', '<Cmd>lua MiniSessions.restart()<CR>',        'Restart')
 nmap_leader('sw', '<Cmd>lua MiniSessions.write()<CR>',          'Write current')
 
--- t is for 'Terminal'
-nmap_leader('tT', '<Cmd>horizontal term<CR>', 'Terminal (horizontal)')
-nmap_leader('tt', '<Cmd>vertical term<CR>',   'Terminal (vertical)')
+-- t is for 'Terminal' ('plugin/23_terminal.lua')
+nmap_leader('tt', function() Config.Terminal.toggle() end, 'Toggle dock')
+nmap_leader('tn', function() Config.Terminal.new() end,    'New tab')
+nmap_leader('tx', function() Config.Terminal.close() end,  'Close tab')
+nmap_leader('tr', function() Config.Terminal.rename() end, 'Rename tab')
+nmap_leader('tl', function() Config.Terminal.next() end,   'Next tab')
+nmap_leader('th', function() Config.Terminal.prev() end,   'Previous tab')
+nmap_leader('tf', function() Config.Terminal.pick() end,   'Pick tab')
+nmap_leader('tv', '<Cmd>vertical term<CR>',                'Vertical split')
 
 -- v is for 'Visits'. Common usage:
 -- - `<Leader>vv` - add    "core" label to current file.

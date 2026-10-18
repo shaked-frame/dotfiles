@@ -4,20 +4,21 @@
 --
 -- 'Send editor context to an agent' has a single interface here:
 -- focus / attach (stage, no submit) / send (submit now) / prompt.
--- Two adapters sit behind it, branched on exactly once:
+-- Two adapters sit behind it, branched on in one place (`Config.Agent.in_herdr`):
 -- - Herdr panes ('plugin/60_herdr.lua', when HERDR_ENV=1)
 -- - sidekick CLI terminal ('plugin/46_sidekick_cli.lua', otherwise)
 --
--- Adapters expose focus(), attach(text, what), send(text, what) and are
--- resolved at press time, not source time. Removal: delete one adapter file
--- and the dispatcher falls back to the other.
+-- Adapters register via `Config.Agent.register(name, adapter)` with
+-- `focus()`, `attach(text, what)`, `send(text, what)` and are resolved at
+-- press time, not source time. Removal: delete one adapter file and the
+-- dispatcher falls back to the other.
 --
--- Conventions (both backends):
+-- Conventions (both adapters):
 -- - Lowercase (`af`/`at`/`av`) attaches context to the agent's input WITHOUT
 --   submitting it, focusing the agent UI so more can be added and Enter
 --   pressed manually. Uppercase (`aF`/`aT`/`aV`) sends it immediately.
 
--- Context builders (backend-agnostic Markdown) ================================
+-- Context builders (adapter-agnostic Markdown) ===============================
 
 local function relative_path()
   local path = vim.api.nvim_buf_get_name(0)
@@ -54,14 +55,29 @@ end
 
 -- Dispatcher =================================================================
 
-local function active_adapter()
-  if vim.env.HERDR_ENV == '1' and Config.AgentHerdr ~= nil then
-    return Config.AgentHerdr
-  end
-  return Config.AgentSidekick
+local adapters = {}
+
+Config.Agent = {}
+
+-- Single HERDR_ENV check across the Neovim config.
+Config.Agent.in_herdr = function()
+  return vim.env.HERDR_ENV == '1'
 end
 
-local function with_adapter(fn_name, fn)
+Config.Agent.register = function(name, adapter)
+  adapters[name] = adapter
+end
+
+local function active_adapter()
+  if Config.Agent.in_herdr() and adapters.herdr ~= nil then
+    return adapters.herdr
+  end
+  return adapters.sidekick or adapters.herdr
+end
+
+Config.Agent.active_adapter = active_adapter
+
+local function with_adapter(fn)
   local adapter = active_adapter()
   if adapter == nil then
     vim.notify('No agent adapter available', vim.log.levels.WARN)
@@ -70,18 +86,16 @@ local function with_adapter(fn_name, fn)
   fn(adapter)
 end
 
-Config.Agent = {}
-
 Config.Agent.focus = function()
-  with_adapter('focus', function(a) a.focus() end)
+  with_adapter(function(a) a.focus() end)
 end
 
 Config.Agent.attach = function(text, what)
-  with_adapter('attach', function(a) a.attach(text, what) end)
+  with_adapter(function(a) a.attach(text, what) end)
 end
 
 Config.Agent.send = function(text, what)
-  with_adapter('send', function(a) a.send(text, what) end)
+  with_adapter(function(a) a.send(text, what) end)
 end
 
 Config.Agent.prompt = function()

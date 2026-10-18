@@ -17,5 +17,8 @@ local matches = vim.fn.globpath(
   true
 )
 if type(matches) == 'table' and #matches > 0 and vim.fn.filereadable(matches[1]) == 1 then
+  for _, lhs in ipairs({ '<C-h>', '<C-j>', '<C-k>', '<C-l>' }) do
+    pcall(vim.keymap.del, 'n', lhs)
+  end
   dofile(matches[1])
 end

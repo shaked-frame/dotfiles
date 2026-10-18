@@ -15,10 +15,14 @@
 -- This is also a good place to set buffer-local 'mini.nvim' variables.
 -- See `:h mini.nvim-buffer-local-config` and `:h mini.nvim-disabling-recipes`.
 
+-- Skip non-file buffers (such as LSP hover floats, which also use
+-- `filetype=markdown`) so they don't get spell-checked or mutated.
+if vim.bo.buftype ~= '' then return end
+
 -- Enable spelling and wrap for window
 vim.cmd('setlocal spell wrap')
 
--- Folds come from the global tree-sitter setup in 'plugin/10_options.lua'.
+-- Folds come from the tree-sitter lifecycle in 'plugin/40_plugins.lua'.
 
 -- Disable buffer-local `gO` (outline view) in favor of 'mini.basics'.
 -- Guarded: hover floats (`K`) also get `filetype=markdown`, but treesitter

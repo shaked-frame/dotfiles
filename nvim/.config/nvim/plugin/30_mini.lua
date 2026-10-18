@@ -106,6 +106,11 @@ now(function()
       move_with_alt = true,
     },
   })
+  -- Release keys owned by 'yanky.nvim' (`gp`) and 'dial.nvim' (`<C-Up>`,
+  -- `<C-Down>`) in 'plugin/40_plugins.lua' so they are mapped once.
+  pcall(vim.keymap.del, { 'n', 'x' }, 'gp')
+  pcall(vim.keymap.del, 'n', '<C-Up>')
+  pcall(vim.keymap.del, 'n', '<C-Down>')
 end)
 
 -- Icon provider. Usually no need to use manually. It is used by plugins like
@@ -275,150 +280,7 @@ now_if_args(function()
   vim.lsp.config('*', { capabilities = MiniCompletion.get_lsp_capabilities() })
 end)
 
--- Navigate and manipulate file system
---
--- Navigation is done using column view (Miller columns) to display nested
--- directories, they are displayed in floating windows in top left corner.
---
--- Manipulate files and directories by editing text as regular buffers.
---
--- Example usage:
--- - `<Leader>ed` - open current working directory
--- - `<Leader>ef` - open directory of current file (needs to be present on disk)
---
--- Basic navigation:
--- - `l` - go in entry at cursor: navigate into directory or open file
--- - `h` - go out of focused directory
--- - Navigate window as any regular buffer
--- - Press `g?` inside explorer to see more mappings
---
--- Basic manipulation:
--- - After any following action, press `=` in Normal mode to synchronize, read
---   carefully about actions, press `y` or `<CR>` to confirm
--- - New entry: press `o` and type its name; end with `/` to create directory
--- - Rename: press `C` and type new name
--- - Delete: type `dd`
--- - Move/copy: type `dd`/`yy`, navigate to target directory, press `p`
---
--- See also:
--- - `:h MiniFiles-navigation` - more details about how to navigate
--- - `:h MiniFiles-manipulation` - more details about how to manipulate
--- - `:h MiniFiles-examples` - examples of common setups
-now_if_args(function()
-  -- Enable directory/file preview
-  --
-  -- Git status marks, gitsigns-style: changed entries swap the blank after
-  -- the file icon for a status symbol (`M` modified, `A` staged/added,
-  -- `D` deleted, `R` renamed, `?` untracked) and get status-colored text.
-  -- Statuses come from one `git status --porcelain` per shown directory,
-  -- cached for 2 seconds (navigation stays snappy; outside changes appear
-  -- on revisit). Directories aggregate: worst status of their content wins.
-  local git_hl = { M = 'MiniFilesGitModified', A = 'MiniFilesGitAdded', D = 'MiniFilesGitDeleted', R = 'MiniFilesGitRenamed', ['?'] = 'MiniFilesGitUntracked' }
-  for group, link in pairs({
-    MiniFilesGitModified = 'DiffChange',
-    MiniFilesGitAdded = 'DiffAdd',
-    MiniFilesGitDeleted = 'DiffDelete',
-    MiniFilesGitRenamed = 'DiffChange',
-    MiniFilesGitUntracked = 'Comment',
-  }) do
-    vim.api.nvim_set_hl(0, group, { link = link })
-  end
-  local git_cache = {}
-  local git_changes = function(dir)
-    -- Array of `{ path = <absolute path>, status = 'M'|'A'|'D'|'R'|'?' }`
-    -- for everything changed under `dir`. NOTE: `git status --porcelain`
-    -- prints paths relative to the repo root (unlike `--short`), so resolve
-    -- the root explicitly instead of assuming dir-relative output.
-    local now = vim.uv.now()
-    local cached = git_cache[dir]
-    if cached ~= nil and now - cached.at < 2000 then return cached.items end
-    local items = {}
-    local root_res = vim.system({ 'git', '-C', dir, 'rev-parse', '--show-toplevel' }):wait()
-    if root_res.code == 0 then
-      local root = (root_res.stdout or ''):gsub('%s+$', '')
-      -- NOTE: `vim.fn.system()` mangles NULs (to 0x01), so `-z` parsing
-      -- needs `vim.system()`, which preserves raw bytes.
-      local res = vim.system({ 'git', '-C', dir, 'status', '--porcelain=v1', '-z', '--untracked-files=normal', '--', '.' }):wait()
-      if res.code == 0 then
-        local chunks = {}
-        for c in (res.stdout or ''):gmatch('[^%z]+') do table.insert(chunks, c) end
-        local i = 1
-        while i <= #chunks do
-          local status, path = chunks[i]:match('^(..) (.*)$')
-          if path == nil then break end
-          i = i + 1
-          if status:sub(1, 1) == 'R' or status:sub(1, 1) == 'C' then
-            path = chunks[i] -- rename/copy: next chunk is the new path
-            i = i + 1
-          end
-          if path ~= nil then
-            path = path:gsub('/$', '') -- untracked dirs come as `name/`
-            local x, y = status:sub(1, 1), status:sub(2, 2)
-            local s = (y ~= ' ' and y ~= '?') and y or (x ~= ' ' and x or (y == '?' and '?' or nil))
-            if s == 'T' or s == 'U' then s = 'M' end
-            if s ~= nil then table.insert(items, { path = root .. '/' .. path, status = s }) end
-          end
-        end
-      end
-    end
-    git_cache[dir] = { at = now, items = items }
-    return items
-  end
-  local git_symbol = function(fs_entry)
-    local dir = fs_entry.path:match('^(.*)/[^/]+$')
-    if dir == nil then return nil end
-    -- Worst status wins when a directory aggregates several changes.
-    local rank = { M = 4, D = 3, A = 2, R = 1, ['?'] = 0 }
-    local best, best_rank = nil, -1
-    for _, item in ipairs(git_changes(dir)) do
-      if item.path == fs_entry.path or item.path:sub(1, #fs_entry.path + 1) == fs_entry.path .. '/' then
-        local r = rank[item.status] or 0
-        if r > best_rank then best, best_rank = item.status, r end
-      end
-    end
-    return best
-  end
-  require('mini.files').setup({
-    windows = { preview = true, width_focus = 35, width_preview = 75 },
-    content = {
-      prefix = function(fs_entry)
-        local icon, hl = MiniFiles.default_prefix(fs_entry)
-        local s = git_symbol(fs_entry)
-        -- Dedicated git column ahead of the (mini.icons) file icon, so both
-        -- survive: `M <icon> name`. Blank column when clean keeps names aligned.
-        if s == nil then return '  ' .. icon, hl end
-        return s .. ' ' .. icon, git_hl[s] or hl
-      end,
-      highlight = function(fs_entry)
-        local s = git_symbol(fs_entry)
-        if s == nil then return MiniFiles.default_highlight(fs_entry) end
-        return git_hl[s] or MiniFiles.default_highlight(fs_entry)
-      end,
-    },
-  })
-
-  -- Add common bookmarks for every explorer. Example usage inside explorer:
-  -- - `'c` to navigate into your config directory
-  -- - `g?` to see available bookmarks
-  --
-  -- Frame repo bookmarks (root detection lives in `Config.frame_root()`,
-  -- see 'init.lua', so the sentinel and walk live in exactly one place):
-  -- - `'a` frontend/apps/web, `'f` frontend/, `'p` frontend/packages/
-  -- NOTE: vimpack plugins moved to `'P` to free `'p` for packages.
-  local add_marks = function()
-    MiniFiles.set_bookmark('c', vim.fn.stdpath('config'), { desc = 'Config' })
-    local vimpack_plugins = vim.fn.stdpath('data') .. '/site/pack/core/opt'
-    MiniFiles.set_bookmark('P', vimpack_plugins, { desc = 'Plugins' })
-    MiniFiles.set_bookmark('w', vim.fn.getcwd, { desc = 'Working directory' })
-    local root = Config.frame_root()
-    if root ~= nil then
-      MiniFiles.set_bookmark('a', root .. '/frontend/apps/web', { desc = 'Web app' })
-      MiniFiles.set_bookmark('f', root .. '/frontend', { desc = 'Frontend' })
-      MiniFiles.set_bookmark('p', root .. '/frontend/packages', { desc = 'Packages' })
-    end
-  end
-  Config.new_autocmd('User', 'MiniFilesExplorerOpen', add_marks, 'Add bookmarks')
-end)
+-- File explorer ('mini.files' and 'oil.nvim') lives in 'plugin/24_explorer.lua'.
 
 -- Miscellaneous small but useful functions. Example usage:
 -- - `<Leader>oz` - toggle between "zoomed" and regular view of current buffer
@@ -526,7 +388,14 @@ later(function() require('mini.align').setup() end)
 --
 -- See also:
 -- - `:h MiniBracketed` - overall mapping design and list of targets
-later(function() require('mini.bracketed').setup() end)
+later(function()
+  require('mini.bracketed').setup({
+    -- `[i`/`]i` belong to 'mini.indentscope' below; `[y`/`]y` belong to
+    -- 'yanky.nvim' in 'plugin/40_plugins.lua'.
+    indent = { suffix = '' },
+    yank = { suffix = '' },
+  })
+end)
 
 -- Remove buffers. Opened files occupy space in tabline and buffer picker.
 -- When not needed, they can be removed. Example usage:
@@ -601,8 +470,8 @@ later(function()
   -- and explicitly removes those conflicting built-ins (see `:h MiniOperators`,
   -- "All built-in conflicting mappings are removed"). So there was nothing to
   -- describe. This config reaches the same actions via `<Leader>l*` instead,
-  -- plus `grr` / `gri` which are mapped (with descriptions) in
-  -- 'plugin/20_keymaps.lua' and 'plugin/50_overrides.lua'.
+  -- plus `grr` / `gri` / `gra` which are mapped (with descriptions) in
+  -- 'plugin/20_keymaps.lua'.
   local ensure_clue_triggers = function(ev) miniclue.ensure_buf_triggers(ev.buf) end
   Config.new_autocmd('LspAttach', nil, ensure_clue_triggers, 'Ensure clue triggers in buffer')
 end)
@@ -786,8 +655,9 @@ later(function() require('mini.jump2d').setup() end)
 -- - `:h MiniKeymap.map_combo()` - map combo
 later(function()
   require('mini.keymap').setup()
-  -- Navigate 'mini.completion' menu with `<Tab>` /  `<S-Tab>`
-  MiniKeymap.map_multistep('i', '<Tab>', { 'pmenu_next' })
+  -- Navigate 'mini.completion' menu with `<S-Tab>` (`<Tab>` is owned by
+  -- 'plugin/45_sidekick.lua', which checks `pumvisible()` first and falls
+  -- back to inline completion).
   MiniKeymap.map_multistep('i', '<S-Tab>', { 'pmenu_prev' })
   -- On `<CR>` try to accept current completion item, fall back to accounting
   -- for pairs from 'mini.pairs'
@@ -834,7 +704,14 @@ later(function() require('mini.move').setup() end)
 -- - `:h MiniOperators-mappings` - overview of how mappings are created
 -- - `:h MiniOperators-overview` - overview of present operators
 later(function()
-  require('mini.operators').setup()
+  local operators = require('mini.operators')
+  -- Keep `gr` (textobject + visual) while leaving `grr` to LSP references in
+  -- 'plugin/20_keymaps.lua' (`gr_` still replaces a line).
+  operators.setup({ replace = { prefix = '' } })
+  for _, lhs in ipairs({ 'grn', 'grt', 'grx' }) do
+    pcall(vim.keymap.del, 'n', lhs)
+  end
+  operators.make_mappings('replace', { textobject = 'gr', line = '', selection = 'gr' })
 
   -- Create mappings for swapping adjacent arguments. Notes:
   -- - Relies on `a` argument textobject from 'mini.ai'.

@@ -65,11 +65,12 @@
 -- It is a global variable which can be use both as `_G.Config` and `Config`
 _G.Config = {}
 
--- Never load netrw (directory browser + `gx` handler): 'mini.files' owns
--- directory browsing and `gx` is a built-in default mapping in Nvim 0.12.
--- Skips its startup cost and its attack surface (e.g. the NetrwBookHistSave
--- code-injection fix in 0.12.6). Must stay here: runtime plugins load right
--- after 'init.lua', so setting this in 'plugin/' is too late.
+-- Never load netrw (directory browser + `gx` handler): `Config.Explorer`
+-- ('plugin/24_explorer.lua') owns directory browsing and `gx` is a built-in
+-- default mapping in Nvim 0.12. Skips its startup cost and its attack surface
+-- (e.g. the NetrwBookHistSave code-injection fix in 0.12.6). Must stay here:
+-- runtime plugins load right after 'init.lua', so setting this in 'plugin/' is
+-- too late.
 vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 
@@ -105,10 +106,11 @@ end
 -- Frame repo locator: nearest ancestor (up from cwd) holding
 -- 'frontend/apps/web'. Covers '~/frame' and any
 -- '~/worktrees/frame/<name>/frame' checkout. Returns nil outside frame repos.
--- Shared by 'plugin/20_keymaps.lua' (scoped finders) and
--- 'plugin/30_mini.lua' (explorer bookmarks) so the sentinel, walk direction,
--- and lower bound live in exactly one place. The optional argument (defaulting
--- to cwd) keeps the walk testable through this interface.
+-- Shared by 'plugin/21_pickers.lua' (scoped finders),
+-- 'plugin/24_explorer.lua' (explorer bookmarks), and
+-- 'after/lsp/tailwindcss.lua' (Tailwind v4 CSS entrypoint) so the sentinel,
+-- walk direction, and lower bound live in one place. The optional argument
+-- (defaulting to cwd) keeps the walk testable through this interface.
 Config.frame_root = function(cwd)
   local home = vim.env.HOME or vim.fn.expand('~')
   local dir = cwd or vim.fn.getcwd()
@@ -144,25 +146,77 @@ vim.pack.add({ 'https://github.com/nvim-mini/mini.nvim' })
 -- - 'plugin/30_mini.lua' and 'plugin/40_plugins.lua'
 local misc = require('mini.misc')
 Config.now = function(f) misc.safely('now', f) end
-Config.later = function(f) misc.safely('later', f) end
+Config.later_pending = 0
+Config.later = function(f)
+  Config.later_pending = Config.later_pending + 1
+  misc.safely('later', function()
+    local ok, err = pcall(f)
+    Config.later_pending = Config.later_pending - 1
+    if not ok then error(err, 0) end
+  end)
+end
 Config.now_if_args = vim.fn.argc(-1) > 0 and Config.now or Config.later
 Config.on_event = function(ev, f) misc.safely('event:' .. ev, f) end
 Config.on_filetype = function(ft, f) misc.safely('filetype:' .. ft, f) end
+
+-- Compat: some plugins (diffview.nvim, nvim-ts-autotag) still call the
+-- deprecated `vim.validate({ name = { value, validator, optional } })`
+-- table form, which on Nvim 0.12 routes through `vim.deprecate` and fails
+-- when `vim.deprecated.health` cannot be required (breaks `<Leader>gu`).
+-- Handle the table form directly; new-signature calls pass through.
+-- Remove once the plugins migrate to `vim.validate(name, value, validator)`.
+do
+  local orig_validate = vim.validate
+  ---@diagnostic disable-next-line: duplicate-set-field
+  vim.validate = function(name, value, validator, optional, message)
+    if validator == nil and type(name) == 'table' then
+      for param, spec in pairs(name) do
+        local val, check, opt_or_msg = spec[1], spec[2], spec[3]
+        local allow_nil = opt_or_msg == true
+        local msg = type(opt_or_msg) == 'string' and opt_or_msg or nil
+        if type(check) == 'string' then
+          if val == nil and not allow_nil then
+            error(string.format('%s: expected %s, got nil', param, check), 2)
+          elseif val ~= nil and type(val) ~= check then
+            error(string.format('%s: expected %s, got %s', param, check, type(val)), 2)
+          end
+        elseif type(check) == 'function' then
+          local ok, valid = pcall(check, val)
+          if not ok or not valid then
+            error(string.format('%s: %s', param, msg or ('invalid value: ' .. vim.inspect(val))), 2)
+          end
+        elseif type(check) == 'table' then
+          local ok_type = val == nil and allow_nil
+          for _, t in ipairs(check) do
+            if type(val) == t then ok_type = true break end
+          end
+          if not ok_type then
+            error(string.format('%s: expected %s, got %s', param, table.concat(check, '|'), type(val)), 2)
+          end
+        end
+      end
+      return
+    end
+    return orig_validate(name, value, validator, optional, message)
+  end
+end
 
 -- ┌─────────────────────┐
 -- │ Scheduling contract │
 -- └─────────────────────┘
 --
--- Ordering in this config is load-bearing. Two rules everything depends on:
+-- Ordering in this config is load-bearing. Three rules everything depends on:
 -- 1. Files in 'plugin/' source alphabetically: 10_options < 20_keymaps <
---    21_pickers < 22_splits < 30_mini < 40_plugins < 44_agent < 45_sidekick <
---    46_sidekick_cli < 47_markdown < 50_overrides < 60_herdr.
---    Slice files (21/22) must sort after their keymap catalog (20) is fine,
---    but keymaps may only reference `Config.Pickers` / `Config.Splits` inside
---    function bodies (press time) — never as a bare value at source time,
---    when the slices may not have been sourced yet.
+--    21_pickers < 22_splits < 23_terminal < 24_explorer < 30_mini < 40_plugins <
+--    42_lazygit < 43_octo < 44_agent < 45_sidekick < 46_sidekick_cli < 60_herdr.
+--    Slice modules (21/22/23/24) sort after the keymap catalog (20), so
+--    keymaps reference `Config.Pickers` / `Config.Splits` / `Config.Terminal` /
+--    `Config.Explorer` inside function bodies (press time), never as a bare
+--    value at source time.
 -- 2. `Config.later()` callbacks run in registration order, so a `later()`
 --    registered in a later-sourced file runs after earlier ones.
+--    `Config.later_pending` tracks the queue depth so `scripts/smoke.sh` can
+--    drain all deferred blocks before asserting post-conditions.
 -- 3. `Config.now_if_args()` runs now only when Neovim starts with file
 --    arguments (otherwise it is `later()`); anything needed for first draw
 --    on the dashboard must use `now()`, not `now_if_args()`.
@@ -170,17 +224,18 @@ Config.on_filetype = function(ft, f) misc.safely('filetype:' .. ft, f) end
 -- Shared `Config` fields (writer -> reader; reads must happen after writes):
 -- - `leader_group_clues`: written at source time in 'plugin/20_keymaps.lua',
 --   read deferred in `later()` by 'plugin/30_mini.lua' (mini.clue setup).
--- - `AgentHerdr` / `AgentSidekick`: written by adapter files (source time for
---   Herdr, `later()` for sidekick), read at press time by the dispatcher
---   'plugin/44_agent.lua' — never at source time.
+-- - `Agent`: defined at source time in 'plugin/44_agent.lua'; adapters
+--   register via `Config.Agent.register(name, adapter)` ('plugin/60_herdr.lua'
+--   and 'plugin/46_sidekick_cli.lua') and are resolved at press time.
 -- - `conform_ready`: written by 'plugin/40_plugins.lua' after
 --   `require('conform').setup()`, read by the format-on-save autocmd in
 --   'plugin/10_options.lua', so a save before setup is a no-op, not an error.
+-- - `explorer` / `Explorer`: owned by 'plugin/24_explorer.lua', which exposes
+--   `Config.Explorer` (`open_cwd`, `open_at_file`) at source time and
+--   initializes the selected adapter ('oil' or 'mini.files') lazily or via
+--   `now_if_args()`.
 --
 -- Consequences (do not break without updating all sides):
--- - 'plugin/50_overrides.lua' ("mappings that must win last") must keep a
---   filename sorting after every file whose mappings it overrides (notably
---   'plugin/30_mini.lua').
 -- - Mason's bin dir is prepended to $PATH eagerly at source time in
 --   'plugin/40_plugins.lua' because `require('mason').setup()` itself runs
 --   deferred; a server spawned before that would otherwise miss Mason binaries.

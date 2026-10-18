@@ -1,22 +1,17 @@
 -- ┌────────────────────────────────────────┐
--- │ Sidekick CLI + snacks (outside Herdr)  │
+-- │ Sidekick CLI agent adapter             │
 -- └────────────────────────────────────────┘
 --
--- Inside Herdr (`HERDR_ENV=1`) agents live in Herdr panes - see
--- 'plugin/60_herdr.lua' - so this file is a no-op there.
+-- Implements the sidekick CLI agent adapter behind 'plugin/44_agent.lua'.
+-- Outside Herdr there is no external agent pane to drive, so the agent runs
+-- inside Neovim via 'sidekick.nvim' CLI terminal (`mux.enabled = false`).
+-- Primary tool is opencode, matching '~/.config/opencode' (MCPs, commands,
+-- skills); claude/codex are fallbacks.
 --
--- Outside Herdr there is no agent pane to drive, so run the agent inside
--- Neovim via 'sidekick.nvim' CLI terminal (plain nvim terminal,
--- `mux.enabled = false`). Primary tool is opencode, matching
--- '~/.config/opencode' (MCPs, commands, skills); claude/codex are fallbacks.
--- Tools are declared in 'plugin/45_sidekick.lua'.
---
--- 'snacks.nvim' is *only* sidekick's preferred picker here (prompt/tool
--- selection) plus the `sidekick_send` picker action (`<M-a>`) to ship picker
--- selections to the CLI. File finding stays on 'mini.pick' (`<Leader>f*`).
-
--- Herdr owns `<Leader>a*` inside its panes; don't shadow those mappings.
-if vim.env.HERDR_ENV == '1' then return end
+-- The adapter is always registered so deleting 'plugin/60_herdr.lua' falls
+-- back to sidekick even inside Herdr. Sidekick-only tool toggles (`<Leader>ao`,
+-- `<Leader>ac`, `<Leader>ax`, `<Leader>as`, `<Leader>aP`) are only mapped when
+-- Herdr is not active (`not Config.Agent.in_herdr()`).
 
 -- Equalize splits when the sidekick chat opens/closes ======================
 -- Sidekick's terminal opens as a right split with `winfixwidth` set (see
@@ -34,21 +29,6 @@ local equalize = function()
   end)
 end
 
-Config.new_autocmd('BufWinEnter', nil, function(ev)
-  if vim.bo[ev.buf].filetype ~= 'sidekick_terminal' then return end
-  for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
-    sidekick_wins[win] = true
-  end
-  equalize()
-end, 'Equalize splits after sidekick opens')
-
-Config.new_autocmd('WinClosed', nil, function(ev)
-  local win = tonumber(ev.match)
-  if win == nil or not sidekick_wins[win] then return end
-  sidekick_wins[win] = nil
-  equalize()
-end, 'Equalize splits after sidekick closes')
-
 -- Adopt orphaned agent terminals (session restore) =========================
 -- Sidekick tracks sessions only in memory, so after a restart a restored
 -- chat pane is unknown to it: toggling then prompts for a tool and spawns a
@@ -58,7 +38,7 @@ end, 'Equalize splits after sidekick closes')
 -- duplicate), dead ones are dropped so the toggle starts fresh. Never
 -- touches terminals that don't match a configured tool, nor a tool sidekick
 -- already tracks. Internal coupling (`Terminal.new` + field assignment) is
--- deliberate: there is no public "adopt this buffer" API; every step is
+-- deliberate: there is no public "adopt this buffer" interface; every step is
 -- guarded so a sidekick update can only no-op, never break the keypress.
 local function adopt_orphans(opts)
   opts = opts or {}
@@ -130,36 +110,81 @@ local function adopt_orphans(opts)
   if cleaned then equalize() end
 end
 
--- Proactive passes: after a session file is sourced the restored pane exists
--- but sidekick (deferred via `later()`) may not be loaded yet - `pcall`
--- guards make these safe no-ops until it is; the press-time pass below is
--- the guarantee. Entering a restored chat also adopts it immediately, so
--- `<D-r>`/`q` work inside it without toggling first.
-Config.new_autocmd('SessionLoadPost', nil, function() adopt_orphans() end, 'Adopt restored sidekick chat')
-Config.new_autocmd('BufEnter', nil, function(ev)
-  if vim.bo[ev.buf].buftype ~= 'terminal' then return end
-  adopt_orphans()
-end, 'Adopt restored sidekick chat on enter')
+if not (Config.Agent and Config.Agent.in_herdr and Config.Agent.in_herdr()) then
+  Config.new_autocmd('BufWinEnter', nil, function(ev)
+    if vim.bo[ev.buf].filetype ~= 'sidekick_terminal' then return end
+    for _, win in ipairs(vim.fn.win_findbuf(ev.buf)) do
+      sidekick_wins[win] = true
+    end
+    equalize()
+  end, 'Equalize splits after sidekick opens')
+
+  Config.new_autocmd('WinClosed', nil, function(ev)
+    local win = tonumber(ev.match)
+    if win == nil or not sidekick_wins[win] then return end
+    sidekick_wins[win] = nil
+    equalize()
+  end, 'Equalize splits after sidekick closes')
+
+  -- Proactive passes: after a session file is sourced the restored pane exists
+  -- but sidekick (deferred via `later()`) may not be loaded yet. `pcall`
+  -- guards make these safe no-ops until it is; the press-time pass below is
+  -- the guarantee. Entering a restored chat also adopts it immediately, so
+  -- `<D-r>`/`q` work inside it without toggling first.
+  Config.new_autocmd('SessionLoadPost', nil, function() adopt_orphans() end, 'Adopt restored sidekick chat')
+  Config.new_autocmd('BufEnter', nil, function(ev)
+    if vim.bo[ev.buf].buftype ~= 'terminal' then return end
+    adopt_orphans()
+  end, 'Adopt restored sidekick chat on enter')
+end
 
 local add = vim.pack.add
 local later = Config.later
 
 later(function()
-  add({ 'https://github.com/folke/snacks.nvim' })
+  add({ 'https://github.com/folke/sidekick.nvim' })
 
-  require('snacks').setup({
-    picker = {
-      actions = {
-        sidekick_send = function(...)
-          return require('sidekick.cli.picker.snacks').send(...)
-        end,
+  require('sidekick').setup({
+    cli = {
+      mux = { enabled = false },
+      picker = 'snacks',
+      -- Custom prompt library, sent via `<Leader>aP`. Merged over sidekick's
+      -- built-ins (`changes`, `diagnostics`, `explain`, `fix`, `optimize`,
+      -- `review`, `tests`, ...).
+      prompts = {
+        find_bugs = 'Find bugs in {this}. For each bug give the file and line.',
+        simplify = 'Simplify {this} without changing its behavior.',
+        -- Opencode slash commands (`~/.config/opencode/command/`): sending
+        -- `/name` as chat input runs the command, so the library can trigger
+        -- them. `{this}` becomes the command's `$ARGUMENTS`.
+        create_pr = '/create-pr {this}',
       },
       win = {
-        input = {
-          keys = {
-            ['<a-a>'] = { 'sidekick_send', mode = { 'n', 'i' } },
-          },
+        keys = {
+          -- `<D-r>` mirrors the global 'Focus agent' mapping
+          -- ('plugin/44_agent.lua'), but that one is Normal-mode only so it
+          -- never fires inside the chat terminal. This buffer-local variant
+          -- closes the chat from Terminal and Normal mode.
+          hide_cmd_r = { '<D-r>', 'hide', mode = 'nt', desc = 'Hide sidekick chat' },
+          -- Focus-aware wheel forwarding in terminal-Normal mode.
+          wheel_up = { '<ScrollWheelUp>', function()
+            if vim.api.nvim_get_current_win() == vim.fn.getmousepos().winid then
+              return '<Cmd>startinsert<CR><ScrollWheelUp>'
+            end
+            return ''
+          end, mode = 'n', expr = true, desc = 'Forward wheel to agent' },
+          wheel_down = { '<ScrollWheelDown>', function()
+            if vim.api.nvim_get_current_win() == vim.fn.getmousepos().winid then
+              return '<Cmd>startinsert<CR><ScrollWheelDown>'
+            end
+            return ''
+          end, mode = 'n', expr = true, desc = 'Forward wheel to agent' },
         },
+      },
+      tools = {
+        opencode = {}, -- primary: matches ~/.config/opencode (MCPs, commands, skills)
+        claude = {}, -- fallback for hardest reasoning tasks
+        codex = {},
       },
     },
   })
@@ -172,28 +197,28 @@ later(function()
   -- so more can be added and Enter pressed manually; uppercase send submits
   -- immediately. Removal: delete this file and the dispatcher falls back
   -- to Herdr.
-  --
-  -- Every entry point adopts orphans first: after a session restore the
-  -- visible chat is unknown to sidekick, and without this the toggle would
-  -- prompt for a tool and spawn a duplicate.
-  Config.AgentSidekick = {
-    focus = function()
-      adopt_orphans({ cleanup = true })
-      cli.toggle()
-    end,
-    attach = function(text, _what)
-      adopt_orphans({ cleanup = true })
-      -- `send` already shows the panel and focuses its input
-      -- (`State.with` with `show=true`, `focus=nil` means "do focus"). Do NOT
-      -- add an explicit `cli.focus()` here: toggle semantics would see the
-      -- focused chat and `blur()` straight back to the code.
-      cli.send({ msg = text, submit = false })
-    end,
-    send = function(text, _what)
-      adopt_orphans({ cleanup = true })
-      cli.send({ msg = text, submit = true })
-    end,
-  }
+  if Config.Agent and Config.Agent.register then
+    Config.Agent.register('sidekick', {
+      focus = function()
+        adopt_orphans({ cleanup = true })
+        cli.toggle()
+      end,
+      attach = function(text, _what)
+        adopt_orphans({ cleanup = true })
+        -- `send` already shows the panel and focuses its input
+        -- (`State.with` with `show=true`, `focus=nil` means "do focus"). Do NOT
+        -- add an explicit `cli.focus()` here: toggle semantics would see the
+        -- focused chat and `blur()` straight back to the code.
+        cli.send({ msg = text, submit = false })
+      end,
+      send = function(text, _what)
+        adopt_orphans({ cleanup = true })
+        cli.send({ msg = text, submit = true })
+      end,
+    })
+  end
+
+  if Config.Agent and Config.Agent.in_herdr and Config.Agent.in_herdr() then return end
 
   -- Explicit tool toggles (opencode primary). No Herdr equivalent by design:
   -- inside Herdr the agent is picked via the dispatcher (`<Leader>aa`).
@@ -214,10 +239,10 @@ later(function()
     adopt_orphans({ cleanup = true })
     cli.select({ filter = { installed = true } })
   end, { desc = 'AI CLI select' })
-  -- Prompt library picker (built-ins + custom `prompts` in
-  -- 'plugin/45_sidekick.lua'). Lowercase `<Leader>ap` (dispatcher,
-  -- 'plugin/44_agent.lua') asks for free text; uppercase here picks a
-  -- canned prompt and sends it, matching the attach/send case convention.
+  -- Prompt library picker (built-ins + custom `prompts` above). Lowercase
+  -- `<Leader>ap` (dispatcher, 'plugin/44_agent.lua') asks for free text;
+  -- uppercase here picks a canned prompt and sends it, matching the
+  -- attach/send case convention.
   vim.keymap.set({ 'n', 'x' }, '<Leader>aP', function()
     adopt_orphans({ cleanup = true })
     cli.prompt()

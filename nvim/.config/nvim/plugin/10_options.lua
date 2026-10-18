@@ -144,24 +144,9 @@ vim.o.completetimeout = 100                             -- Limit sources delay
 local f = function() vim.cmd('setlocal formatoptions-=c formatoptions-=o') end
 Config.new_autocmd('FileType', nil, f, "Proper 'formatoptions'")
 
--- Fall back to indent folds when tree-sitter can't provide syntax folds.
--- `vim.treesitter.foldexpr()` yields no folds without both a parser binary and
--- a `folds` query (e.g. plain text ships a parser but no folds query), so such
--- buffers would lose folding entirely without this. Buffers with both are
--- pinned back to `expr` so a reused buffer never stays stuck on `indent`.
-local fold_fallback = function(ev)
-  local ft = vim.bo[ev.buf].filetype
-  if ft == '' then return end
-  local lang = vim.treesitter.language.get_lang(ft) or ft
-  local has_parser = #vim.api.nvim_get_runtime_file('parser/' .. lang .. '.*', false) > 0
-  local has_folds = vim.treesitter.query.get(lang, 'folds') ~= nil
-  if has_parser and has_folds then
-    vim.cmd('setlocal foldmethod=expr foldexpr=v:lua.vim.treesitter.foldexpr()')
-  else
-    vim.cmd('setlocal foldmethod=indent')
-  end
-end
-Config.new_autocmd('FileType', '*', fold_fallback, 'Treesitter folds with indent fallback')
+-- Tree-sitter attachment and fold-method fallback live together in
+-- 'plugin/40_plugins.lua' so language aliases ('jsonc', 'mdx', 'octo') are
+-- registered before `FileType` evaluates parser and fold query support.
 
 -- Don't let LSP servers colorize text (e.g. CSS color values)
 vim.lsp.document_color.enable(false)
