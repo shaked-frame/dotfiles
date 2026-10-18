@@ -276,6 +276,9 @@ eval "$(fnm env --use-on-cd)"
 # Zoxide (smart cd)
 eval "$(zoxide init --cmd cd zsh)"
 
+# Worktrunk (git worktree manager)
+if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)"; fi
+
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                                   PROMPT                                     ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝
