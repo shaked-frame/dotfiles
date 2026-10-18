@@ -49,10 +49,10 @@ git:
     #                              lazygit, so gitconfig must not carry it
     #   --side-by-side             one renderer only; delta cannot negate a
     #                              boolean per run, so gitconfig cannot hold it
-    - name: delta-side-by-side
-      command: 'delta --paging=never --dark --hunk-header-style=omit --file-modified-label="" --side-by-side --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
     - name: delta
       command: 'delta --paging=never --dark --hunk-header-style=omit --file-modified-label="" --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
+    - name: delta-side-by-side
+      command: 'delta --paging=never --dark --hunk-header-style=omit --file-modified-label="" --side-by-side --hyperlinks --hyperlinks-file-link-format="lazygit-edit://{path}:{line}"'
     # Syntax-aware structural diff for code. Unlike delta, difftastic takes
     # over diff generation rather than formatting Git's line-based output.
     - name: difftastic
@@ -183,13 +183,18 @@ customCommands:
   # copyToClipboard in the two panels that need it, for copyFileInfoToClipboard
   # and copyPullRequestURL. <ctrl+g> is unbound in every default context.
   - key: '<c-g>'
-    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/create-pr {{index .PromptResponses 0}}' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat GH_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.5 --thinking low '/create-pr {{index .PromptResponses 0}}'"
+    command: "GIT_PAGER=cat PAGER=cat GH_PAGER=cat claude -p --model haiku '/create-pr Extra context: {{index .PromptResponses 0}} | Base override: {{index .PromptResponses 1}} (empty means main)' --allowedTools 'Bash(git:*)' 'Bash(gh:*)' 'Read'"
     context: 'localBranches, files'
-    description: 'AI create PR with pi'
+    description: 'AI create PR with claude haiku'
     prompts:
       - type: 'input'
         title: 'Extra context for the PR (optional)'
         initialValue: ''
+      - type: 'input'
+        title: 'Base branch (empty = main)'
+        initialValue: ''
+        suggestions:
+          preset: 'branches'
     loadingText: 'Creating pull request...'
     output: popup
     outputTitle: 'pi create PR'
