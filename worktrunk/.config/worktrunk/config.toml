@@ -1,0 +1,19 @@
+# worktrunk configuration
+# Docs: https://worktrunk.dev/config/
+# Verify with: wt config show
+
+# Match Herdr's ~/worktrees/<repo>/<slug>/<repo> layout so Config.frame_root()
+# in Neovim, Starship's `wt` path shortening, and Herdr workspaces all agree.
+worktree-path = "~/worktrees/{{ repo }}/{{ branch | sanitize }}/{{ repo }}"
+
+# Frame monorepo bootstrap.
+# Uses pre-start so `wt switch -c <branch>` blocks until env files, local
+# agent rules, dependencies, and mkcert certificates are ready. Agents can run
+# commands or tests as soon as `wt switch -c` returns.
+[[projects."github.com/frame-rnd/frame".pre-start]]
+env = "link-worktree-env"
+agents = "ln -sfn {{ primary_worktree_path }}/AGENTS.local.md AGENTS.local.md"
+deps = "pnpm i"
+
+[[projects."github.com/frame-rnd/frame".pre-start]]
+certs = "pnpm setup:certs"
