@@ -113,14 +113,10 @@ end
 -- (defaulting to cwd) keeps the walk testable through this interface.
 Config.frame_root = function(cwd)
   local home = vim.env.HOME or vim.fn.expand('~')
-  local dir = cwd or vim.fn.getcwd()
-  while dir and dir ~= '' and dir ~= '/' and #dir >= #home do
-    if vim.fn.isdirectory(dir .. '/frontend/apps/web') == 1 then return dir end
-    local parent = vim.fn.fnamemodify(dir, ':h')
-    if parent == dir then break end
-    dir = parent
-  end
-  return nil
+  local root = vim.fs.root(cwd or vim.fn.getcwd(), function(_, path)
+    return #path >= #home and vim.fn.isdirectory(path .. '/frontend/apps/web') == 1
+  end)
+  return root
 end
 
 -- 'mini.nvim' - all-in-one plugin powering most MiniMax features.
@@ -159,47 +155,10 @@ Config.now_if_args = vim.fn.argc(-1) > 0 and Config.now or Config.later
 Config.on_event = function(ev, f) misc.safely('event:' .. ev, f) end
 Config.on_filetype = function(ft, f) misc.safely('filetype:' .. ft, f) end
 
--- Compat: some plugins (diffview.nvim, nvim-ts-autotag) still call the
--- deprecated `vim.validate({ name = { value, validator, optional } })`
--- table form, which on Nvim 0.12 routes through `vim.deprecate` and fails
--- when `vim.deprecated.health` cannot be required (breaks `<Leader>gu`).
--- Handle the table form directly; new-signature calls pass through.
--- Remove once the plugins migrate to `vim.validate(name, value, validator)`.
-do
-  local orig_validate = vim.validate
-  ---@diagnostic disable-next-line: duplicate-set-field
-  vim.validate = function(name, value, validator, optional, message)
-    if validator == nil and type(name) == 'table' then
-      for param, spec in pairs(name) do
-        local val, check, opt_or_msg = spec[1], spec[2], spec[3]
-        local allow_nil = opt_or_msg == true
-        local msg = type(opt_or_msg) == 'string' and opt_or_msg or nil
-        if type(check) == 'string' then
-          if val == nil and not allow_nil then
-            error(string.format('%s: expected %s, got nil', param, check), 2)
-          elseif val ~= nil and type(val) ~= check then
-            error(string.format('%s: expected %s, got %s', param, check, type(val)), 2)
-          end
-        elseif type(check) == 'function' then
-          local ok, valid = pcall(check, val)
-          if not ok or not valid then
-            error(string.format('%s: %s', param, msg or ('invalid value: ' .. vim.inspect(val))), 2)
-          end
-        elseif type(check) == 'table' then
-          local ok_type = val == nil and allow_nil
-          for _, t in ipairs(check) do
-            if type(val) == t then ok_type = true break end
-          end
-          if not ok_type then
-            error(string.format('%s: expected %s, got %s', param, table.concat(check, '|'), type(val)), 2)
-          end
-        end
-      end
-      return
-    end
-    return orig_validate(name, value, validator, optional, message)
-  end
-end
+-- Preload `vim.deprecated.health` at startup while the current Neovim runtime
+-- directory is on disk, so a background `brew upgrade neovim` cannot break
+-- plugins (`diffview.nvim`, `nvim-ts-autotag`) that trigger `vim.deprecate`.
+pcall(require, 'vim.deprecated.health')
 
 -- ┌─────────────────────┐
 -- │ Scheduling contract │

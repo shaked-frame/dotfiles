@@ -20,20 +20,30 @@ later(function()
   })
 
   -- `<Tab>` in Insert mode, in priority order:
-  -- 1. If the completion popup is visible, select the next item.
-  -- 2. Otherwise try to accept inline completion ("ghost text").
-  -- 3. Otherwise insert a literal <Tab>.
+  -- 1. If the user already highlighted an item in the completion popup
+  --    (`selected ~= -1`), keep cycling the popup menu (`<C-n>`).
+  -- 2. Otherwise, if Copilot inline completion ("ghost text") is visible,
+  --    accept it (and dismiss an unselected popup menu with `<C-e>` first).
+  -- 3. Otherwise, if the completion popup is visible, select the first item.
+  -- 4. Otherwise insert a literal `<Tab>`.
   --
   -- To accept inline completion one word at a time instead, use `<C-l>` or
   -- Option+Tab (`<M-Tab>`; set up in 'plugin/40_plugins.lua' on `LspAttach`).
   vim.keymap.set('i', '<Tab>', function()
-    if vim.fn.pumvisible() == 1 then return '<C-n>' end
+    local pum = vim.fn.pumvisible() == 1
+    if pum and vim.fn.complete_info({ 'selected' }).selected ~= -1 then
+      return '<C-n>'
+    end
 
     local ok, accepted = pcall(function() return vim.lsp.inline_completion.get() end)
-    if ok and accepted then return '' end
+    if ok and accepted then
+      return pum and '<C-e>' or ''
+    end
+
+    if pum then return '<C-n>' end
 
     return '<Tab>'
-  end, { expr = true, desc = 'Completion / inline completion / tab' })
+  end, { expr = true, desc = 'Inline completion / completion / tab' })
 
   -- NOTE: unlike Insert mode above, the fallback here is `<C-i>`, not a
   -- literal `<Tab>`. Normal mode has no "insert a tab" behavior; `<Tab>` and

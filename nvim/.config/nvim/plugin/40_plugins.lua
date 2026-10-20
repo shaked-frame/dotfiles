@@ -359,6 +359,9 @@ later(function()
 
   require('snacks').setup({
     picker = {
+      -- Keep 'mini.pick' as the global `vim.ui.select` handler; 'snacks' is
+      -- only used where explicitly requested ('octo.nvim' and 'sidekick.nvim').
+      ui_select = false,
       actions = {
         sidekick_send = function(...)
           return require('sidekick.cli.picker.snacks').send(...)
@@ -427,6 +430,123 @@ later(function()
     },
   })
   require('grug-far').setup()
+
+  -- Extend every 'grug-far' buffer with path-filling actions (`\u` open
+  -- buffers, `\Q` quickfix files, `\g` pick files via mini.pick, `\B` pick
+  -- open buffers via mini.pick) and `\h` to toggle `--help` in Flags.
+  -- Appending to `inst._context.actions` puts them in the top virtual help
+  -- header and the `g?` help window automatically.
+  local pick_into_grug_paths = function(buf, source_kind)
+    local inst = require('grug-far').get_instance(buf)
+    if not inst then return end
+
+    local apply_paths = function(paths)
+      if not paths or #paths == 0 then return end
+      local escaped = vim.tbl_map(function(p)
+        local rel = vim.fn.fnamemodify(p, ':.')
+        return (rel:gsub(' ', '\\ '))
+      end, paths)
+      vim.schedule(function()
+        if inst:is_valid() then
+          inst:update_input_values({ paths = table.concat(escaped, '\n') }, false)
+        end
+      end)
+    end
+
+    local item_path = function(m)
+      if type(m) ~= 'table' then return m end
+      return m.path or (m.bufnr and vim.api.nvim_buf_get_name(m.bufnr)) or m.text
+    end
+
+    local choose_one = function(item)
+      if not item then return end
+      local matches = MiniPick.get_picker_matches()
+      if matches and matches.marked and #matches.marked > 0 then
+        apply_paths(vim.tbl_map(item_path, matches.marked))
+        return
+      end
+      apply_paths({ item_path(item) })
+    end
+
+    local choose_many = function(items)
+      apply_paths(vim.tbl_map(item_path, items or {}))
+    end
+
+    local opts = {
+      source = {
+        name = 'GrugFar Paths (' .. source_kind .. '; <C-x> mark, <CR> fill)',
+        choose = choose_one,
+        choose_marked = choose_many,
+      },
+    }
+    if source_kind == 'buffers' then
+      MiniPick.builtin.buffers(nil, opts)
+    else
+      MiniPick.builtin.files(nil, opts)
+    end
+  end
+
+  Config.new_autocmd('FileType', 'grug-far', function(ev)
+    local buf = ev.buf
+    local ok, grug = pcall(require, 'grug-far')
+    if not ok then return end
+    local inst = grug.get_instance(buf)
+    if not inst then return end
+
+    local utils = require('grug-far.utils')
+    local render = require('grug-far.render')
+    local custom_actions = {
+      {
+        text = 'Paths: Buffers',
+        keymap = { n = '<localleader>u' },
+        description = 'Fill Paths with <buflist> (all open listed buffers).',
+        action = function()
+          inst:update_input_values({ paths = '<buflist>' }, false)
+        end,
+      },
+      {
+        text = 'Paths: Quickfix',
+        keymap = { n = '<localleader>Q' },
+        description = 'Fill Paths with <qflist> (all files in the quickfix list).',
+        action = function()
+          inst:update_input_values({ paths = '<qflist>' }, false)
+        end,
+      },
+      {
+        text = 'Pick Path Files',
+        keymap = { n = '<localleader>g' },
+        description = 'Pick project files via mini.pick (<C-x> to mark multiple) and fill Paths.',
+        action = function()
+          pick_into_grug_paths(buf, 'files')
+        end,
+      },
+      {
+        text = 'Pick Path Buffers',
+        keymap = { n = '<localleader>B' },
+        description = 'Pick open buffers via mini.pick (<C-x> to mark multiple) and fill Paths.',
+        action = function()
+          pick_into_grug_paths(buf, 'buffers')
+        end,
+      },
+      {
+        text = 'Toggle Flags Help',
+        keymap = { n = '<localleader>h' },
+        description = 'Toggle --help in Flags to view ripgrep flag documentation in the results list.',
+        action = function()
+          inst:toggle_flags({ '--help' })
+        end,
+      },
+    }
+
+    inst:when_ready(function()
+      if not vim.api.nvim_buf_is_valid(buf) then return end
+      for _, action in ipairs(custom_actions) do
+        table.insert(inst._context.actions, action)
+        utils.setBufKeymap(buf, action.text, action.keymap, action.action)
+      end
+      render(buf, inst._context)
+    end)
+  end, 'Extend grug-far with path pickers and flag help')
   require('diffview').setup({
     keymaps = {
       -- `<Leader>e` (Explore) and `<Leader>b` (Buffer) are whole prefix groups

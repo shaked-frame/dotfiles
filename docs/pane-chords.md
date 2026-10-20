@@ -6,9 +6,9 @@ When changing any row, check the other three.
 
 | Layer | Chords | Source |
 | ----- | ------ | ------ |
-| Herdr (multiplexer panes) | `prefix+h/j/k/l`, direct `ctrl+alt+h/j/k/l`, `prefix+a` last pane | `herdr/.config/herdr/config.toml` `[keys]` |
+| Herdr (multiplexer panes) | `ctrl+h/j/k/l` (via `vim-herdr-navigation`), `prefix+h/j/k/l`, direct `ctrl+alt+h/j/k/l`, `prefix+a` last pane | `herdr/.config/herdr/config.toml` `[keys]` |
 | Ghostty (splits) | `super+h/l` goto split | `ghostty/.config/ghostty/config` |
-| nvim (windows) | `<C-h/j/k/l>` (mini.basics), `<M-h/j/k/l>` in insert/cmd, `<C-h/j/k/l>` from terminal mode | `plugin/30_mini.lua`, `plugin/20_keymaps.lua` |
+| nvim (windows + Herdr edge handoff) | `<C-h/j/k/l>` in Normal and Terminal modes (`Config.Splits.navigate`), `<M-h/j/k/l>` in insert/cmd | `plugin/20_keymaps.lua`, `plugin/22_splits.lua`, `plugin/30_mini.lua` |
 | Zed (panes) | `ctrl-h/j/k/l` ActivatePane* | `zed/.config/zed/keymap.json` |
 
 Standing surrenders (do not reclaim without updating all sides):
@@ -16,9 +16,9 @@ Standing surrenders (do not reclaim without updating all sides):
   dial.nvim lives on `<C-Up>/<C-Down>` (`plugin/40_plugins.lua`).
 - Ghostty's old byte-injecting `text:\x01h` chords are retired (comment in
   ghostty config) — they fired in apps with nothing to do with the multiplexer.
-- `ctrl-h/j/k/l` means "nvim window" inside nvim and "Zed pane" inside Zed;
-  Herdr panes use the `ctrl+alt-*` family instead, chosen as essentially
-  unclaimed. `super+h/l` belongs to Ghostty splits.
+- `ctrl-h/j/k/l` walks Neovim splits first in both Normal and Terminal modes
+  and crosses into the adjacent Herdr pane at a split edge; `ctrl+alt+h/j/k/l`
+  always jumps Herdr panes directly. `super+h/l` belongs to Ghostty splits.
 
 ## Hyper (Super+Ctrl+Alt+Shift)
 

@@ -57,3 +57,29 @@ Config.Splits.move_to_side = function(dir) -- dir: 'h' (left) or 'l' (right)
 
   vim.api.nvim_set_current_win(neighbor_win) -- focus follows the moved buffer
 end
+
+-- Navigate between Neovim windows in `wincmd` ('h'|'j'|'k'|'l') direction and,
+-- when already at a Neovim split edge inside Herdr, hand off focus to the
+-- neighbouring Herdr pane. Works from both Normal and Terminal modes: if at a
+-- split edge inside a terminal buffer, Terminal mode is preserved so the shell
+-- or agent TUI is not stranded in Normal mode.
+local dir_names = { h = 'left', j = 'down', k = 'up', l = 'right' }
+
+Config.Splits.navigate = function(wincmd)
+  local was_term = vim.fn.mode() == 't'
+  if was_term then vim.cmd('stopinsert') end
+
+  local prev_win = vim.api.nvim_get_current_win()
+  vim.cmd('wincmd ' .. wincmd)
+  if vim.api.nvim_get_current_win() ~= prev_win then
+    return
+  end
+
+  if was_term then vim.cmd('startinsert') end
+
+  local pane_id = vim.env.HERDR_PANE_ID
+  if pane_id and pane_id ~= '' then
+    local herdr_bin = (vim.env.HERDR_BIN_PATH and vim.env.HERDR_BIN_PATH ~= '') and vim.env.HERDR_BIN_PATH or 'herdr'
+    vim.system({ herdr_bin, 'pane', 'focus', '--direction', dir_names[wincmd], '--pane', pane_id })
+  end
+end

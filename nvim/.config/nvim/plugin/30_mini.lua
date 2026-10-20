@@ -100,17 +100,15 @@ now(function()
     -- Manage options in 'plugin/10_options.lua' for didactic purposes
     options = { basic = false },
     mappings = {
-      -- Create `<C-hjkl>` mappings for window navigation
-      windows = true,
+      -- `<C-hjkl>` is owned by `Config.Splits.navigate` in 'plugin/20_keymaps.lua'
+      -- and `<C-Up>`/`<C-Down>` by 'dial.nvim' in 'plugin/40_plugins.lua'.
+      windows = false,
       -- Create `<M-hjkl>` mappings for navigation in Insert and Command modes
       move_with_alt = true,
     },
   })
-  -- Release keys owned by 'yanky.nvim' (`gp`) and 'dial.nvim' (`<C-Up>`,
-  -- `<C-Down>`) in 'plugin/40_plugins.lua' so they are mapped once.
+  -- Release `gp` owned by 'yanky.nvim' in 'plugin/40_plugins.lua'.
   pcall(vim.keymap.del, { 'n', 'x' }, 'gp')
-  pcall(vim.keymap.del, 'n', '<C-Up>')
-  pcall(vim.keymap.del, 'n', '<C-Down>')
 end)
 
 -- Icon provider. Usually no need to use manually. It is used by plugins like
@@ -509,10 +507,7 @@ later(function() require('mini.comment').setup() end)
 
 -- Autohighlight word under cursor with a customizable delay.
 -- Word boundaries are defined based on `:h 'iskeyword'` option.
---
--- It is not enabled by default because its effects are a matter of taste.
--- Uncomment next line (use `gcc`) to enable.
--- later(function() require('mini.cursorword').setup() end)
+later(function() require('mini.cursorword').setup() end)
 
 -- Work with diff hunks that represent the difference between the buffer text and
 -- some reference text set by a source. Default source uses text from Git index.
@@ -765,7 +760,64 @@ end)
 -- - `:h MiniPick.builtin` and `:h MiniExtra.pickers` - available pickers;
 --   Execute one either with Lua function, `:Pick <picker-name>` command, or
 --   one of `<Leader>f` mappings defined in 'plugin/20_keymaps.lua'
-later(function() require('mini.pick').setup() end)
+later(function()
+  require('mini.pick').setup({
+    mappings = {
+      -- `<C-q>` sends marked items (from `<C-x>` / `<C-a>`) to the quickfix
+      -- list, or sends all currently filtered matches if none are marked.
+      send_to_qflist = {
+        char = '<C-q>',
+        func = function()
+          local matches = MiniPick.get_picker_matches()
+          if not matches then return end
+          local items = (matches.marked and #matches.marked > 0) and matches.marked or matches.all
+          if not items or #items == 0 then return end
+          MiniPick.default_choose_marked(items, { list_type = 'quickfix' })
+          return true
+        end,
+      },
+    },
+  })
+
+  -- Guard `vim.ui.select` against Neovim 0.12's `vim/lsp/buf.lua:1341` assertion
+  -- failure when an LSP client detaches or restarts between returning code
+  -- actions and formatting or applying them.
+  local orig_ui_select = vim.ui.select
+  ---@diagnostic disable-next-line: duplicate-set-field
+  vim.ui.select = function(items, opts, on_choice)
+    if opts and opts.kind == 'codeaction' and type(items) == 'table' then
+      items = vim.tbl_filter(function(item)
+        return type(item) ~= 'table'
+          or not item.ctx
+          or not item.ctx.client_id
+          or vim.lsp.get_client_by_id(item.ctx.client_id) ~= nil
+      end, items)
+      if #items == 0 then
+        vim.notify('No code actions available', vim.log.levels.INFO)
+        return
+      end
+      if type(opts.format_item) == 'function' then
+        local orig_format = opts.format_item
+        opts = vim.tbl_extend('force', opts, {
+          format_item = function(item)
+            local ok, res = pcall(orig_format, item)
+            if ok and type(res) == 'string' then return res end
+            return (type(item) == 'table' and item.action and item.action.title) or tostring(item)
+          end,
+        })
+      end
+      local orig_on_choice = on_choice
+      on_choice = function(choice, idx)
+        if choice and choice.ctx and choice.ctx.client_id and not vim.lsp.get_client_by_id(choice.ctx.client_id) then
+          vim.notify('LSP client restarted before code action could be applied', vim.log.levels.WARN)
+          return
+        end
+        return orig_on_choice(choice, idx)
+      end
+    end
+    return orig_ui_select(items, opts, on_choice)
+  end
+end)
 
 -- Manage and expand snippets (templates for a frequently used text).
 -- Typical workflow is to type snippet's (configurable) prefix and expand it

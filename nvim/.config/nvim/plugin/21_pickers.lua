@@ -9,30 +9,9 @@
 
 Config.Pickers = {}
 
--- Items for the buffer picker (shared by the initial list and the refresh
--- after a `<C-d>` delete).
-local list_buffer_picker_items = function(include_current, include_unlisted)
-  -- `nvim_exec2` rather than the deprecated `nvim_exec`
-  local cmd = 'buffers' .. (include_unlisted and '!' or '')
-  local buffers_output = vim.api.nvim_exec2(cmd, { output = true }).output
-  local cur_buf_id = vim.api.nvim_get_current_buf()
-  local items = {}
-
-  for _, l in ipairs(vim.split(buffers_output, '\n')) do
-    local buf_str, name = l:match('^%s*%d+'), l:match('"(.*)"')
-    local buf_id = tonumber(buf_str)
-    if buf_id ~= nil and (include_current or buf_id ~= cur_buf_id) then
-      table.insert(items, { text = name, bufnr = buf_id })
-    end
-  end
-
-  return items
-end
-
 -- Buffer picker that allows deleting a buffer with `<C-d>` without closing it.
 Config.Pickers.buffers = function()
   local pick = require('mini.pick')
-  local local_opts = { include_current = true, include_unlisted = false }
 
   local delete_current = function()
     local matches = pick.get_picker_matches()
@@ -41,15 +20,14 @@ Config.Pickers.buffers = function()
     if not (bufnr and vim.api.nvim_buf_is_valid(bufnr)) then return end
 
     MiniBufremove.delete(bufnr)
-
     if not pick.is_picker_active() then return end
 
-    local items = list_buffer_picker_items(local_opts.include_current, local_opts.include_unlisted)
+    local items = vim.tbl_filter(function(it) return it.bufnr ~= bufnr end, pick.get_picker_items() or {})
     if #items == 0 then return true end
     pick.set_picker_items(items)
   end
 
-  pick.builtin.buffers(local_opts, {
+  pick.builtin.buffers({ include_current = true, include_unlisted = false }, {
     mappings = { delete_buffer = { char = '<C-d>', func = delete_current } },
   })
 end

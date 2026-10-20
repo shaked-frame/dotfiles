@@ -110,12 +110,13 @@ end, 'Next diagnostic')
 -- 'plugin/23_terminal.lua' (`Config.Terminal`).
 vim.keymap.set({ 'n', 't' }, '<C-/>', function() Config.Terminal.toggle() end, { desc = 'Toggle terminal dock' })
 
--- Navigate windows directly from Terminal mode with `<C-hjkl>`
--- (Zed: `ctrl-hjkl` = workspace::ActivatePane*)
-vim.keymap.set('t', '<C-h>', [[<C-\><C-n><C-w>h]], { desc = 'Go to left window' })
-vim.keymap.set('t', '<C-j>', [[<C-\><C-n><C-w>j]], { desc = 'Go to lower window' })
-vim.keymap.set('t', '<C-k>', [[<C-\><C-n><C-w>k]], { desc = 'Go to upper window' })
-vim.keymap.set('t', '<C-l>', [[<C-\><C-n><C-w>l]], { desc = 'Go to right window' })
+-- Navigate windows and Herdr panes from Normal and Terminal mode with `<C-hjkl>`
+-- (Zed: `ctrl-hjkl` = workspace::ActivatePane*). Walks Neovim splits first and
+-- crosses into the adjacent Herdr pane at a split edge.
+vim.keymap.set({ 'n', 't' }, '<C-h>', function() Config.Splits.navigate('h') end, { desc = 'Go to left window/pane' })
+vim.keymap.set({ 'n', 't' }, '<C-j>', function() Config.Splits.navigate('j') end, { desc = 'Go to lower window/pane' })
+vim.keymap.set({ 'n', 't' }, '<C-k>', function() Config.Splits.navigate('k') end, { desc = 'Go to upper window/pane' })
+vim.keymap.set({ 'n', 't' }, '<C-l>', function() Config.Splits.navigate('l') end, { desc = 'Go to right window/pane' })
 
 -- Open the active file explorer (`Config.explorer` in 'init.lua') at the
 -- current file with `-`.
@@ -170,6 +171,7 @@ Config.leader_group_clues = {
   { mode = 'x', keys = '<Leader>f', desc = '+Find' },
   { mode = 'x', keys = '<Leader>g', desc = '+Git' },
   { mode = 'x', keys = '<Leader>l', desc = '+Language' },
+  { mode = 'x', keys = '<Leader>r', desc = '+Replace' },
 }
 
 -- Helpers for a more concise `<Leader>` mappings.
@@ -201,9 +203,34 @@ local close_other_buffers = function()
   end
 end
 
+local close_clean_buffers = function()
+  local closed = 0
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    if vim.bo[buf].buflisted and vim.bo[buf].buftype == '' then
+      local name = vim.api.nvim_buf_get_name(buf)
+      local diff_data = _G.MiniDiff and MiniDiff.get_buf_data(buf) or nil
+      local git_data = _G.MiniGit and MiniGit.get_buf_data(buf) or nil
+      local has_hunks = diff_data and diff_data.hunks and #diff_data.hunks > 0
+      local has_git_status = git_data and git_data.status and git_data.status ~= '  ' and git_data.status ~= '!!'
+      local is_dirty = vim.bo[buf].modified or has_hunks or has_git_status
+      if not is_dirty and (not git_data or git_data.status == nil) and name ~= '' then
+        local res = vim.system({ 'git', '-C', vim.fs.dirname(name), 'status', '--porcelain', '--', name }, { text = true }):wait()
+        is_dirty = res.code == 0 and vim.trim(res.stdout or '') ~= ''
+      end
+      if not is_dirty then
+        MiniBufremove.delete(buf)
+        closed = closed + 1
+      end
+    end
+  end
+  vim.notify(string.format('Closed %d clean buffer%s', closed, closed == 1 and '' or 's'), vim.log.levels.INFO)
+end
+
 nmap_leader('ba', '<Cmd>b#<CR>',                                 'Alternate')
 nmap_leader('bd', '<Cmd>lua MiniBufremove.delete()<CR>',         'Delete')
 nmap_leader('bD', '<Cmd>lua MiniBufremove.delete(0, true)<CR>',  'Delete!')
+nmap_leader('bg', '<Cmd>Pick buf_lines scope="all"<CR>',         'Grep open buffers')
+nmap_leader('bm', close_clean_buffers,                           'Only modified (git)')
 nmap_leader('bn', '<Cmd>enew<CR>',                               'New file')
 nmap_leader('bo', close_other_buffers,                           'Only current')
 nmap_leader('bs', new_scratch_buffer,                            'Scratch')
@@ -223,12 +250,6 @@ end
 local source_plugin_file = function(filename)
   return string.format('<Cmd>source %s/plugin/%s<CR>', vim.fn.stdpath('config'), filename)
 end
-local explore_quickfix = function()
-  vim.cmd(vim.fn.getqflist({ winid = true }).winid ~= 0 and 'cclose' or 'copen')
-end
-local explore_locations = function()
-  vim.cmd(vim.fn.getloclist(0, { winid = true }).winid ~= 0 and 'lclose' or 'lopen')
-end
 
 nmap_leader('eb', '<Cmd>Pick lsp scope="document_symbol"<CR>', 'Outline (symbols)')
 nmap_leader('ed', function() Config.Explorer.open_cwd() end,     'Directory')
@@ -239,8 +260,8 @@ nmap_leader('em', edit_plugin_file('30_mini.lua'),          'MINI config')
 nmap_leader('en', '<Cmd>lua MiniNotify.show_history()<CR>', 'Notifications')
 nmap_leader('eo', edit_plugin_file('10_options.lua'),       'Options config')
 nmap_leader('ep', edit_plugin_file('40_plugins.lua'),       'Plugins config')
-nmap_leader('eq', explore_quickfix,                         'Quickfix list')
-nmap_leader('eQ', explore_locations,                        'Location list')
+nmap_leader('eq', function() require('quicker').toggle() end,                     'Quickfix list')
+nmap_leader('eQ', function() require('quicker').toggle({ loclist = true }) end,   'Location list')
 nmap_leader('eR', source_plugin_file('20_keymaps.lua'),     'Reload keymaps')
 
 -- f is for 'Fuzzy Find'. Common usage:
@@ -302,32 +323,41 @@ nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cw
 local git_log_cmd = [[Git log --pretty=format:\%h\ \%as\ │\ \%s --topo-order]]
 local git_log_buf_cmd = git_log_cmd .. ' --follow -- %'
 
+local stage_buffer = function()
+  local buf = vim.api.nvim_get_current_buf()
+  local data = MiniDiff.get_buf_data(buf)
+  if data and data.hunks and #data.hunks > 0 then
+    MiniDiff.do_hunks(buf, 'apply')
+    vim.notify('Staged buffer hunks', vim.log.levels.INFO)
+  else
+    vim.cmd('Git add -- %')
+    vim.notify('Staged ' .. vim.fn.expand('%:.'), vim.log.levels.INFO)
+  end
+end
+
+local restore_buffer = function()
+  local ok, err = pcall(MiniDiff.do_hunks, vim.api.nvim_get_current_buf(), 'reset')
+  if not ok then vim.notify(tostring(err), vim.log.levels.WARN) end
+end
+
 nmap_leader('ga', '<Cmd>Git diff --cached<CR>',             'Added diff')
 nmap_leader('gA', '<Cmd>Git diff --cached -- %<CR>',        'Added diff buffer')
 nmap_leader('gb', '<Cmd>Git blame -- %<CR>',                'Blame buffer')
 nmap_leader('gc', '<Cmd>Git commit<CR>',                    'Commit')
 nmap_leader('gC', '<Cmd>Git commit --amend<CR>',            'Commit amend')
--- Same as `gh` (Apply hunks = stage with the default Git source), but under
--- the Leader menu so it is discoverable: `gh` lives under bare `g`, not here.
-xmap_leader('gc', function()
-  local mode = vim.fn.mode()
-  if mode == 'v' or mode == 'V' or mode == '\22' then
-    vim.cmd('normal! \27') -- leave Visual so the '< '> marks are set
-  end
-  local ok, err = pcall(
-    MiniDiff.do_hunks,
-    vim.api.nvim_get_current_buf(),
-    'apply',
-    { line_start = vim.fn.line("'<"), line_end = vim.fn.line("'>") }
-  )
-  if not ok then vim.notify(tostring(err), vim.log.levels.WARN) end
-end, 'Stage selection')
+vim.keymap.set('x', '<Leader>gc', function() return MiniDiff.operator('apply') end, { expr = true, desc = 'Stage selection' })
 nmap_leader('gd', '<Cmd>Git diff<CR>',                      'Diff')
 nmap_leader('gD', '<Cmd>Git diff -- %<CR>',                 'Diff buffer')
+vim.keymap.set('n', '<Leader>gh', function() return MiniDiff.operator('apply') .. 'gh' end, { expr = true, remap = true, desc = 'Stage hunk' })
+vim.keymap.set('x', '<Leader>gh', function() return MiniDiff.operator('apply') end, { expr = true, desc = 'Stage selection' })
 nmap_leader('gl', '<Cmd>' .. git_log_cmd .. '<CR>',         'Log')
 nmap_leader('gL', '<Cmd>' .. git_log_buf_cmd .. '<CR>',     'Log buffer')
 nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>', 'Toggle overlay')
+vim.keymap.set('n', '<Leader>gr', function() return MiniDiff.operator('reset') .. 'gh' end, { expr = true, remap = true, desc = 'Restore hunk' })
+vim.keymap.set('x', '<Leader>gr', function() return MiniDiff.operator('reset') end, { expr = true, desc = 'Restore selection' })
+nmap_leader('gR', restore_buffer,                           'Restore buffer')
 nmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>',  'Show at cursor')
+nmap_leader('gS', stage_buffer,                             'Stage buffer')
 nmap_leader('gu', function()
   -- Toggle: close the view when open (`:q` alone cannot take it down).
   local ok, lib = pcall(require, 'diffview.lib')
@@ -379,8 +409,29 @@ nmap_leader('=', '<Cmd>wincmd =<CR>',             'Equalize window sizes')
 nmap_leader('M', '<Cmd>lua MiniMisc.zoom()<CR>', 'Maximize (zoom) window')
 
 -- r is for 'Replace' (project-wide search and replace via 'grug-far.nvim')
-nmap_leader('rr', '<Cmd>GrugFar<CR>',             'Search and replace')
-nmap_leader('rw', '<Cmd>GrugFar <C-r><C-w><CR>',  'Replace current word')
+nmap_leader('rr', '<Cmd>GrugFar<CR>', 'Search and replace')
+xmap_leader('rr', function() require('grug-far').with_visual_selection() end, 'Search and replace selection')
+nmap_leader('rw', function()
+  require('grug-far').open({ prefills = { search = vim.fn.expand('<cword>') } })
+end, 'Replace current word')
+nmap_leader('rf', function()
+  require('grug-far').open({ prefills = { paths = vim.fn.expand('%') } })
+end, 'Replace in current file')
+xmap_leader('rf', function()
+  require('grug-far').with_visual_selection({ prefills = { paths = vim.fn.expand('%') } })
+end, 'Replace selection in current file')
+nmap_leader('rb', function()
+  require('grug-far').open({ prefills = { paths = '<buflist>' } })
+end, 'Replace in open buffers')
+xmap_leader('rb', function()
+  require('grug-far').with_visual_selection({ prefills = { paths = '<buflist>' } })
+end, 'Replace selection in open buffers')
+nmap_leader('rq', function()
+  require('grug-far').open({ prefills = { paths = '<qflist>' } })
+end, 'Replace in quickfix files')
+xmap_leader('rq', function()
+  require('grug-far').with_visual_selection({ prefills = { paths = '<qflist>' } })
+end, 'Replace selection in quickfix files')
 
 -- x is for 'Trouble' (diagnostics and list views)
 nmap_leader('xx', '<Cmd>Trouble diagnostics toggle<CR>',              'Diagnostics')
