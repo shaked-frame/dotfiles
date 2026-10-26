@@ -699,9 +699,24 @@ Config.now(function()
       DiffChange = { fg = 'none', bg = '#2a2f38' },
       DiffText = { fg = 'none', bg = '#006000' },
 
-      -- Active buffer tab text in function-name blue (mini.tabline only).
-      ['MiniTablineCurrent'] = { fg = '${blue}' },
-      ['MiniTablineModifiedCurrent'] = { fg = '${blue}' },
+      -- VS Code One Dark Pro's flat tab strip. Underline approximates its
+      -- active tab's bottom border within a single terminal row.
+      TabLineSel = { fg = '#dcdcdc', bg = '#282c34', underline = true, sp = '#b4b4b4' },
+      -- VS Code defaults inactive text to 50% active foreground; preblend
+      -- #dcdcdc over #21252b because terminal foregrounds have no alpha.
+      TabLine = { fg = '#7e8184', bg = '#21252b' },
+      TabLineFill = { fg = '#7e8184', bg = '#21252b' },
+      ['MiniTablineCurrent'] = { link = 'TabLineSel' },
+      ['MiniTablineVisible'] = { link = 'TabLine' },
+      ['MiniTablineHidden'] = { link = 'TabLine' },
+      ['MiniTablineModifiedCurrent'] = { link = 'MiniTablineCurrent' },
+      ['MiniTablineModifiedVisible'] = { link = 'MiniTablineVisible' },
+      ['MiniTablineModifiedHidden'] = { link = 'MiniTablineHidden' },
+      ['MiniTablineFill'] = { link = 'TabLineFill' },
+      ['MiniTablineTabpagesection'] = { link = 'TabLine' },
+      ['MiniTablineTrunc'] = { link = 'TabLine' },
+      ['MiniTablineSeparator'] = { fg = '#181a1f', bg = '#21252b' },
+      ['MiniTablineHint'] = { fg = '#7f848e', bg = '#21252b' },
 
       -- Match the installed VS Code theme where this port's defaults differ.
       -- Modern queries split native tags from component tags; don't inherit
@@ -724,4 +739,34 @@ Config.now(function()
     require('onedarkpro').setup(theme_config)
     vim.cmd('colorscheme onedark')
   end
+end)
+
+-- File tabs ===================================================================
+-- Keep creation order so H/L and [b/]b still follow the displayed buffers.
+-- The terminal dock has its own winbar and keeps its existing tab styles.
+Config.now(function()
+  add({ 'https://github.com/akinsho/bufferline.nvim' })
+
+  local bufferline = require('bufferline')
+  bufferline.setup({
+    options = {
+      mode = 'buffers',
+      -- Stock UI from the README; let One Dark Pro supply the base colors.
+      style_preset = bufferline.style_preset.default,
+      separator_style = 'slant',
+      diagnostics = 'nvim_lsp',
+      diagnostics_update_on_event = true,
+      diagnostics_indicator = function(count) return ' (' .. count .. ')' end,
+      sort_by = 'id',
+      persist_buffer_sort = false,
+      always_show_bufferline = true,
+      get_element_icon = function(element)
+        -- Use the existing icon provider without a second icon dependency.
+        return MiniIcons.get('file', element.path)
+      end,
+      -- Keep the normal unsaved-change prompt and preserve split layouts.
+      close_command = function(buf) require('mini.bufremove').delete(buf) end,
+      right_mouse_command = false,
+    },
+  })
 end)

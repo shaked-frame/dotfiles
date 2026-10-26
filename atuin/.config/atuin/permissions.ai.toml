@@ -1,2 +1,2 @@
 [permissions]
-allow = ["Write(/Users/shakedhagag/.config/atuin-ai-server/config.toml)", "Write(/Users/shakedhagag/.config/atuin-ai-server/env)", "Read(/Users/shakedhagag/.config/atuin/config.toml)", "Write(/Users/shakedhagag/.config/atuin/config.toml)"]
+allow = ["Write(/Users/shakedhagag/.config/atuin-ai-server/config.toml)", "Write(/Users/shakedhagag/.config/atuin-ai-server/env)", "Read(/Users/shakedhagag/.config/atuin/config.toml)", "Write(/Users/shakedhagag/.config/atuin/config.toml)", "AtuinHistory"]

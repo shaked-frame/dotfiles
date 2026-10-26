@@ -3,7 +3,7 @@
 -- └─────────────────────────────┘
 --
 -- Dedicated bottom terminal split with its own internal terminal tabs,
--- independent of editor buffers and 'mini.tabline'. Keymaps live in
+-- independent of editor buffers and 'bufferline.nvim'. Keymaps live in
 -- 'plugin/20_keymaps.lua' plus buffer-local bindings attached here.
 
 Config.Terminal = {}
@@ -84,14 +84,14 @@ Config.Terminal.winbar = function()
   prune_items()
   local parts = {}
   for i, item in ipairs(state.items) do
-    local hl = (i == state.active) and '%#MiniTablineCurrent#' or '%#MiniTablineVisible#'
+    local hl = (i == state.active) and '%#MiniTablineCurrent#' or '%#MiniTablineHidden#'
     local click = (i <= 9) and ('%@v:lua.Config.Terminal.click_' .. i .. '@') or ''
     local end_click = (i <= 9) and '%X' or ''
     local safe_name = item.name:gsub('%%', '%%%%')
-    table.insert(parts, string.format('%s%s %d:%s %s', hl, click, i, safe_name, end_click))
+    table.insert(parts, string.format('%s%s  %d:%s  %s', hl, click, i, safe_name, end_click))
   end
-  local right = '%=%#Comment# [H/L] tab  [t] new  [r] rename  [x] close  [q] hide '
-  return table.concat(parts, '%#MiniTablineFill#│') .. right .. '%#MiniTablineFill#'
+  local right = '%#MiniTablineFill#%=%#MiniTablineHint# [H/L] tab  [t] new  [r] rename  [x] close  [q] hide '
+  return table.concat(parts, '%#MiniTablineSeparator#│') .. right .. '%#MiniTablineFill#'
 end
 
 local ensure_dock_win = function()

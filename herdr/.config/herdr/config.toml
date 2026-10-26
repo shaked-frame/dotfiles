@@ -5,7 +5,7 @@
 onboarding = false
 
 [theme]
-# Matches the Neovim colour scheme (onedark.nvim, style = 'dark').
+# Matches the Neovim One Dark Pro palette.
 # Built-in themes: catppuccin, catppuccin-latte, terminal, tokyo-night,
 # tokyo-night-day, dracula, nord, gruvbox, gruvbox-light, one-dark, one-light,
 # solarized, solarized-light, kanagawa, kanagawa-lotus, rose-pine,
@@ -17,6 +17,11 @@ name = "one-dark"
 #   light_name = "one-light"
 #   dark_name = "one-dark"
 auto_switch = false
+
+[theme.custom]
+# Sidebar edge and section dividers match Neovim's WinSeparator. The built-in
+# One Dark surface_dim is #282c34, invisible against our terminal background.
+surface_dim = "#4b5263"
 
 [terminal]
 shell_mode = "auto"
@@ -188,11 +193,8 @@ description = "Minimize agent pane (zoom editor)"
 # UI
 #------------------------------------------
 [ui]
-# Muted to match Neovim's separator gray (onedark `FloatBorder`/`LineNr`).
-# NOTE: this is the only border-brightness knob Herdr exposes, and it also
-# drives the other accent UI (navigation highlights, tab markers, agent
-# labels on borders) - they all go subtle together. Revert to "#61afef"
-# to get the bright blue back.
+# Muted pane borders and accent UI (navigation highlights, tab markers, agent
+# labels). The sidebar divider is controlled by theme.custom.surface_dim.
 accent = "#5c6370"
 # Interior dividers only: shared-edge splitters with no outside frame
 # (tmux-style). `auto` skips the frame on a lone pane while
