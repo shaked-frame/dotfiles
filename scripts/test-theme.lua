@@ -64,7 +64,8 @@ local ok, err = xpcall(function()
     local config = require('bufferline.config')
     assert(config.options.mode == 'buffers', 'Styling must not switch file tabs to Vim tabpages')
     assert(config.options.style_preset == require('bufferline').style_preset.default, 'Use the standard Bufferline preset')
-    assert(config.options.separator_style == 'thin' and config.options.indicator.style == 'icon', 'Use stock separators and active indicator')
+    assert(config.options.separator_style == 'slant', 'Use the README slanted tab style')
+    assert(config.options.diagnostics == 'nvim_lsp' and config.options.diagnostics_update_on_event, 'Refresh native LSP indicators when diagnostics change')
     assert(config.options.show_buffer_close_icons and config.options.show_close_icon, 'Use the standard close buttons')
     assert(config.options.custom_areas == nil, 'Remove the custom outer frame')
     assert(next(config.user.highlights or {}) == nil, 'Let Bufferline derive highlights from the theme')
@@ -76,6 +77,8 @@ local ok, err = xpcall(function()
   end
   check_file_tabs()
   local previous = vim.api.nvim_get_current_buf()
+  local previous_columns = vim.o.columns
+  vim.o.columns = 160 -- Keep both test tabs visible when diagnostic counts grow.
   local buf = vim.api.nvim_create_buf(true, false)
   local other = vim.api.nvim_create_buf(true, false)
   vim.api.nvim_buf_set_name(buf, vim.fn.stdpath('cache') .. '/tab-border-one.txt')
@@ -91,6 +94,7 @@ local ok, err = xpcall(function()
   assert(vim.fn.strdisplaywidth(clean) == vim.fn.strdisplaywidth(dirty), 'Dirty dot should not shift neighboring tabs')
   assert(clean:find(require('bufferline.config').options.buffer_close_icon, 1, true), 'Missing standard file close button')
   assert(not clean:find('│', 1, true), 'The custom outer frame is still rendered')
+  assert(clean:find('', 1, true) and clean:find('', 1, true), 'Slanted separators are not rendered')
   local elements = require('bufferline').get_elements().elements
   local first, second
   for i, element in ipairs(elements) do
@@ -98,10 +102,29 @@ local ok, err = xpcall(function()
     if element.id == other then second = i end
   end
   assert(first and second and first < second, 'Buffer creation-order navigation changed')
+
+  local ns = vim.api.nvim_create_namespace('test-bufferline-diagnostics')
+  vim.diagnostic.set(ns, buf, {
+    { lnum = 0, col = 0, severity = vim.diagnostic.severity.ERROR, message = 'First test error' },
+    { lnum = 0, col = 0, severity = vim.diagnostic.severity.ERROR, message = 'Second test error' },
+  })
+  vim.diagnostic.set(ns, other, {
+    { lnum = 0, col = 0, severity = vim.diagnostic.severity.WARN, message = 'Test warning' },
+  })
+  local diagnostic_tabs = nvim_bufferline()
+  local diagnostic_text = render_tabs()
+  assert(diagnostic_text:find('(2)', 1, true), 'Error count is missing from the active file tab')
+  assert(diagnostic_text:find('(1)', 1, true), 'Warning count is missing from the inactive file tab')
+  assert(diagnostic_tabs:find('BufferLineErrorSelected', 1, true), 'Active error tab is not severity-colored')
+  assert(diagnostic_tabs:find('BufferLineWarningDiagnostic', 1, true), 'Warning indicator is not severity-colored')
+  vim.diagnostic.reset(ns)
+  assert(not render_tabs():find('(2)', 1, true), 'Resolved diagnostic indicators did not clear')
+  print('Active/inactive LSP counts, severity colors and diagnostic clearing: OK')
   vim.api.nvim_set_current_buf(previous)
   vim.api.nvim_buf_delete(buf, { force = true })
   vim.api.nvim_buf_delete(other, { force = true })
-  print('Stock Bufferline UI, terminal tab styles, buffer order and dirty dot: OK')
+  vim.o.columns = previous_columns
+  print('Slanted Bufferline UI, terminal tab styles, buffer order and dirty dot: OK')
 
   local source = 'function greet(name: string) { return <Button className="hello"><div>{name}</div></Button>; }'
   local parser = vim.treesitter.get_string_parser(source, 'tsx')
