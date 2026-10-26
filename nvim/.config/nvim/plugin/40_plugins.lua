@@ -51,6 +51,14 @@ now_if_args(function()
     'https://github.com/nvim-treesitter/nvim-treesitter-textobjects',
     'https://github.com/nvim-treesitter/nvim-treesitter-context',
     'https://github.com/windwp/nvim-ts-autotag',
+    'https://github.com/HiPhish/rainbow-delimiters.nvim',
+  })
+
+  -- VS Code One Dark Pro cycles orange, purple, cyan for nested brackets.
+  require('rainbow-delimiters.setup').setup({
+    highlight = { 'RainbowDelimiterOrange', 'RainbowDelimiterViolet', 'RainbowDelimiterCyan' },
+    -- queries/tsx/rainbow-delimiters.scm leaves JSX tag names to the theme.
+    blacklist = { 'html', 'xml' },
   })
 
   require('treesitter-context').setup({
@@ -251,10 +259,17 @@ now_if_args(function()
 
     -- Accept inline completion word-by-word, one word per press
     -- (Zed: `alt-tab` = editor::AcceptNextWordEditPrediction).
-    -- `<C-l>` is the primary binding; `<M-Tab>` is Option+Tab (Ghostty sends
-    -- it as Alt+Tab with `macos-option-as-alt = true`).
+    -- `<M-Tab>` is Option+Tab; `<C-l>` is an alternative chord.
+    local get_completor_table = function()
+      for i = 1, 10 do
+        local name, val = debug.getupvalue(vim.lsp.inline_completion.get, i)
+        if name == 'Completor' and type(val) == 'table' then return val end
+      end
+    end
+
     local accept_word = function(fallback)
       return function()
+        local pum = vim.fn.pumvisible() == 1
         local ok = vim.lsp.inline_completion.get({
           bufnr = bufnr,
           on_accept = function(item)
@@ -262,19 +277,61 @@ now_if_args(function()
             local text = type(ins) == 'table' and ins.value or ins
             if type(text) ~= 'string' or text == '' then return item end
 
-            -- Accept first word (+ trailing spaces for natural repeated presses)
-            local chunk = text:match('^%s*%S+%s*')
+            -- `item.insert_text` starts at `item.range` (often column 0 of the
+            -- line), so keep the prefix already before the cursor and slice one
+            -- word from the ghost-text suffix after the cursor.
+            local prefix_len = 0
+            if item.range then
+              local start_row, start_col = item.range:to_extmark()
+              local cur = vim.api.nvim_win_get_cursor(0)
+              local cur_row, cur_col = cur[1] - 1, cur[2]
+              if start_row == cur_row and cur_col > start_col then
+                prefix_len = cur_col - start_col
+              end
+            end
+
+            local prefix = text:sub(1, prefix_len)
+            local suffix = text:sub(prefix_len + 1)
+            local chunk = suffix:match('^%s*[%w_]+%s*') or suffix:match('^%s*%S+%s*')
             if not chunk or chunk == '' then return item end
 
-            if type(ins) == 'table' then
-              item.insert_text = vim.tbl_extend('force', ins, { value = chunk })
-            else
-              item.insert_text = chunk
+            local full_ins = vim.deepcopy(ins)
+            local orig_range = item.range
+            local new_text = prefix .. chunk
+            local accepted_item = vim.tbl_extend('force', item, {
+              insert_text = type(ins) == 'table' and vim.tbl_extend('force', ins, { value = new_text }) or new_text,
+            })
+
+            -- If more ghost text remains after this word, restore `comp.current`
+            -- with its range end advanced to the new cursor position so rapid
+            -- Option+Tab presses keep stepping word-by-word without duplication.
+            if #chunk < #suffix then
+              vim.schedule(function()
+                local Completor = get_completor_table()
+                local comp = Completor and Completor.active and Completor.active[bufnr]
+                if not comp then return end
+                if orig_range then
+                  local cur = vim.api.nvim_win_get_cursor(0)
+                  orig_range.end_row = cur[1] - 1
+                  orig_range.end_col = cur[2]
+                end
+                comp.current = {
+                  _index = item._index or 1,
+                  client_id = item.client_id,
+                  insert_text = full_ins,
+                  range = orig_range,
+                  _filter_text = item._filter_text,
+                  command = item.command,
+                }
+                pcall(comp.show, comp)
+              end)
             end
-            return item
+
+            return accepted_item
           end,
         })
-        return ok and '' or fallback
+        if ok then return pum and '<C-e>' or '' end
+        return fallback
       end
     end
     vim.keymap.set('i', '<C-l>', accept_word('<C-l>'), { expr = true, buffer = bufnr, desc = 'Accept inline completion word' })
@@ -621,36 +678,17 @@ end)
 -- otherwise set (that line is commented out there, so this is the only one that
 -- loads and there is no startup flash of the wrong theme).
 --
--- Italics for comments, keywords and types are applied on top by the
--- `ColorScheme` autocommand in 'plugin/30_mini.lua'. That merges `italic` into
--- whatever the active scheme defined, so it keeps working across theme changes
--- and does not need onedark's own `code_style` option.
+-- Use the VS Code One Dark Pro port, including its language-specific queries
+-- and LSP semantic highlights, rather than the separate Atom One Dark theme.
 Config.now(function()
-  add({ 'https://github.com/navarasu/onedark.nvim' })
+  add({ 'https://github.com/olimorris/onedarkpro.nvim' })
 
-  require('onedark').setup({
-    -- Available: dark, darker, cool, deep, warm, warmer, light
-    --
-    -- 'dark' is the canonical Atom / Zed One Dark palette, matching it exactly:
-    --   bg #282c34   fg #abb2bf   comment #5c6370   blue #61afef   purple #c678dd
-    -- The other styles are recolours - 'darker' in particular darkens and
-    -- desaturates everything (bg #1f2329, fg #a0a8b7), which is why it did not
-    -- look like One Dark.
-    style = 'dark',
-    transparent = true,
-
-    -- One Dark's own comment colour is only 2.32:1 against its background,
-    -- below the 3:1 WCAG floor for UI text - so authentic does not mean legible.
-    -- Use the palette's own `light_grey` (#848b98, 4.08:1): readable, still
-    -- clearly dimmer than code (`fg` #abb2bf is 6.57:1), no invented colours.
-    --
-    -- Scoped to the comment groups on purpose: `grey` also drives LineNr,
-    -- NonText, Whitespace, FloatBorder and DiagnosticUnnecessary, which are
-    -- meant to stay dim. Remove this block for a pixel-exact One Dark.
+  local theme_config = {
+    options = { transparency = false, cursorline = true },
+    styles = { comments = 'italic', parameters = 'italic' },
     highlights = {
-      Comment = { fg = '$light_grey' },
-      SpecialComment = { fg = '$light_grey' },
-      ['@comment'] = { fg = '$light_grey' },
+      -- A visible, subdued divider for editor splits and the terminal dock.
+      WinSeparator = { fg = '#4b5263' },
 
       -- Diff colours from delta's dark defaults (as in lazygit), so Neovim's
       -- diff mode (Octo reviews, diffview) reads the same. `fg = 'none'`
@@ -661,29 +699,29 @@ Config.now(function()
       DiffChange = { fg = 'none', bg = '#2a2f38' },
       DiffText = { fg = 'none', bg = '#006000' },
 
-      -- JSX/TSX tag names default to `purple` here. nvim-treesitter's 'jsx'
-      -- query captures custom components as `@tag` (uppercase names) and
-      -- native elements like `<div>` as `@tag.builtin`, and onedark.nvim
-      -- colors both the same. Zed's One Dark instead renders every JSX tag
-      -- name in `blue`, matching plain identifiers and types. That reads
-      -- better in a file full of similarly named nested components
-      -- (`Dialog`, `DialogContent`, `DialogHeader`, and so on), since
-      -- purple already carries keyword weight. `@tag.attribute` (prop
-      -- names) and `@tag.delimiter` (`<`, `/>`, etc.) are left on their
-      -- defaults.
-      ['@tag'] = { fg = '$blue' },
-      ['@tag.builtin'] = { fg = '$blue' },
-
       -- Active buffer tab text in function-name blue (mini.tabline only).
-      ['MiniTablineCurrent'] = { fg = '$blue' },
-      ['MiniTablineModifiedCurrent'] = { fg = '$blue' },
+      ['MiniTablineCurrent'] = { fg = '${blue}' },
+      ['MiniTablineModifiedCurrent'] = { fg = '${blue}' },
+
+      -- Match the installed VS Code theme where this port's defaults differ.
+      -- Modern queries split native tags from component tags; don't inherit
+      -- Neovim's default blue for @tag.builtin.
+      ['@tag.builtin'] = { link = '@tag' },
+      ['@tag.tsx'] = { fg = '${yellow}' },
+      ['@tag.builtin.tsx'] = { fg = '${red}' },
+      ['@tag.attribute.tsx'] = { fg = '${orange}', italic = true },
+      ['@type.builtin.tsx'] = { fg = '${yellow}' },
+      ['@tag.javascript'] = { fg = '${yellow}' },
+      ['@tag.builtin.javascript'] = { fg = '${red}' },
+      ['@tag.attribute.javascript'] = { fg = '${orange}', italic = true },
     },
-  })
-  require('onedark').load()
+  }
+  require('onedarkpro').setup(theme_config)
+  vim.cmd('colorscheme onedark')
 
   Config.toggle_transparency = function()
-    local onedark = require('onedark')
-    onedark.set_options('transparent', not vim.g.onedark_config.transparent)
-    onedark.load()
+    theme_config.options.transparency = not theme_config.options.transparency
+    require('onedarkpro').setup(theme_config)
+    vim.cmd('colorscheme onedark')
   end
 end)

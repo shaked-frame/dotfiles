@@ -16,6 +16,7 @@ local state = {
   prev_win = nil,
   counter = 0,
 }
+local adopt_terminals
 
 local is_valid_win = function(win)
   return win ~= nil and vim.api.nvim_win_is_valid(win)
@@ -42,7 +43,10 @@ end
 
 local record_prev_win = function()
   local cur = vim.api.nvim_get_current_win()
-  if cur ~= state.win then state.prev_win = cur end
+  local buf = vim.api.nvim_win_get_buf(cur)
+  if cur ~= state.win and vim.bo[buf].buftype == '' and vim.api.nvim_win_get_config(cur).relative == '' then
+    state.prev_win = cur
+  end
 end
 
 local restore_prev_win = function()
@@ -53,6 +57,7 @@ end
 
 local configure_dock_win = function(win)
   vim.wo[win].winfixheight = true
+  vim.wo[win].winfixwidth = false
   vim.wo[win].number = false
   vim.wo[win].relativenumber = false
   vim.wo[win].signcolumn = 'no'
@@ -90,6 +95,7 @@ Config.Terminal.winbar = function()
 end
 
 local ensure_dock_win = function()
+  adopt_terminals()
   if is_valid_win(state.win) then return state.win end
 
   record_prev_win()
@@ -174,6 +180,96 @@ local remove_buf_item = function(buf)
   end
 end
 
+-- Session files restart terminal jobs but cannot restore this module's Lua
+-- registry. Ordinary :terminal buffers also bypass new(). Adopt their jobs,
+-- not their processes, and consolidate their visible splits into one dock.
+adopt_terminals = function()
+  prune_items()
+  local tab = vim.api.nvim_get_current_tabpage()
+  -- Preserve the existing cross-tab toggle behavior; don't consolidate this
+  -- tab's windows into a dock that currently belongs to another tabpage.
+  if is_valid_win(state.win) and vim.api.nvim_win_get_tabpage(state.win) ~= tab then return end
+  local tracked = {}
+  for _, item in ipairs(state.items) do tracked[item.buf] = true end
+
+  if is_valid_win(state.win) and not tracked[vim.api.nvim_win_get_buf(state.win)] then
+    -- The user opened an editor buffer in the old dock window.
+    vim.wo[state.win].winfixheight = false
+    vim.wo[state.win].winbar = ''
+    state.win = nil
+  end
+
+  local adopted_current
+  for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+    local ft = vim.bo[buf].filetype
+    local name = vim.api.nvim_buf_get_name(buf)
+    local command = name:match('^term://.-//%d+:(.*)') or ''
+    local executable = vim.fn.fnamemodify(command:match('^(%S+)') or '', ':t')
+    local managed_tool = ({ opencode = true, claude = true, codex = true, pi = true, lazygit = true })[executable]
+    local eligible = vim.bo[buf].buftype == 'terminal' and (ft == '' or ft == 'terminal') and not managed_tool
+    for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+      if vim.api.nvim_win_get_config(win).relative ~= '' or vim.api.nvim_win_get_tabpage(win) ~= tab then eligible = false end
+    end
+    if eligible and not tracked[buf] then
+      local job = vim.b[buf].terminal_job_id
+      if type(job) == 'number' and vim.fn.jobwait({ job }, 0)[1] == -1 then
+        state.counter = state.counter + 1
+        local label = vim.b[buf].terminal_dock_name or (executable .. '-' .. state.counter)
+        local cwd = vim.b[buf].terminal_link_cwd or name:match('^term://(.-)//%d+:') or vim.fn.getcwd()
+        table.insert(state.items, { buf = buf, name = label, cwd = cwd })
+        tracked[buf] = true
+        if buf == vim.api.nvim_get_current_buf() then adopted_current = buf end
+        vim.b[buf].is_dock_terminal = true
+        vim.b[buf].terminal_dock_name = label
+        vim.bo[buf].buflisted = false
+        vim.bo[buf].bufhidden = 'hide'
+        attach_buf_keymaps(buf)
+      end
+    end
+  end
+
+  local windows = {}
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(tab)) do
+    if tracked[vim.api.nvim_win_get_buf(win)] and vim.api.nvim_win_get_config(win).relative == '' then
+      table.insert(windows, win)
+    end
+  end
+  if #windows == 0 then return end
+  record_prev_win()
+  if not is_valid_win(state.win) then
+    state.win = windows[#windows]
+    local buf = adopted_current or vim.api.nvim_win_get_buf(state.win)
+    for i, item in ipairs(state.items) do
+      if item.buf == buf then state.active = i break end
+    end
+  elseif adopted_current then
+    for i, item in ipairs(state.items) do
+      if item.buf == adopted_current then state.active = i break end
+    end
+  end
+  if adopted_current then
+    vim.api.nvim_win_set_buf(state.win, adopted_current)
+  end
+
+  -- Leave an editor window to return to, even if only terminals were restored.
+  if #windows == #vim.api.nvim_tabpage_list_wins(tab) then
+    vim.cmd('topleft new')
+    state.prev_win = vim.api.nvim_get_current_win()
+  end
+  configure_dock_win(state.win)
+  for _, win in ipairs(windows) do
+    if win ~= state.win then vim.api.nvim_win_close(win, false) end
+  end
+  local layout = vim.fn.winlayout()
+  local bottom = layout[1] == 'col' and layout[2][#layout[2]] or nil
+  if not (bottom and bottom[1] == 'leaf' and bottom[2] == state.win) then
+    vim.api.nvim_win_call(state.win, function()
+      vim.cmd('wincmd J')
+      vim.api.nvim_win_set_height(0, state.height)
+    end)
+  end
+end
+
 Config.Terminal.new = function(name)
   prune_items()
   local cwd = vim.fn.getcwd()
@@ -185,6 +281,7 @@ Config.Terminal.new = function(name)
   state.counter = state.counter + 1
   local shell_name = vim.fn.fnamemodify(vim.o.shell, ':t')
   local label = (name and name ~= '') and name or (state.counter == 1 and shell_name or (shell_name .. '-' .. state.counter))
+  vim.b[buf].terminal_dock_name = label
 
   table.insert(state.items, { buf = buf, name = label, cwd = cwd })
   state.active = #state.items
@@ -219,7 +316,7 @@ Config.Terminal.hide = function()
 end
 
 Config.Terminal.open = function()
-  prune_items()
+  adopt_terminals()
   if #state.items == 0 then
     Config.Terminal.new()
     return
@@ -228,7 +325,7 @@ Config.Terminal.open = function()
 end
 
 Config.Terminal.toggle = function()
-  prune_items()
+  adopt_terminals()
   if is_valid_win(state.win) then
     if vim.api.nvim_get_current_win() == state.win then
       Config.Terminal.hide()
@@ -271,6 +368,7 @@ Config.Terminal.rename = function()
   vim.ui.input({ prompt = 'Terminal name: ', default = cur.name }, function(input)
     if input and input ~= '' then
       cur.name = input
+      vim.b[cur.buf].terminal_dock_name = input
       refresh_winbar()
     end
   end)
@@ -284,7 +382,7 @@ Config.Terminal.close = function()
 end
 
 Config.Terminal.pick = function()
-  prune_items()
+  adopt_terminals()
   if #state.items == 0 then
     Config.Terminal.new()
     return
@@ -321,9 +419,13 @@ Config.new_autocmd('WinResized', nil, function()
 end, 'Remember terminal dock height')
 
 Config.new_autocmd('WinLeave', nil, function()
-  local cur = vim.api.nvim_get_current_win()
-  if cur ~= state.win then
-    local cfg = vim.api.nvim_win_get_config(cur)
-    if cfg.relative == '' then state.prev_win = cur end
-  end
+  record_prev_win()
 end, 'Track previous editor window for terminal dock')
+
+Config.new_autocmd('SessionLoadPost', nil, function()
+  vim.schedule(adopt_terminals)
+end, 'Adopt restored terminals into the bottom dock')
+
+Config.new_autocmd({ 'TermClose', 'BufWipeout' }, nil, function(ev)
+  vim.schedule(function() remove_buf_item(ev.buf) end)
+end, 'Remove closed adopted terminal tabs')

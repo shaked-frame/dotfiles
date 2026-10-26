@@ -110,6 +110,13 @@ end, 'Next diagnostic')
 -- 'plugin/23_terminal.lua' (`Config.Terminal`).
 vim.keymap.set({ 'n', 't' }, '<C-/>', function() Config.Terminal.toggle() end, { desc = 'Toggle terminal dock' })
 
+-- Open compiler paths from terminal output without replacing the terminal.
+-- Return the original mouse key outside paths so selection still works.
+for _, key in ipairs({ '<2-LeftMouse>', '<C-LeftMouse>' }) do
+  vim.keymap.set({ 'n', 't' }, key, function() return Config.TerminalLinks.mouse(key) end,
+    { expr = true, desc = 'Open terminal file at mouse' })
+end
+
 -- Navigate windows and Herdr panes from Normal and Terminal mode with `<C-hjkl>`
 -- (Zed: `ctrl-hjkl` = workspace::ActivatePane*). Walks Neovim splits first and
 -- crosses into the adjacent Herdr pane at a split edge.
@@ -470,7 +477,7 @@ nmap_leader('tr', function() Config.Terminal.rename() end, 'Rename tab')
 nmap_leader('tl', function() Config.Terminal.next() end,   'Next tab')
 nmap_leader('th', function() Config.Terminal.prev() end,   'Previous tab')
 nmap_leader('tf', function() Config.Terminal.pick() end,   'Pick tab')
-nmap_leader('tv', '<Cmd>vertical term<CR>',                'Vertical split')
+nmap_leader('tv', function() Config.Terminal.toggle() end, 'Toggle dock')
 
 -- v is for 'Visits'. Common usage:
 -- - `<Leader>vv` - add    "core" label to current file.

@@ -147,38 +147,35 @@ customCommands:
         condition: '{{ not (or (eq .Form.Type "feature") (eq .Form.Type "task") (eq .Form.Type "bugfix")) }}'
     command: "git checkout -b \"{{.Form.Type}}/$(printf '%s' '{{.Form.Ticket}}{{.Form.Desc}}' | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')\" \"{{.SelectedLocalBranch.Name}}\""
     loadingText: 'Creating branch'
-  # Model choice for the pi commands below. Benchmarked 2026-10-04,
-  # trivial prompt, 3 runs each, --thinking low, -ne -ns -xt edit,write:
-  #   github-copilot/gpt-5.4-mini   1.8/1.5/1.6s  <- primary (fastest, stable)
-  #   github-copilot/mai-code-1.1-flash 1.5/1.7/6.2s (one outlier, rejected)
-  #   github-copilot/gpt-5.6-luna   2.5/2.2/1.5s
-  #   github-copilot/gemini-3.8-flash 4.6/2.8/2.9s
-  #   github-copilot/gpt-5-mini     3.4/3.3/2.2s
-  #   openai-codex/gpt-5.5          5.1/5.2/6.1s  <- fallback (fastest codex)
-  #   openai-codex/gpt-6-luna       5.3/5.7/5.0s
-  #   openai-codex/gpt-5.6-luna     6.6/6.8/5.5s
-  #   openai-codex/gpt-5.6-sol      11.7/11.2/9.7s (rejected)
-  #
-  # The fallback after `||` uses a different provider rather than the next
-  # fastest model. It runs only when the primary fails on auth, a rate limit, or
-  # a Copilot outage, and a second github-copilot entry would fail alongside it.
-  #
-  # --model bypasses the `enabledModels` allowlist in ~/.pi/agent/settings.json,
-  # so these run without being listed there.
+  # Headless Claude uses the latest provider-resolved Haiku with low effort.
+  # Skip session persistence, skills and MCP startup; keep normal auth/context.
+  # No shell fallback: a failed run may already have created some commits.
   - key: '<c-c>'
-    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/commit' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.5 --thinking low '/commit'"
+    command: >-
+      GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat
+      claude -p --model haiku --effort low --no-session-persistence
+      --disable-slash-commands --tools 'Bash,Read'
+      --allowedTools 'Read' 'Bash(git *)' --permission-mode dontAsk
+      --strict-mcp-config --mcp-config '{"mcpServers":{}}'
+      < "${XDG_CONFIG_HOME:-$HOME/.config}/lazygit/prompts/commit.md"
     context: 'files'
-    description: 'AI commit with pi'
+    description: 'AI commit with Claude Haiku'
     loadingText: 'Generating commit...'
     output: popup
-    outputTitle: 'pi commit'
+    outputTitle: 'Claude commit'
   - key: '<c-a>'
-    command: "GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model github-copilot/gpt-5.4-mini --thinking low '/atomic-commit' || GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat pi -p --no-session -ne -ns -xt edit,write --model openai-codex/gpt-5.5 --thinking low '/atomic-commit'"
+    command: >-
+      GIT_EDITOR=true GIT_SEQUENCE_EDITOR=true GIT_PAGER=cat
+      claude -p --model haiku --effort low --no-session-persistence
+      --disable-slash-commands --tools 'Bash,Read'
+      --allowedTools 'Read' 'Bash(git *)' --permission-mode dontAsk
+      --strict-mcp-config --mcp-config '{"mcpServers":{}}'
+      < "${XDG_CONFIG_HOME:-$HOME/.config}/lazygit/prompts/atomic-commit.md"
     context: 'files'
-    description: 'AI atomic commits with pi'
+    description: 'AI atomic commits with Claude Haiku'
     loadingText: 'Generating atomic commits...'
     output: popup
-    outputTitle: 'pi atomic commits'
+    outputTitle: 'Claude atomic commits'
   # This was <c-o>, which is universal.copyToClipboard. Binding it here shadowed
   # copyToClipboard in the two panels that need it, for copyFileInfoToClipboard
   # and copyPullRequestURL. <ctrl+g> is unbound in every default context.

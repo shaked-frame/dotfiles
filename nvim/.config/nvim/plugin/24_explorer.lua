@@ -42,6 +42,17 @@ local setup_oil = function()
     'https://github.com/refractalize/oil-git-status.nvim',
   })
 
+  local scroll_preview_or_oil = function(preview_action, fallback_key)
+    return function()
+      local util = require('oil.util')
+      if util.get_preview_win() then
+        require('oil.actions')[preview_action].callback()
+      else
+        vim.cmd('normal! ' .. vim.keycode(fallback_key))
+      end
+    end
+  end
+
   local oil_keymaps = {
     -- Keep `<C-h>` and `<C-l>` free for split and Herdr pane navigation,
     -- and `<C-s>` free for `:write` to apply Oil edits.
@@ -49,6 +60,10 @@ local setup_oil = function()
     ['<C-l>'] = false,
     ['<C-s>'] = false,
     ['gr'] = 'actions.refresh',
+    ['gy'] = { 'actions.yank_entry', opts = { modify = ':.' }, mode = 'n', desc = 'Yank relative path' },
+    ['gY'] = { 'actions.yank_entry', mode = 'n', desc = 'Yank absolute path' },
+    ['<C-d>'] = { callback = scroll_preview_or_oil('preview_scroll_down', '<C-d>'), mode = 'n', desc = 'Scroll preview or Oil down' },
+    ['<C-u>'] = { callback = scroll_preview_or_oil('preview_scroll_up', '<C-u>'), mode = 'n', desc = 'Scroll preview or Oil up' },
   }
   for key, mark in pairs(Config.explorer_bookmarks()) do
     oil_keymaps["'" .. key] = {

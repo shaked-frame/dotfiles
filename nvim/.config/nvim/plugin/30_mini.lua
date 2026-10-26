@@ -33,49 +33,14 @@ local now, now_if_args, later = Config.now, Config.now_if_args, Config.later
 -- - `:h mini.nvim-color-schemes` - list of other color schemes
 -- - `:h MiniHues-examples` - how to define highlighting with 'mini.hues'
 -- - 'plugin/40_plugins.lua' honorable mentions - other good color schemes
--- NOTE: the color scheme is set by 'onedark.nvim' in 'plugin/40_plugins.lua'.
+-- NOTE: the color scheme is set by 'onedarkpro.nvim' in 'plugin/40_plugins.lua'.
 -- This is left commented out so that 'miniwinter' does not load first and get
 -- immediately replaced (which shows as a flash of the wrong colors on startup).
 -- Uncomment this and remove the onedark block in 40_plugins.lua to go back.
 -- now(function() vim.cmd('colorscheme miniwinter') end)
 
--- Italics ====================================================================
---
--- 'mini.hues' (and therefore 'miniwinter') is deliberately minimal about text
--- styles: it only sets `italic` on `Italic` and `@markup.italic` (i.e. markup
--- emphasis like `*text*` in Markdown). Nothing in actual code is italicized.
---
--- The italics previously seen here came from 'nightfox.nvim', which was
--- configured with `styles = { comments = 'italic', keywords = 'italic,bold',
--- types = 'italic,bold' }`. This restores that look on top of 'miniwinter'.
---
--- Only base groups are listed: the tree-sitter groups link to them
--- (`@comment` -> `Comment`, `@keyword` -> `Keyword` -> `Statement`,
--- `@type` -> `Type`), so italic propagates automatically.
---
--- To also make something bold, add `bold = true` to the entry below.
--- NOTE: requires a font with a real italic face. Ghostty is configured with
--- `font-family-italic`, and both 'xterm-ghostty' and 'tmux-256color' terminfo
--- advertise `sitm`/`ritm`, so italics render inside and outside tmux.
-local italic_groups = {
-  Comment             = { italic = true }, -- comments
-  Statement           = { italic = true }, -- keywords: if/return/function/...
-  Type                = { italic = true }, -- types, Typedef, StorageClass, Structure
-  ['@keyword.return'] = { italic = true }, -- not linked to Statement, set separately
-}
-
--- `nvim_set_hl()` replaces a group definition outright, so merge into whatever
--- the active color scheme already defined instead of overwriting it.
-local apply_italics = function()
-  for group, extra in pairs(italic_groups) do
-    local ok, current = pcall(vim.api.nvim_get_hl, 0, { name = group, link = false })
-    if ok then vim.api.nvim_set_hl(0, group, vim.tbl_extend('force', current, extra)) end
-  end
-end
-
--- Re-apply on every color scheme change, including the one set above.
-Config.new_autocmd('ColorScheme', nil, apply_italics, 'Keep italics after colorscheme change')
-now(apply_italics)
+-- Text styles belong to the theme in 'plugin/40_plugins.lua'. Avoid a global
+-- ColorScheme override: it would also change unrelated themes and LSP groups.
 
 -- You can try these other 'mini.hues'-based color schemes (uncomment with `gcc`):
 -- now(function() vim.cmd('colorscheme minispring') end)
@@ -245,6 +210,90 @@ now_if_args(function()
     return nil
   end
 
+  -- Render inline `![alt](data:image/svg+xml;base64,...)` icon previews (used
+  -- by `@frame/ui-assets` and `lucide-react` JSDocs) as cached Unicode
+  -- compact Braille art in the completion `Info` float and `K` hover float.
+  local svg_preview_cache = {}
+  local render_svg_b64 = function(b64)
+    if svg_preview_cache[b64] ~= nil then return svg_preview_cache[b64] end
+    -- Documentation is server-provided. Keep conversion bounded and leave
+    -- oversized images as Markdown instead of stalling completion.
+    if #b64 > 65536 then return false end
+    if vim.fn.executable('magick') ~= 1 then
+      svg_preview_cache[b64] = false
+      return false
+    end
+    local ok_dec, svg = pcall(vim.base64.decode, b64)
+    if not ok_dec or not svg or svg == '' then
+      svg_preview_cache[b64] = false
+      return false
+    end
+    local W, H = 24, 24
+    local res = vim.system(
+      { 'magick', '-background', 'white', 'svg:-', '-flatten', '-resize', W .. 'x' .. H .. '!', '-depth', '8', 'gray:-' },
+      { stdin = svg }
+    ):wait(250)
+    local raw = (res.code == 0) and res.stdout or nil
+    if not raw or #raw < W * H then
+      svg_preview_cache[b64] = false
+      return false
+    end
+    local px = function(x, y)
+      local b = raw:byte(y * W + x + 1)
+      return b ~= nil and b < 180
+    end
+    -- Each Braille cell holds 2x4 pixels: 24x24 pixels occupy only 12x6
+    -- terminal cells. No code fence, so render-markdown adds no header or fill.
+    local dots = { { 1, 2, 4, 64 }, { 8, 16, 32, 128 } }
+    local out = { '' }
+    for y = 0, H - 1, 4 do
+      local row = {}
+      for x = 0, W - 1, 2 do
+        local bits = 0
+        for dx = 0, 1 do
+          for dy = 0, 3 do
+            if px(x + dx, y + dy) then bits = bits + dots[dx + 1][dy + 1] end
+          end
+        end
+        table.insert(row, bits == 0 and ' ' or vim.fn.nr2char(0x2800 + bits))
+      end
+      local line = table.concat(row):gsub('%s+$', '')
+      if line ~= '' then table.insert(out, '  ' .. line) end
+    end
+    table.insert(out, '')
+    svg_preview_cache[b64] = out
+    return out
+  end
+
+  local expand_svg_previews = function(lines)
+    if type(lines) ~= 'table' then return lines end
+    local out = {}
+    for _, line in ipairs(lines) do
+      local prefix, alt, b64, suffix = line:match('^(.-)!%[(.-)%]%(data:image/svg%+xml;base64,([A-Za-z0-9+/=]+)%s*%)(.*)$')
+      if b64 then
+        local art = render_svg_b64(b64)
+        if art then
+          local label = vim.trim((prefix or '') .. ' ' .. (alt or ''))
+          if label ~= '' then table.insert(out, label) end
+          vim.list_extend(out, art)
+          if suffix ~= '' then table.insert(out, suffix) end
+        else
+          table.insert(out, line)
+        end
+      else
+        table.insert(out, line)
+      end
+    end
+    return out
+  end
+
+  local orig_open_preview = vim.lsp.util.open_floating_preview
+  ---@diagnostic disable-next-line: duplicate-set-field
+  vim.lsp.util.open_floating_preview = function(contents, syntax, opts)
+    if syntax == 'markdown' then contents = expand_svg_previews(contents) end
+    return orig_open_preview(contents, syntax, opts)
+  end
+
   local completion_helpers = get_completion_helpers()
   if completion_helpers then
     local apply_text_edits = completion_helpers.apply_text_edits
@@ -257,6 +306,13 @@ now_if_args(function()
     completion_helpers.exec_command = function(client_id, command)
       if client_id ~= nil and vim.lsp.get_client_by_id(client_id) == nil then return end
       return exec_command(client_id, command)
+    end
+
+    local normalize_item_doc = completion_helpers.normalize_item_doc
+    if type(normalize_item_doc) == 'function' then
+      completion_helpers.normalize_item_doc = function(lsp_item, fallback_info)
+        return expand_svg_previews(normalize_item_doc(lsp_item, fallback_info))
+      end
     end
   end
 

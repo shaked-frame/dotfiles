@@ -11,6 +11,17 @@ FUNCNEST=100
 # Default editor
 export EDITOR=nvim
 
+# Tell Neovim's embedded terminal where relative compiler paths start, even
+# after `cd`. OSC 7 is consumed by Neovim, not printed into the scrollback.
+if [[ -n "$NVIM" ]]; then
+  autoload -Uz add-zsh-hook
+  _nvim_terminal_cwd() {
+    local dir=${PWD//\%/%25}
+    printf '\e]7;file://%s\e\\' "${dir// /%20}"
+  }
+  add-zsh-hook precmd _nvim_terminal_cwd
+fi
+
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                                   HISTORY                                    ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝

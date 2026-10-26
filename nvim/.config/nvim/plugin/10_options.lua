@@ -42,6 +42,7 @@ vim.o.colorcolumn    = '+1'       -- Draw column on the right of maximum width
 vim.o.cursorline     = true       -- Enable current line highlighting
 vim.o.linebreak      = true       -- Wrap lines at 'breakat' (if 'wrap' is set)
 vim.o.list           = true       -- Show helpful text indicators
+vim.o.laststatus     = 3          -- One bottom statusline; thin lines between splits
 vim.o.number         = true       -- Show line numbers
 vim.o.relativenumber = true       -- Show relative line numbers
 vim.o.pumborder      = 'single'   -- Use border in popup menu
