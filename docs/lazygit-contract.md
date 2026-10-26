@@ -11,7 +11,7 @@ contract is: **opening LazyGit must return you to your editor state**
 | Herdr popup | `prefix+alt+g` | popup sizing in `herdr/.config/herdr/config.toml` |
 | Zed task | `space g g` | Zed task reveal; `lazygit/.config/lazygit/zed.yml` |
 
-The tool itself (`lazygit/.config/lazygit/config.yml`: pi commit/PR custom
+The tool itself (`lazygit/.config/lazygit/config.yml`: Claude commit/PR custom
 commands, branch-type prompts, delta renderers) is shared by all four doors.
 Change the contract (what "return" means) once, here; change a door's
 mechanics in its own file. Do not unify the doors — each context's access is
