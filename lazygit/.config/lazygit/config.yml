@@ -100,42 +100,6 @@ customCommands:
             description: 'Jira ticket branch (work)'
             value: 'bugfix'
             key: 'b'
-          - name: 'feat'
-            description: 'conventional: new feature'
-            value: 'feat'
-            key: 'F'
-          - name: 'fix'
-            description: 'conventional: bug fix'
-            value: 'fix'
-            key: 'x'
-          - name: 'chore'
-            description: 'conventional: maintenance, deps'
-            value: 'chore'
-            key: 'c'
-          - name: 'docs'
-            description: 'conventional: documentation'
-            value: 'docs'
-            key: 'd'
-          - name: 'refactor'
-            description: 'conventional: no behaviour change'
-            value: 'refactor'
-            key: 'r'
-          - name: 'test'
-            description: 'conventional: tests only'
-            value: 'test'
-            key: 's'
-          - name: 'perf'
-            description: 'conventional: performance'
-            value: 'perf'
-            key: 'p'
-          - name: 'ci'
-            description: 'conventional: pipelines, workflows'
-            value: 'ci'
-            key: 'i'
-          - name: 'build'
-            description: 'conventional: build system'
-            value: 'build'
-            key: 'u'
       - type: 'input'
         key: 'Ticket'
         title: 'Ticket number'
@@ -180,18 +144,41 @@ customCommands:
   # copyToClipboard in the two panels that need it, for copyFileInfoToClipboard
   # and copyPullRequestURL. <ctrl+g> is unbound in every default context.
   - key: '<c-g>'
-    command: "GIT_PAGER=cat PAGER=cat GH_PAGER=cat claude -p --model haiku '/create-pr Extra context: {{index .PromptResponses 0}} | Base override: {{index .PromptResponses 1}} (empty means main)' --allowedTools 'Bash(git:*)' 'Bash(gh:*)' 'Read'"
+    command: >-
+      python3 "${XDG_CONFIG_HOME:-$HOME/.config}/lazygit/scripts/create-pr.py"
+      {{if .Form.BodyFile}}--body-file {{.Form.BodyFile | quote}}{{end}}
+      --reviewer {{.Form.Reviewer | quote}}
+      -- {{.Form.Title | quote}} {{.Form.Description | quote}} {{.Form.Base | quote}}
     context: 'localBranches, files'
-    description: 'AI create PR with claude haiku'
+    description: 'Create PR with GitHub CLI'
     prompts:
       - type: 'input'
-        title: 'Extra context for the PR (optional)'
+        key: 'Title'
+        title: 'Short PR title (branch and package added automatically)'
         initialValue: ''
       - type: 'input'
+        key: 'BodyFile'
+        title: 'PR body Markdown file (optional, empty = type description)'
+        initialValue: ''
+        suggestions:
+          preset: 'files'
+      - type: 'input'
+        key: 'Description'
+        title: 'PR description (Jira link added automatically)'
+        initialValue: ''
+        condition: '{{ not .Form.BodyFile }}'
+      - type: 'input'
+        key: 'Base'
         title: 'Base branch (empty = main)'
         initialValue: ''
         suggestions:
           preset: 'branches'
+      - type: 'input'
+        key: 'Reviewer'
+        title: 'PR reviewer (search repo users, empty = skip)'
+        initialValue: ''
+        suggestions:
+          command: "gh api 'repos/{owner}/{repo}/collaborators?per_page=100' --paginate --jq '.[].login'"
     loadingText: 'Creating pull request...'
-    output: popup
-    outputTitle: 'pi create PR'
+    # gh may need to ask where to push an unpublished branch.
+    output: terminal

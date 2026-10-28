@@ -32,7 +32,9 @@ alpha-blending = linear-corrected
 # macOS
 # -----------------------------------------------------------------------------
 window-titlebar-background = 090B10
-macos-titlebar-style=tabs
+# Herdr owns workspace tabs; hide Ghostty's titlebar and window buttons.
+# Keep the native frame and rounded corners. Applies to new windows.
+macos-titlebar-style = hidden
 macos-titlebar-proxy-icon = hidden
 macos-option-as-alt = true
 macos-non-native-fullscreen = true
