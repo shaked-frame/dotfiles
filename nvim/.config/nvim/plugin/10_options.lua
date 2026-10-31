@@ -22,6 +22,13 @@
 -- General ====================================================================
 vim.g.mapleader = ' ' -- Use `<Space>` as <Leader> key
 
+-- No remote plugins (rplugin) here, so skip the language host providers:
+-- quieter `:checkhealth vim.provider` and no host lookups on startup.
+vim.g.loaded_node_provider    = 0
+vim.g.loaded_perl_provider    = 0
+vim.g.loaded_python3_provider = 0
+vim.g.loaded_ruby_provider    = 0
+
 vim.o.mouse       = 'a'            -- Enable mouse
 vim.o.mousescroll = 'ver:3,hor:6'  -- Customize mouse scroll
 vim.o.smoothscroll = true          -- Smooth screen-line scrolling
