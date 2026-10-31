@@ -22,7 +22,7 @@ Layout mirrors the target tree: `<package>/.config/<name>/...` links to
 | `herdr` | `.config/herdr/config.toml` |
 | `lazygit` | `.config/lazygit` |
 | `nvim` | `.config/nvim` |
-| `rex` | `.config/rex` (app settings, Remote Control and the notifier's LaunchAgent: see its `README.md`) |
+| `rex` | `.config/rex` (app settings such as font, theme and Remote Control: see its `README.md`) |
 | `starship` | `.config/starship.toml` |
 | `worktrunk` | `.config/worktrunk/config.toml` |
 | `yazi` | `.config/yazi` |

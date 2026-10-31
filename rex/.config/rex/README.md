@@ -13,15 +13,9 @@ defaults write com.superlogical.rex Workspace.terminalFallbackFontNames -array "
 
 - **Remote Control** (Settings > Rex Server) must be on. `rex do worktree_open`
   switches the app's session from the CLI, which the app refuses otherwise.
-- **Notifications**: `scripts/notify.lua` sends a macOS notification when an
-  agent is blocked, finishes or fails while Rex isn't frontmost. launchd keeps
-  it running (`launchd/com.shakedhagag.rex-notify.plist`):
-  ```sh
-  ln -s ~/.config/rex/launchd/com.shakedhagag.rex-notify.plist ~/Library/LaunchAgents/
-  launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.shakedhagag.rex-notify.plist
-  # remove: launchctl bootout gui/$(id -u)/com.shakedhagag.rex-notify
-  ```
-  Log: `~/Library/Logs/rex-notify.log`.
+- **Notifications**: Rex itself sends macOS notifications when a program
+  (Claude Code included) reports blocked, done or error through the Program
+  Status Protocol. Choose which states notify in its Settings. No script needed.
 - **Theme**: `themes/Atom One Dark` is Ghostty's theme with the `#282c34`
   background from `ghostty/config`. Import it once:
   `rex -C <client> do client.theme.import path="$HOME/.config/rex/themes/Atom One Dark"`
