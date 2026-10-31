@@ -1,6 +1,7 @@
 # Rex
 
-`init.lua` holds keys and actions. Font, theme and Remote Control are app
+`init.lua` holds keys and actions; [`KEYMAP.md`](KEYMAP.md) lists every key.
+Font, theme and Remote Control are app
 settings (`defaults read com.superlogical.rex`) and are set like this:
 
 ```sh

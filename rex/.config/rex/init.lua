@@ -39,8 +39,9 @@ local function fg_program(block_id)
   return (n:gsub("^%-", ""):match("[^/]+$")), fg
 end
 
---- Working directory of the focused program. zsh doesn't report OSC 7 to Rex,
---- so the terminal's own `pwd` comes back empty; read it from the process.
+--- Working directory of the focused program, read from the process rather than
+--- the terminal's OSC 7 `pwd`: that is the shell's directory, which goes stale
+--- once a program like nvim `:cd`s elsewhere.
 local function fg_cwd(block_id)
   local _, fg = fg_program(block_id)
   return fg and fg.cwd
@@ -183,6 +184,71 @@ for key, dir in pairs{ h = "left", j = "down", k = "up", l = "right" } do
   rex.bind("resize/shift+" .. key, "pane.resize", { direction = dir, amount = 15 })
 end
 rex.bind("resize/=", "pane.balance")
+
+-- Hyper+6/7/8/9 resize like Neovim's `Config.Splits.resize`: move the focused
+-- pane's border that way, its right/bottom one when a pane lies past it, else
+-- its left/top one. The nearest split across that axis is the border; its
+-- ratio moves by `step` of the window. With Neovim focused the key goes to
+-- Neovim as CSI-u (its `H('6')`..`H('9')` maps), which resizes its own
+-- windows and sends `rex=true` back here when it has none that way.
+local NVIM_RESIZE_KEYS = { left = "\27[54;15u", up = "\27[55;15u", down = "\27[56;15u", right = "\27[57;15u" }
+
+local function contains(node, id)
+  if node.block_id then return node.block_id == id end
+  return node.split ~= nil and (contains(node.split.before, id) or contains(node.split.after, id))
+end
+
+local function first_leaf(node)
+  if node.block_id then return node.block_id end
+  return first_leaf(node.split.before)
+end
+
+local function resize_border(block_id, dir, step)
+  local axis = (dir == "left" or dir == "right") and "horizontal" or "vertical"
+  local w = active_window()
+  local border
+  for _, layer in ipairs(w.layers or {}) do
+    if layer.kind == "tiled" and layer.layout and contains(layer.layout, block_id) then
+      local node = layer.layout
+      while node.split do
+        if node.split.direction == axis then border = node end
+        node = contains(node.split.before, block_id) and node.split.before or node.split.after
+      end
+    end
+  end
+  if border == nil then return end
+
+  local size = axis == "horizontal" and border.rect[3] or border.rect[4]
+  local delta = step / size * ((dir == "left" or dir == "up") and -1 or 1)
+  local ratio = math.max(0.05, math.min(0.95, border.split.ratio + delta))
+  local _, err = rex.session.resize_pane{
+    before_block_id = first_leaf(border.split.before),
+    after_block_id = first_leaf(border.split.after),
+    direction = axis,
+    ratio = ratio,
+  }
+  if err then error(err, 0) end
+end
+
+rex.action{
+  name = "resize",
+  title = "Resize Pane",
+  args = { direction = "string", rex = "boolean?" },
+  repeats = true,
+  run = function(ctx, args)
+    if not args.rex then
+      local prog = fg_program(ctx.block_id)
+      if prog == "nvim" or prog == "vim" then
+        rex.block.call(T, "write", { block_id = ctx.block_id, data = NVIM_RESIZE_KEYS[args.direction] })
+        return
+      end
+    end
+    resize_border(ctx.block_id, args.direction, args.direction:match("^[lr]") and 0.03 or 0.05)
+  end,
+}
+for key, dir in pairs{ ["6"] = "left", ["7"] = "up", ["8"] = "down", ["9"] = "right" } do
+  rex.bind(H .. key, "resize", { direction = dir })
+end
 rex.bind("resize/enter", "client.mode.exit")
 rex.bind("resize/q", "client.mode.exit")
 
@@ -209,6 +275,11 @@ rex.bind(H .. "b", "client.sidebar.toggle")
 rex.bind(H .. ",", "client.config.reload")
 rex.bind(H .. "/", "client.find.open")
 
+-- Jump between shell prompts in the scrollback. Needs the OSC 133 marks from
+-- the Rex block in zsh/.zshrc.
+rex.bind(H .. "up", "client.prompt.previous")
+rex.bind(H .. "down", "client.prompt.next")
+
 -- Ghostty passthroughs ========================================================
 -- Rex is now the terminal, so the raw-byte keybinds from ghostty/config move
 -- here. `write` injects bytes as if typed.
@@ -223,10 +294,7 @@ end
 
 -- Hyper -> CSI-u modifier 15, for nvim `H()` maps. Rex matches unshifted
 -- keys, so this is `p` (Ghostty needed an uppercase `P`).
-rex.bind(H .. "8", send("\27[56;15u"))
-rex.bind(H .. "7", send("\27[55;15u"))
-rex.bind(H .. "9", send("\27[57;15u"))
-rex.bind(H .. "0", send("\27[48;15u"))
+-- Hyper+6/7/8/9 reach Neovim through the `resize` action below.
 rex.bind(H .. "\\", send("\27[92;15u"))
 rex.bind(H .. "p", send("\27[112;15u"))
 
@@ -234,7 +302,7 @@ rex.bind(H .. "p", send("\27[112;15u"))
 rex.bind("cmd+left", send("\27[H"))
 rex.bind("cmd+right", send("\27[F"))
 
--- Popups ======================================================================
+-- Floats ======================================================================
 
 rex.action{
   name = "lazygit",
@@ -249,7 +317,8 @@ rex.action{
   title = "Toggle Scratch Terminal",
   run = function(ctx) toggle_float(ctx, "scratch", nil, 0.8, 0.8) end,
 }
-rex.bind(H .. "t", "scratch")
+-- Not Hyper+t: that is the global hotkey that focuses Rex.
+rex.bind(H .. "o", "scratch")
 
 -- herdr `edit_scrollback`: dump the pane's screen + scrollback into nvim.
 rex.action{
@@ -327,7 +396,7 @@ rex.action{
   title = "Zoom Agent Pane",
   category = "Agents",
   args = { editor = "boolean?" },
-  run = function(ctx, args)
+  run = function(_, args)
     local w = active_window()
     for _, b in ipairs(window_blocks(w)) do
       local is_agent = AGENTS[fg_program(b.block_id) or ""] == true
@@ -340,6 +409,67 @@ rex.action{
 }
 rex.bind(H .. "m", "zoom_agent", { editor = true })
 rex.bind("ctrl+alt+m", "zoom_agent", { editor = true })
+
+-- Move the agent between its own "Claude" tab and a split right of nvim in the
+-- "Vim" tab, keeping it running (herdr prefix+shift+v). In the Vim tab it goes
+-- to Claude; anywhere else it joins Vim. Rex can't make a tab around an
+-- existing block, so a missing Claude tab is created with a placeholder shell
+-- that is closed once the agent is beside it. A tab whose last pane leaves
+-- closes, like herdr's.
+rex.action{
+  name = "agent_move",
+  title = "Move Agent: Claude Tab / Vim Split",
+  category = "Agents",
+  run = function(ctx)
+    local view, err = rex.session.view{}
+    if not view then error(err, 0) end
+
+    local vim_w, claude_w, agent, agent_w
+    for _, w in ipairs(view.windows) do
+      local label = (w.label or ""):lower()
+      if label == "vim" then vim_w = w elseif label == "claude" then claude_w = w end
+      for _, b in ipairs(window_blocks(w)) do
+        -- Prefer an agent in the active tab, else the session's first.
+        if AGENTS[fg_program(b.block_id) or ""] and (agent == nil or w.window_id == view.active_window_id) then
+          agent, agent_w = b, w
+        end
+      end
+    end
+    if agent == nil then error("no agent pane in this session", 0) end
+
+    local function move_beside(anchor_id, ratio)
+      local _, e = rex.session.move_block{
+        block_id = agent.block_id, anchor_block_id = anchor_id,
+        direction = "horizontal", side = "after", ratio = ratio,
+      }
+      if e then error(e, 0) end
+    end
+
+    if vim_w and agent_w.window_id == vim_w.window_id then
+      local others = claude_w and window_blocks(claude_w) or {}
+      if #others > 0 then
+        move_beside(others[#others].block_id)
+      else
+        local w, e = rex.session.new_window{ window_label = "Claude", layout = rex.layout.block{ flavor = SHELL } }
+        if not w then error(e, 0) end
+        local placeholder = w.block_ids[1]
+        move_beside(placeholder)
+        rex.call("block.close", { session_id = ctx.session_id, block_id = placeholder })
+      end
+    else
+      if vim_w == nil then error("no Vim tab in this session", 0) end
+      local blocks = window_blocks(vim_w)
+      local anchor = blocks[1]
+      for _, b in ipairs(blocks) do
+        if fg_program(b.block_id) == "nvim" then anchor = b break end
+      end
+      move_beside(anchor.block_id, 0.55)
+    end
+    rex.session.focus_block{ block_id = agent.block_id }
+  end,
+}
+rex.bind(H .. "v", "agent_move")
+rex.bind("ctrl+alt+v", "agent_move")
 
 -- Worktrees ===================================================================
 -- One Rex session per Git worktree, labelled with the branch and opened as an
@@ -354,7 +484,7 @@ rex.action{
   title = "Open Worktree Session",
   category = "Worktrees",
   args = { path = "string", branch = "string?" },
-  run = function(ctx, args)
+  run = function(_, args)
     local label = args.branch or args.path:match("[^/]+$")
     local list = rex.call("session.list")
     local id

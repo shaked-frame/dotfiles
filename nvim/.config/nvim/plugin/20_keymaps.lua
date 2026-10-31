@@ -94,11 +94,13 @@ nmap(']h', '<Cmd>lua MiniDiff.goto_hunk("next")<CR>zz', 'Next hunk')
 -- Hyper+p next hunk (Zed: `ctrl-alt-cmd-shift-p` GoToHunk)
 nmap(H('P'), '<Cmd>lua MiniDiff.goto_hunk("next")<CR>zz', 'Next hunk')
 
--- Window resizing with Hyper key (Zed: `ctrl-alt-cmd-^&*(` = ResizePane*)
-nmap(H('8'), '<Cmd>vertical resize +5<CR>', 'Increase window width')
-nmap(H('7'), '<Cmd>vertical resize -5<CR>', 'Decrease window width')
-nmap(H('9'), '<Cmd>resize +3<CR>', 'Increase window height')
-nmap(H('0'), '<Cmd>resize -3<CR>', 'Decrease window height')
+-- Window resizing with Hyper key (Zed: `ctrl-alt-cmd-^&*(` = ResizePane*):
+-- 6 left, 7 up, 8 down, 9 right move the window border that way. Rex sends
+-- these only while Neovim is focused, and gets them back at a split edge.
+nmap(H('6'), function() Config.Splits.resize('h') end, 'Resize: border left')
+nmap(H('7'), function() Config.Splits.resize('k') end, 'Resize: border up')
+nmap(H('8'), function() Config.Splits.resize('j') end, 'Resize: border down')
+nmap(H('9'), function() Config.Splits.resize('l') end, 'Resize: border right')
 
 -- Diagnostic navigation with Hyper key (Zed: `ctrl-alt-cmd-|` = GoToDiagnostic)
 nmap(H('\\'), function()

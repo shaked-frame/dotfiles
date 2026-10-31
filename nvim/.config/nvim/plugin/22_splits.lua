@@ -91,3 +91,27 @@ Config.Splits.navigate = function(wincmd)
     vim.system({ herdr_bin, 'pane', 'focus', '--direction', dir_names[wincmd], '--pane', pane_id })
   end
 end
+
+-- Resize by moving the current window's border in `dir` ('h'|'j'|'k'|'l'):
+-- its right/bottom border when a window lies past it, else its left/top one.
+-- Same rule as Rex's `resize` action, so Hyper+6/7/8/9 feel identical in both.
+-- With no Neovim split on that axis there is nothing to resize here, so inside
+-- Rex the Rex pane is resized instead (`rex=true` stops Rex sending it back).
+Config.Splits.resize = function(dir)
+  local horizontal = dir == 'h' or dir == 'l'
+  local before, after = horizontal and 'h' or 'k', horizontal and 'l' or 'j'
+  local cur = vim.fn.winnr()
+  local has_before, has_after = vim.fn.winnr(before) ~= cur, vim.fn.winnr(after) ~= cur
+
+  if not (has_before or has_after) then
+    if vim.env.REX_BLOCK and vim.env.REX_BLOCK ~= '' then
+      local rex_bin = (vim.env.REX_BIN_DIR and vim.env.REX_BIN_DIR ~= '') and (vim.env.REX_BIN_DIR .. '/rex') or 'rex'
+      vim.system({ rex_bin, 'do', 'resize', 'direction=' .. dir_names[dir], 'rex=true', '-b', vim.env.REX_BLOCK })
+    end
+    return
+  end
+
+  local grow = (dir == after) == has_after
+  local step = horizontal and 5 or 3
+  vim.cmd((horizontal and 'vertical ' or '') .. 'resize ' .. (grow and '+' or '-') .. step)
+end
