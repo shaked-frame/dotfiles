@@ -77,6 +77,14 @@ Config.Splits.navigate = function(wincmd)
 
   if was_term then vim.cmd('startinsert') end
 
+  -- Rex passes `<C-hjkl>` through while Neovim is the focused program (see
+  -- ~/.config/rex/init.lua), so hand focus to the neighbouring Rex pane here.
+  if vim.env.REX_BLOCK and vim.env.REX_BLOCK ~= '' then
+    local rex_bin = (vim.env.REX_BIN_DIR and vim.env.REX_BIN_DIR ~= '') and (vim.env.REX_BIN_DIR .. '/rex') or 'rex'
+    vim.system({ rex_bin, 'focus', dir_names[wincmd] })
+    return
+  end
+
   local pane_id = vim.env.HERDR_PANE_ID
   if pane_id and pane_id ~= '' then
     local herdr_bin = (vim.env.HERDR_BIN_PATH and vim.env.HERDR_BIN_PATH ~= '') and vim.env.HERDR_BIN_PATH or 'herdr'

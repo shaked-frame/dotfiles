@@ -206,6 +206,9 @@ end
 
 -- Mappings ===================================================================
 
--- stylua: ignore start
-vim.keymap.set('n', '<Leader>gw', pick_worktree, { desc = 'Worktrees (Herdr)' })
--- stylua: ignore end
+-- Inside Rex, 'plugin/61_rex.lua' owns `<Leader>gw` (Rex worktree sessions).
+if not (Config.Agent and Config.Agent.in_rex and Config.Agent.in_rex()) then
+  -- stylua: ignore start
+  vim.keymap.set('n', '<Leader>gw', pick_worktree, { desc = 'Worktrees (Herdr)' })
+  -- stylua: ignore end
+end

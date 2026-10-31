@@ -4,14 +4,16 @@
 --
 -- 'Send editor context to an agent' has a single interface here:
 -- focus / attach (stage, no submit) / send (submit now) / prompt.
--- Two adapters sit behind it, branched on in one place (`Config.Agent.in_herdr`):
+-- Three adapters sit behind it, chosen in one place (`active_adapter()`):
 -- - Herdr panes ('plugin/60_herdr.lua', when HERDR_ENV=1)
+-- - Rex panes ('plugin/61_rex.lua', inside Rex, when an agent pane exists
+--   and no sidekick chat is open in this tabpage)
 -- - sidekick CLI terminal ('plugin/46_sidekick_cli.lua', otherwise)
 --
 -- Adapters register via `Config.Agent.register(name, adapter)` with
 -- `focus()`, `attach(text, what)`, `send(text, what)` and are resolved at
 -- press time, not source time. Removal: delete one adapter file and the
--- dispatcher falls back to the other.
+-- dispatcher falls back to sidekick.
 --
 -- Conventions (both adapters):
 -- - Lowercase (`af`/`at`/`av`) attaches context to the agent's input WITHOUT
@@ -64,13 +66,31 @@ Config.Agent.in_herdr = function()
   return vim.env.HERDR_ENV == '1'
 end
 
+-- Rex sets REX_BLOCK in every pane it opens. Herdr wins when nested in Rex.
+Config.Agent.in_rex = function()
+  return not Config.Agent.in_herdr() and (vim.env.REX_BLOCK or '') ~= ''
+end
+
 Config.Agent.register = function(name, adapter)
   adapters[name] = adapter
+end
+
+local function sidekick_visible()
+  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
+    if vim.bo[vim.api.nvim_win_get_buf(win)].filetype == 'sidekick_terminal' then return true end
+  end
+  return false
 end
 
 local function active_adapter()
   if Config.Agent.in_herdr() and adapters.herdr ~= nil then
     return adapters.herdr
+  end
+  -- Inside Rex the agent on screen wins: an open sidekick chat first, then an
+  -- agent running in a Rex pane. With neither, sidekick opens its chat as it
+  -- does outside Rex, so `<Leader>a*` never dead-ends.
+  if Config.Agent.in_rex() and adapters.rex ~= nil and not sidekick_visible() and adapters.rex.available() then
+    return adapters.rex
   end
   return adapters.sidekick or adapters.herdr
 end

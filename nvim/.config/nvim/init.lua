@@ -167,7 +167,8 @@ pcall(require, 'vim.deprecated.health')
 -- Ordering in this config is load-bearing. Three rules everything depends on:
 -- 1. Files in 'plugin/' source alphabetically: 10_options < 20_keymaps <
 --    21_pickers < 22_splits < 23_terminal < 24_explorer < 30_mini < 40_plugins <
---    42_lazygit < 43_octo < 44_agent < 45_sidekick < 46_sidekick_cli < 60_herdr.
+--    42_lazygit < 43_octo < 44_agent < 45_sidekick < 46_sidekick_cli < 60_herdr <
+--    61_rex.
 --    Slice modules (21/22/23/24) sort after the keymap catalog (20), so
 --    keymaps reference `Config.Pickers` / `Config.Splits` / `Config.Terminal` /
 --    `Config.Explorer` inside function bodies (press time), never as a bare
@@ -184,8 +185,9 @@ pcall(require, 'vim.deprecated.health')
 -- - `leader_group_clues`: written at source time in 'plugin/20_keymaps.lua',
 --   read deferred in `later()` by 'plugin/30_mini.lua' (mini.clue setup).
 -- - `Agent`: defined at source time in 'plugin/44_agent.lua'; adapters
---   register via `Config.Agent.register(name, adapter)` ('plugin/60_herdr.lua'
---   and 'plugin/46_sidekick_cli.lua') and are resolved at press time.
+--   register via `Config.Agent.register(name, adapter)` ('plugin/60_herdr.lua',
+--   'plugin/61_rex.lua' and 'plugin/46_sidekick_cli.lua') and are resolved at
+--   press time.
 -- - `conform_ready`: written by 'plugin/40_plugins.lua' after
 --   `require('conform').setup()`, read by the format-on-save autocmd in
 --   'plugin/10_options.lua', so a save before setup is a no-op, not an error.

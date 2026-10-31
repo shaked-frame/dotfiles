@@ -1,0 +1,337 @@
+-- =============================================================================
+-- Rex configuration
+-- Docs: https://www.superlogical.com/rex/docs/customize/config
+-- Reload after editing: rex config reload  (or Hyper+,)
+-- Inspect what loaded:  rex keymap
+-- =============================================================================
+--
+-- Ported from ~/.config/herdr/config.toml. Terminology:
+--
+--   herdr workspace  ~  Rex session   (one per worktree, see `worktree_open`)
+--   herdr tab        ~  Rex tab       (a session "window" in the API)
+--   herdr pane       ~  Rex pane      (a "block" in the API)
+--   herdr popup      ~  Rex floating layer (session.new_layer)
+--
+-- No prefix key. Two modifier families instead:
+--   ctrl+alt+*  the direct chords carried over from herdr
+--   Hyper+*     everything herdr only had behind its F12 prefix. Hyper is the
+--               ZSA Voyager key, sent as cmd+ctrl+alt+shift. Hyper+7/8/9/0, \
+--               and p are reserved for Neovim (see "Ghostty passthroughs").
+--
+-- Settings that are not Lua (font, theme, Remote Control) live in the app:
+-- see README.md next to this file.
+
+local T = "com.superlogical.terminal"
+local SHELL = "com.superlogical.terminal.shell"
+local H = "cmd+ctrl+alt+shift+"
+
+-- Helpers =====================================================================
+
+--- Name of the focused program in a terminal block, e.g. "nvim" or "claude".
+--- `name` is not reliable on its own: Claude Code's native binary reports its
+--- version ("2.1.312") as `name` while `argv0` is "claude".
+local function fg_program(block_id)
+  if not block_id then return nil end
+  local p = rex.block.call(T, "process", { block_id = block_id })
+  local fg = p and p.foreground
+  if not fg then return nil end
+  local n = fg.script or fg.argv0 or fg.name or ""
+  return (n:gsub("^%-", ""):match("[^/]+$")), fg
+end
+
+--- Working directory of the focused program. zsh doesn't report OSC 7 to Rex,
+--- so the terminal's own `pwd` comes back empty; read it from the process.
+local function fg_cwd(block_id)
+  local _, fg = fg_program(block_id)
+  return fg and fg.cwd
+end
+
+local AGENTS = { claude = true, codex = true }
+
+local function active_window()
+  local view, err = rex.session.view{}
+  if not view then error(err, 0) end
+  for _, w in ipairs(view.windows) do
+    if w.window_id == view.active_window_id then return w, view end
+  end
+end
+
+--- Every block in the tiled layer(s) of a window.
+local function window_blocks(w)
+  local out = {}
+  for _, layer in ipairs(w and w.layers or {}) do
+    if layer.kind == "tiled" then
+      for _, b in ipairs(layer.blocks or {}) do table.insert(out, b) end
+    end
+  end
+  return out
+end
+
+--- A shell that types `cmd` on start, so quitting the program leaves a shell
+--- behind instead of closing the pane (herdr behaved the same way).
+local function shell_running(cmd, cwd)
+  return rex.layout.block{
+    flavor = SHELL,
+    options = { cwd = cwd, initial_input = cmd and (cmd .. "\n") or nil },
+  }
+end
+
+--- The editor | agent layout every worktree session starts with.
+local function dev_layout(cwd)
+  return rex.layout.horizontal(0.55, shell_running("nvim", cwd), shell_running("claude", cwd))
+end
+
+--- Open `command` (nil = interactive shell) in a centered floating layer,
+--- starting in the focused pane's directory. Closes when the program exits.
+local function popup(ctx, command, w, h)
+  local _, err = rex.session.new_layer{
+    bounds = { (1 - w) / 2, (1 - h) / 2, w, h },
+    focus = true,
+    layout = rex.layout.block{
+      flavor = SHELL,
+      options = { command = command, cwd = fg_cwd(ctx.block_id) },
+    },
+  }
+  if err then error(err, 0) end
+end
+
+-- Panes =======================================================================
+
+-- vim-herdr-navigation replacement: ctrl+h/j/k/l moves between Rex panes, but
+-- is passed through to Neovim when it is the focused program. Neovim hands
+-- focus back at a split edge by running `rex focus <dir>` (see
+-- nvim/plugin/22_splits.lua). Returning false sends the key to the terminal.
+for key, dir in pairs{ h = "left", j = "down", k = "up", l = "right" } do
+  rex.bind("ctrl+" .. key, function(ctx)
+    local prog = fg_program(ctx.block_id)
+    if prog == "nvim" or prog == "vim" then return false end
+    rex.session.focus_direction{ direction = dir }
+    return true
+  end)
+
+  rex.bind("ctrl+alt+" .. key, "pane.focus", { direction = dir })
+  rex.bind(H .. key, "pane.move", { direction = dir })
+end
+
+rex.bind("ctrl+alt+d", "pane.split.right")
+rex.bind(H .. "d", "pane.split.right")
+rex.bind("ctrl+alt+shift+d", "pane.split.down")
+rex.bind(H .. "-", "pane.split.down")
+
+rex.bind(H .. "x", "pane.close")
+rex.bind("ctrl+alt+z", "pane.zoom")
+rex.bind(H .. "z", "pane.zoom")
+rex.bind(H .. "f", "pane.float")
+rex.bind(H .. "tab", "pane.focus_next")
+
+-- Resize mode (herdr prefix+r). Exclusive, so stray keys don't reach the shell.
+rex.mode("resize", { exclusive = true })
+rex.bind(H .. "r", "client.mode.enter", { name = "resize" })
+for key, dir in pairs{ h = "left", j = "down", k = "up", l = "right" } do
+  rex.bind("resize/" .. key, "pane.resize", { direction = dir })
+  rex.bind("resize/shift+" .. key, "pane.resize", { direction = dir, amount = 15 })
+end
+rex.bind("resize/=", "pane.balance")
+rex.bind("resize/enter", "client.mode.exit")
+rex.bind("resize/q", "client.mode.exit")
+
+-- Tabs ========================================================================
+-- cmd+1..9 are left to the app's defaults; Hyper digits belong to Neovim.
+
+rex.bind("ctrl+alt+c", "client.tab.new")
+rex.bind(H .. "c", "client.tab.new")
+rex.bind("ctrl+alt+]", "client.tab.next")
+rex.bind(H .. "]", "client.tab.next")
+rex.bind("ctrl+alt+[", "client.tab.previous")
+rex.bind(H .. "[", "client.tab.previous")
+
+-- Sessions (herdr workspaces) =================================================
+
+rex.bind(H .. "s", "session.switch")               -- Rex's own session picker
+rex.bind("ctrl+alt+n", "session.next")
+rex.bind("ctrl+alt+p", "session.previous")
+
+-- Misc ========================================================================
+
+rex.bind("ctrl+alt+b", "client.sidebar.toggle")
+rex.bind(H .. "b", "client.sidebar.toggle")
+rex.bind(H .. ",", "client.config.reload")
+rex.bind(H .. "/", "client.find.open")
+
+-- Ghostty passthroughs ========================================================
+-- Rex is now the terminal, so the raw-byte keybinds from ghostty/config move
+-- here. `write` injects bytes as if typed.
+
+local function send(bytes)
+  return function(ctx)
+    if not ctx.block_id then return false end
+    rex.block.call(T, "write", { block_id = ctx.block_id, data = bytes })
+    return true
+  end
+end
+
+-- Hyper -> CSI-u modifier 15, for nvim `H()` maps. Rex matches unshifted
+-- keys, so this is `p` (Ghostty needed an uppercase `P`).
+rex.bind(H .. "8", send("\27[56;15u"))
+rex.bind(H .. "7", send("\27[55;15u"))
+rex.bind(H .. "9", send("\27[57;15u"))
+rex.bind(H .. "0", send("\27[48;15u"))
+rex.bind(H .. "\\", send("\27[92;15u"))
+rex.bind(H .. "p", send("\27[112;15u"))
+
+-- Line start/end like a macOS text field.
+rex.bind("cmd+left", send("\27[H"))
+rex.bind("cmd+right", send("\27[F"))
+
+-- Popups ======================================================================
+
+rex.action{
+  name = "lazygit",
+  title = "Lazygit",
+  category = "Git",
+  run = function(ctx) popup(ctx, { "lazygit" }, 0.9, 0.9) end,
+}
+rex.bind(H .. "g", "lazygit")
+
+rex.action{
+  name = "scratch",
+  title = "Scratch Terminal",
+  run = function(ctx) popup(ctx, nil, 0.8, 0.8) end,
+}
+rex.bind(H .. "t", "scratch")
+
+-- herdr `edit_scrollback`: dump the pane's screen + scrollback into nvim.
+rex.action{
+  name = "edit_scrollback",
+  title = "Edit Scrollback in Neovim",
+  run = function(ctx)
+    local r, err = rex.block.call(T, "format", { block_id = ctx.block_id, format = "text", trim = true })
+    if not r then error(err, 0) end
+    local path = os.tmpname() .. ".txt"
+    local f = assert(io.open(path, "w"))
+    f:write(r.content or "")
+    f:close()
+    popup(ctx, { "nvim", "+", path }, 0.9, 0.9)
+  end,
+}
+rex.bind(H .. "e", "edit_scrollback")
+
+-- Agents ======================================================================
+
+-- Open an agent to the right of the focused pane, in the same directory.
+rex.action{
+  name = "agent_split",
+  title = "Open Agent Beside Pane",
+  category = "Agents",
+  args = { command = "string?" },
+  run = function(ctx, args)
+    local _, err = rex.session.new_split{
+      block_id = ctx.block_id,
+      direction = "horizontal",
+      side = "after",
+      focus = true,
+      layout = shell_running(args.command or "claude", fg_cwd(ctx.block_id)),
+    }
+    if err then error(err, 0) end
+  end,
+}
+rex.bind(H .. "a", "agent_split")
+
+-- Agent panes in this session, those in the caller's tab first. Each entry has
+-- `block_id`, `window_id`, `program` and `here` (same tab as the caller).
+-- Read by Neovim's Rex agent adapter (nvim/plugin/61_rex.lua) through
+-- `rex do list_agents --json`, which runs it against $REX_SESSION/$REX_BLOCK.
+rex.action{
+  name = "list_agents",
+  title = "List Agent Panes",
+  category = "Agents",
+  run = function(ctx)
+    local view, err = rex.session.view{}
+    if not view then error(err, 0) end
+    local here, elsewhere = {}, {}
+    for _, w in ipairs(view.windows) do
+      local blocks = window_blocks(w)
+      local in_tab = false
+      for _, b in ipairs(blocks) do
+        if b.block_id == ctx.block_id then in_tab = true end
+      end
+      for _, b in ipairs(blocks) do
+        local prog = fg_program(b.block_id)
+        if AGENTS[prog or ""] then
+          table.insert(in_tab and here or elsewhere,
+            { block_id = b.block_id, window_id = w.window_id, program = prog, here = in_tab })
+        end
+      end
+    end
+    for _, a in ipairs(elsewhere) do table.insert(here, a) end
+    return { agents = here }
+  end,
+}
+
+-- Zoom the agent pane in this tab, or (with editor=true) zoom the first
+-- non-agent pane so the agent keeps running out of sight. Press again to
+-- restore. Replaces herdr's prefix+shift+a and prefix+shift+m commands.
+rex.action{
+  name = "zoom_agent",
+  title = "Zoom Agent Pane",
+  category = "Agents",
+  args = { editor = "boolean?" },
+  run = function(ctx, args)
+    local w = active_window()
+    for _, b in ipairs(window_blocks(w)) do
+      local is_agent = AGENTS[fg_program(b.block_id) or ""] == true
+      if is_agent ~= (args.editor == true) then
+        rex.session.zoom_block{ window_id = w.window_id, block_id = b.block_id }
+        return
+      end
+    end
+  end,
+}
+rex.bind(H .. "m", "zoom_agent", { editor = true })
+rex.bind("ctrl+alt+m", "zoom_agent", { editor = true })
+
+-- Worktrees ===================================================================
+-- One Rex session per Git worktree, labelled with the branch and opened as an
+-- nvim | claude split. Entry points:
+--   Hyper+w            floating fzf picker (scripts/worktree-pick.sh)
+--   nvim `space g w`   MiniPick picker (nvim/plugin/61_rex.lua)
+-- Both end in `rex do worktree_open`, which needs Remote Control turned on in
+-- the app (Settings > Rex Server) so the CLI can switch the app's session.
+
+rex.action{
+  name = "worktree_open",
+  title = "Open Worktree Session",
+  category = "Worktrees",
+  args = { path = "string", branch = "string?" },
+  run = function(ctx, args)
+    local label = args.branch or args.path:match("[^/]+$")
+    local list = rex.call("session.list")
+    local id
+    for _, s in ipairs(list and list.sessions or {}) do
+      if s.label == label then id = s.session_id end
+    end
+    if not id then
+      local r, err = rex.call("session.create", {
+        label = label,
+        initial_windows = { { window_label = "Vim", layout = dev_layout(args.path) } },
+      })
+      if not r then error(err, 0) end
+      id = r.session_id
+    end
+    rex.client.queue("session.select", { session_id = id })
+    return { session_id = id }
+  end,
+}
+
+local CONFIG_DIR = (os.getenv("XDG_CONFIG_HOME") or (os.getenv("HOME") .. "/.config")) .. "/rex"
+
+rex.action{
+  name = "worktree_picker",
+  title = "Worktrees…",
+  category = "Worktrees",
+  run = function(ctx)
+    popup(ctx, { "sh", CONFIG_DIR .. "/scripts/worktree-pick.sh" }, 0.6, 0.5)
+  end,
+}
+rex.bind(H .. "w", "worktree_picker")
+rex.bind("ctrl+alt+w", "worktree_picker")
