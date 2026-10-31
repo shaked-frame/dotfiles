@@ -300,6 +300,29 @@ if command -v wt >/dev/null 2>&1; then eval "$(command wt config shell init zsh)
 # reload-zsh deepens the chain until FUNCNEST explodes (the double-ESC error).
 (( $+functions[starship_zle-keymap-select] )) || eval "$(starship init zsh)"
 
+# ── Rex shell integration ─────────────────────────────────────────────────────
+# What Ghostty's `shell-integration = zsh` used to send, for Rex
+# (TERM_PROGRAM=rex): OSC 133 prompt/command marks (prompt jumping, and Rex
+# clears stale program status at each prompt) and OSC 7 cwd (Rex knows each
+# pane's directory). Skipped inside Neovim's :terminal, which gets its own OSC 7
+# above. After starship so the prompt-end mark follows starship's prompt; the
+# PROMPT guard keeps reload-zsh from appending it twice.
+if [[ $TERM_PROGRAM == rex && -z "$NVIM" ]]; then
+  autoload -Uz add-zsh-hook
+  _rex_precmd() {
+    local ret=$?
+    (( ${+_rex_running} )) && printf '\e]133;D;%d\a' "$ret"
+    unset _rex_running
+    local dir=${PWD//\%/%25}
+    printf '\e]7;file://%s%s\a\e]133;A\a' "$HOST" "${dir// /%20}"
+  }
+  _rex_preexec() { _rex_running=1; printf '\e]133;C\a'; }
+  add-zsh-hook preexec _rex_preexec
+  # First in line, so `$?` is still the finished command's status.
+  precmd_functions=(_rex_precmd ${precmd_functions:#_rex_precmd})
+  [[ $PROMPT == *'133;B'* ]] || PROMPT="${PROMPT}%{"$'\e]133;B\a'"%}"
+fi
+
 # ── Atuin (shell history) ─────────────────────────────────────────────────────
 (( $+functions[_atuin_search] )) || eval "$(atuin init zsh)"
 
