@@ -550,11 +550,12 @@ rex.bind(H .. "v", "agent_move")
 rex.bind("ctrl+alt+v", "agent_move")
 
 -- Worktrees ===================================================================
--- A worktree session is the Rex session that belongs to one Git worktree,
--- opened as nvim | claude (see CONTEXT.md). It is identified by the working
--- directory of its first tab's first pane, longest worktree path winning, and
--- never by its label: agents and people rename sessions. The label is display
--- only: the branch at creation, the folder name for a detached worktree.
+-- A worktree is open wherever a tiled pane's working directory is inside it
+-- (longest worktree path winning), in any tab of any session; floats don't
+-- count. Opening it returns to that tab, preferring one with nvim, and only
+-- creates a worktree session (nvim | claude, see CONTEXT.md) when no pane is
+-- there. Labels never identify anything: agents and people rename sessions.
+-- A new session's label is the branch, or the folder name when detached.
 --
 -- `worktrees` and `worktree_open` own the concept; the pickers only show and
 -- choose:
@@ -604,33 +605,51 @@ local function owning_worktree(worktrees, dir)
 	return best
 end
 
---- Working directory of a session's first tab's first pane. Reading another
---- session needs attaching to it; the action's own session is already attached.
-local function session_dir(session_id, own_session_id)
+--- Every tiled pane of a session, in tab order, as `{ window_id, dir, program }`.
+--- Reading another session needs attaching to it; the action's own session is
+--- already attached.
+local function session_panes(session_id, own_session_id)
 	local attached = session_id ~= own_session_id and rex.call("session.attach", { session_id = session_id })
 	local view = rex.call("session.view", { session_id = session_id })
-	local w = view and view.windows and view.windows[1]
-	local layer = w and w.layers and w.layers[1]
-	local dir
-	if layer and layer.layout then
-		local p = rex.block.call(T, "process", { session_id = session_id, block_id = first_leaf(layer.layout) })
-		dir = p and p.foreground and p.foreground.cwd
+	local panes = {}
+	for _, w in ipairs(view and view.windows or {}) do
+		for _, b in ipairs(window_blocks(w)) do
+			local p = rex.block.call(T, "process", { session_id = session_id, block_id = b.block_id })
+			local fg = p and p.foreground
+			if fg and fg.cwd then
+				local n = fg.script or fg.argv0 or fg.name or ""
+				table.insert(panes, {
+					window_id = w.window_id,
+					dir = fg.cwd,
+					program = n:gsub("^%-", ""):match("[^/]+$"),
+				})
+			end
+		end
 	end
 	if attached then
 		rex.call("session.detach", { session_id = session_id })
 	end
-	return dir
+	return panes
 end
 
---- Open worktree sessions keyed by worktree path: `{ session_id, label }`.
+--- Where each worktree is open, keyed by worktree path:
+--- `{ session_id, label, window_id }`. The first tab with nvim in the worktree
+--- wins, else the first tab with any pane there.
 local function worktree_sessions(worktrees, own_session_id)
 	local found = {}
 	local list = rex.call("session.list")
 	for _, s in ipairs(list and list.sessions or {}) do
-		local dir = session_dir(s.session_id, own_session_id)
-		local w = dir and owning_worktree(worktrees, dir)
-		if w and found[w.path] == nil then
-			found[w.path] = { session_id = s.session_id, label = s.label }
+		for _, pane in ipairs(session_panes(s.session_id, own_session_id)) do
+			local w = owning_worktree(worktrees, pane.dir)
+			local seen = w and found[w.path]
+			if w and (seen == nil or (not seen.editor and pane.program == "nvim")) then
+				found[w.path] = {
+					session_id = s.session_id,
+					label = s.label,
+					window_id = pane.window_id,
+					editor = pane.program == "nvim",
+				}
+			end
 		end
 	end
 	return found
@@ -648,7 +667,7 @@ rex.action({
 		for _, w in ipairs(list) do
 			local s = open[w.path]
 			if s then
-				w.session_id, w.label = s.session_id, s.label
+				w.session_id, w.label, w.window_id = s.session_id, s.label, s.window_id
 			end
 		end
 		return { worktrees = list }
@@ -659,7 +678,7 @@ rex.action({
 	name = "worktree_open",
 	title = "Open Worktree Session",
 	category = "Worktrees",
-	description = "Find or create the worktree session for a worktree path, and switch to it unless select=false.",
+	description = "Return to the tab where a worktree is open, or create its worktree session; select=false skips switching.",
 	args = { path = "string", select = "boolean?" },
 	run = function(ctx, args)
 		local path = args.path:gsub("/+$", "")
@@ -675,7 +694,7 @@ rex.action({
 		end
 
 		local open = worktree_sessions(list, ctx.session_id)[target.path]
-		local id = open and open.session_id
+		local id, window_id = open and open.session_id, open and open.window_id
 		if id == nil then
 			local r, err = rex.call("session.create", {
 				label = target.branch or target.path:match("[^/]+$"),
@@ -687,9 +706,9 @@ rex.action({
 			id = r.session_id
 		end
 		if args.select ~= false then
-			rex.client.queue("session.select", { session_id = id })
+			rex.client.queue("session.select", { session_id = id, window_id = window_id })
 		end
-		return { session_id = id, created = open == nil }
+		return { session_id = id, window_id = window_id, created = open == nil }
 	end,
 })
 
