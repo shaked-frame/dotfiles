@@ -1,77 +1,118 @@
 -- ┌───────────────────────────────────┐
--- │ Rex: worktree sessions            │
+-- │ Rex: host, worktrees, agent panes │
 -- └───────────────────────────────────┘
 --
 -- Rex (https://www.superlogical.com/rex) is the terminal multiplexer hosting
--- this Neovim. Each Git worktree gets its own Rex session, labelled with the
--- branch and laid out as nvim | claude. The session itself is built by the
--- `worktree_open` action in ~/.config/rex/init.lua; this file only picks.
+-- this Neovim. Three parts:
 --
--- Loaded after 'plugin/60_herdr.lua' so `<Leader>gw` here wins inside Rex,
--- while Herdr panes keep the Herdr picker.
---
--- Also the Rex agent adapter behind 'plugin/44_agent.lua': `<Leader>a*` sends
--- editor context to a claude/codex pane in this Rex session. The dispatcher
--- only picks it when no sidekick chat is open and `available()` finds an agent
--- pane, so sidekick (inline completion, NES, its CLI chat) is untouched.
---
--- Switching the app's session from the CLI needs Remote Control turned on in
--- the Rex app (Settings > Rex Server).
+-- - `Config.Rex`: the Rex host (see CONTEXT.md). Detection and every `rex`
+--   call from Neovim go through it; 'plugin/22_splits.lua' and
+--   'plugin/44_agent.lua' use it at press time. All calls run through
+--   `Config.Rex.runner`, which 'scripts/test-rex-host.lua' swaps for a recorder.
+-- - `<Leader>gw`: pick a worktree session. Listing and opening live in the
+--   `worktrees` / `worktree_open` actions in ~/.config/rex/init.lua; this
+--   only shows and chooses. Switching the app's session from the CLI needs
+--   Remote Control turned on in the Rex app (Settings > Rex Server).
+-- - The Rex agent adapter behind 'plugin/44_agent.lua': `<Leader>a*` sends
+--   editor context to a claude/codex pane in this Rex session. The dispatcher
+--   only picks it when no sidekick chat is open and `available()` finds an
+--   agent pane, so sidekick (inline completion, NES, its CLI chat) is untouched.
 
-if not (Config.Agent and Config.Agent.in_rex and Config.Agent.in_rex()) then return end
+-- Host =======================================================================
 
-local rex_bin = (vim.env.REX_BIN_DIR and vim.env.REX_BIN_DIR ~= '') and (vim.env.REX_BIN_DIR .. '/rex') or 'rex'
+Config.Rex = {}
 
---- Run a command; return stdout, or nil after notifying the error.
----@param cmd string[]
----@return string|nil
-local function run(cmd)
-  local out = vim.system(cmd, { text = true }):wait()
-  if out.code ~= 0 then
-    vim.notify(table.concat(cmd, ' ') .. '\n' .. (out.stderr or ''), vim.log.levels.ERROR)
-    return nil
+--- Run `rex <argv>`. With `opts.wait`, wait and return
+--- `{ code, stdout, stderr }`; otherwise start it and return nothing.
+---@param argv string[]
+---@param opts? { wait?: boolean }
+---@return { code: integer, stdout: string, stderr: string }|nil
+Config.Rex.runner = function(argv, opts)
+  local dir = vim.env.REX_BIN_DIR
+  local cmd = vim.list_extend({ (dir and dir ~= '') and (dir .. '/rex') or 'rex' }, argv)
+  if opts and opts.wait then
+    local out = vim.system(cmd, { text = true }):wait()
+    return { code = out.code, stdout = out.stdout or '', stderr = out.stderr or '' }
   end
-  return out.stdout
+  vim.system(cmd)
 end
 
---- Git worktrees of the current repo as `{ branch, path }` tables.
-local function worktrees()
-  local out = run({ 'git', 'worktree', 'list', '--porcelain' })
-  if not out then return {} end
-  local items, path = {}, nil
-  for line in out:gmatch('[^\n]+') do
-    if line:match('^worktree ') then path = line:sub(10) end
-    local branch = line:match('^branch refs/heads/(.+)')
-    if branch then table.insert(items, { branch = branch, path = path }) end
-    if line == 'detached' then table.insert(items, { branch = '(detached)', path = path }) end
+--- Whether this Neovim runs in a Rex pane. Herdr wins when nested in Rex: it
+--- is the multiplexer the pane actually sits in.
+Config.Rex.active = function()
+  return vim.env.HERDR_ENV ~= '1' and (vim.env.REX_BLOCK or '') ~= ''
+end
+
+--- Run a Rex action against this Neovim's pane and wait for its result.
+--- Never notifies: callers decide whether a failure matters.
+---@param name string
+---@param args? table<string, string|number|boolean>
+---@return table|nil result, string|nil err
+Config.Rex.action = function(name, args)
+  local argv = { 'do', name, '-b', vim.env.REX_BLOCK or '', '--json' }
+  local keys = vim.tbl_keys(args or {})
+  table.sort(keys)
+  for _, k in ipairs(keys) do
+    table.insert(argv, k .. '=' .. tostring(args[k]))
   end
-  return items
+
+  local out = Config.Rex.runner(argv, { wait = true })
+  if out.code ~= 0 then return nil, vim.trim(out.stderr ~= '' and out.stderr or out.stdout) end
+  local text = vim.trim(out.stdout)
+  if text == '' or text == 'null' then return {} end
+  local ok, decoded = pcall(vim.json.decode, text, { luanil = { object = true, array = true } })
+  if not ok or type(decoded) ~= 'table' then return nil, 'unreadable result from `rex do ' .. name .. '`' end
+  return decoded
 end
 
---- Labels of the open Rex sessions, as a set.
-local function open_sessions()
-  local out = run({ rex_bin, 'ls', '--json' })
-  local ok, decoded = pcall(vim.json.decode, out or '')
-  local set = {}
-  for _, s in ipairs(ok and decoded.sessions or {}) do set[s.label] = true end
-  return set
+--- Focus a pane by ID, or the nearest pane in a direction
+--- ('left'|'right'|'up'|'down').
+---@param target string
+Config.Rex.focus = function(target) Config.Rex.runner({ 'focus', target }) end
+
+--- Type `text` into a pane as one bracketed paste, so multi-line text lands as
+--- one block instead of each newline submitting. `submit` presses Enter after
+--- a beat, or a TUI can eat it while it takes the paste.
+---@param block_id string
+---@param text string
+---@param opts? { submit?: boolean }
+Config.Rex.send = function(block_id, text, opts)
+  Config.Rex.runner({ 'send', '-b', block_id, '\27[200~' .. text .. '\27[201~' })
+  if opts and opts.submit then
+    vim.defer_fn(function() Config.Rex.runner({ 'send-key', '-b', block_id, 'enter' }) end, 150)
+  end
 end
 
--- Pick a Git worktree and open (or switch to) its Rex session.
+if not Config.Rex.active() then return end
+
+-- Worktrees ==================================================================
+
+-- Pick a Git worktree and open (or switch to) its worktree session.
 -- Mirrors Zed's `space g w`.
 local function pick_worktree()
-  local list = worktrees()
+  local res, err = Config.Rex.action('worktrees', { cwd = vim.fn.getcwd() })
+  if not res then
+    vim.notify(err, vim.log.levels.ERROR)
+    return
+  end
+  local list = res.worktrees or {}
   if #list == 0 then
     vim.notify('No Git worktrees found', vim.log.levels.WARN)
     return
   end
 
-  local open = open_sessions()
   local items = {}
   for _, w in ipairs(list) do
+    local name = w.branch or vim.fn.fnamemodify(w.path, ':t')
+    local renamed = (w.label and w.label ~= name) and ('  [' .. w.label .. ']') or ''
     table.insert(items, {
-      text = string.format('%s%-44s %s', open[w.branch] and '● ' or '○ ', w.branch, vim.fn.fnamemodify(w.path, ':~')),
-      branch = w.branch,
+      text = string.format(
+        '%s%-44s %s%s',
+        w.session_id and '● ' or '○ ',
+        (w.detached and '(detached) ' or '') .. name,
+        vim.fn.fnamemodify(w.path, ':~'),
+        renamed
+      ),
       path = w.path,
     })
   end
@@ -83,7 +124,8 @@ local function pick_worktree()
       choose = function(item)
         -- Deferred: MiniPick is still tearing its window down at this point.
         vim.schedule(function()
-          run({ rex_bin, 'do', 'worktree_open', 'path=' .. item.path, 'branch=' .. item.branch })
+          local _, open_err = Config.Rex.action('worktree_open', { path = item.path })
+          if open_err then vim.notify(open_err, vim.log.levels.ERROR) end
         end)
       end,
     },
@@ -102,9 +144,8 @@ local agents_cache = { at = 0, list = {} }
 local function agents()
   local now = vim.uv.now()
   if now - agents_cache.at < 1000 then return agents_cache.list end
-  local out = vim.system({ rex_bin, 'do', 'list_agents', '-b', vim.env.REX_BLOCK, '--json' }, { text = true }):wait()
-  local ok, decoded = pcall(vim.json.decode, out.code == 0 and out.stdout or '')
-  agents_cache = { at = now, list = ok and type(decoded) == 'table' and decoded.agents or {} }
+  local res = Config.Rex.action('list_agents')
+  agents_cache = { at = now, list = res and res.agents or {} }
   return agents_cache.list
 end
 
@@ -138,35 +179,24 @@ local function with_agent(prompt, fn)
   })
 end
 
---- Type `text` into the agent's input. Wrapped in bracketed paste so a
---- multi-line selection lands as one block instead of each newline submitting.
-local function paste(agent, text, submit)
-  if not run({ rex_bin, 'send', '-b', agent.block_id, '\27[200~' .. text .. '\27[201~' }) then return false end
-  if submit then
-    -- Give the TUI a beat to take the paste before Enter, or it can be eaten.
-    vim.defer_fn(function() run({ rex_bin, 'send-key', '-b', agent.block_id, 'enter' }) end, 150)
-  end
-  return true
-end
-
 if Config.Agent and Config.Agent.register then
   Config.Agent.register('rex', {
     available = function() return #agents() > 0 end,
     focus = function()
-      with_agent('Rex agents -> focus', function(a) run({ rex_bin, 'focus', a.block_id }) end)
+      with_agent('Rex agents -> focus', function(a) Config.Rex.focus(a.block_id) end)
     end,
     -- Stage without submitting, then move to the agent to add more and press Enter.
     attach = function(text, what)
       with_agent('Rex agents -> ' .. what, function(a)
-        if paste(a, text, false) then
-          run({ rex_bin, 'focus', a.block_id })
-          vim.notify('Attached ' .. what .. ' to ' .. a.program .. ' (not sent)')
-        end
+        Config.Rex.send(a.block_id, text)
+        Config.Rex.focus(a.block_id)
+        vim.notify('Attached ' .. what .. ' to ' .. a.program .. ' (not sent)')
       end)
     end,
     send = function(text, what)
       with_agent('Rex agents -> ' .. what, function(a)
-        if paste(a, text, true) then vim.notify('Sent ' .. what .. ' to ' .. a.program) end
+        Config.Rex.send(a.block_id, text, { submit = true })
+        vim.notify('Sent ' .. what .. ' to ' .. a.program)
       end)
     end,
   })

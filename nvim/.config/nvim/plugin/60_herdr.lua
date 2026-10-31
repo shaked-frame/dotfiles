@@ -206,8 +206,9 @@ end
 
 -- Mappings ===================================================================
 
--- Inside Rex, 'plugin/61_rex.lua' owns `<Leader>gw` (Rex worktree sessions).
-if not (Config.Agent and Config.Agent.in_rex and Config.Agent.in_rex()) then
+-- Only inside Herdr: elsewhere the picker has nothing to drive, and inside the
+-- Rex host 'plugin/61_rex.lua' maps `<Leader>gw` instead.
+if Config.Agent and Config.Agent.in_herdr and Config.Agent.in_herdr() then
   -- stylua: ignore start
   vim.keymap.set('n', '<Leader>gw', pick_worktree, { desc = 'Worktrees (Herdr)' })
   -- stylua: ignore end

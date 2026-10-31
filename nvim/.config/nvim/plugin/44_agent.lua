@@ -66,9 +66,10 @@ Config.Agent.in_herdr = function()
   return vim.env.HERDR_ENV == '1'
 end
 
--- Rex sets REX_BLOCK in every pane it opens. Herdr wins when nested in Rex.
+-- The Rex host check lives in `Config.Rex` ('plugin/61_rex.lua'). That file
+-- sources later, so only call this at press time.
 Config.Agent.in_rex = function()
-  return not Config.Agent.in_herdr() and (vim.env.REX_BLOCK or '') ~= ''
+  return Config.Rex ~= nil and Config.Rex.active()
 end
 
 Config.Agent.register = function(name, adapter)

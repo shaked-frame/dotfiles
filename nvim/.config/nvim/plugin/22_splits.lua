@@ -59,8 +59,8 @@ Config.Splits.move_to_side = function(dir) -- dir: 'h' (left) or 'l' (right)
 end
 
 -- Navigate between Neovim windows in `wincmd` ('h'|'j'|'k'|'l') direction and,
--- when already at a Neovim split edge inside Herdr, hand off focus to the
--- neighbouring Herdr pane. Works from both Normal and Terminal modes: if at a
+-- when already at a Neovim split edge inside Rex or Herdr, hand off focus to
+-- the neighbouring pane. Works from both Normal and Terminal modes: if at a
 -- split edge inside a terminal buffer, Terminal mode is preserved so the shell
 -- or agent TUI is not stranded in Normal mode.
 local dir_names = { h = 'left', j = 'down', k = 'up', l = 'right' }
@@ -79,9 +79,8 @@ Config.Splits.navigate = function(wincmd)
 
   -- Rex passes `<C-hjkl>` through while Neovim is the focused program (see
   -- ~/.config/rex/init.lua), so hand focus to the neighbouring Rex pane here.
-  if vim.env.REX_BLOCK and vim.env.REX_BLOCK ~= '' then
-    local rex_bin = (vim.env.REX_BIN_DIR and vim.env.REX_BIN_DIR ~= '') and (vim.env.REX_BIN_DIR .. '/rex') or 'rex'
-    vim.system({ rex_bin, 'focus', dir_names[wincmd] })
+  if Config.Rex and Config.Rex.active() then
+    Config.Rex.focus(dir_names[wincmd])
     return
   end
 
@@ -104,10 +103,7 @@ Config.Splits.resize = function(dir)
   local has_before, has_after = vim.fn.winnr(before) ~= cur, vim.fn.winnr(after) ~= cur
 
   if not (has_before or has_after) then
-    if vim.env.REX_BLOCK and vim.env.REX_BLOCK ~= '' then
-      local rex_bin = (vim.env.REX_BIN_DIR and vim.env.REX_BIN_DIR ~= '') and (vim.env.REX_BIN_DIR .. '/rex') or 'rex'
-      vim.system({ rex_bin, 'do', 'resize', 'direction=' .. dir_names[dir], 'rex=true', '-b', vim.env.REX_BLOCK })
-    end
+    if Config.Rex and Config.Rex.active() then Config.Rex.action('resize', { direction = dir_names[dir], rex = true }) end
     return
   end
 

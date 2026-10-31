@@ -1,47 +1,37 @@
 #!/bin/sh
-# Pick a Git worktree of the current repo and open it as a Rex session
+# Pick a worktree of the current repo and open its worktree session
 # (nvim | claude). Run by the `worktree_picker` action in a floating layer.
+# Listing, session lookup and opening live in the `worktrees` and
+# `worktree_open` actions in init.lua; this script only shows and chooses.
 #
-#   ● branch   a Rex session with that label is already open
-#   ○ branch   not open yet; choosing it creates the session
+#   ● branch  [label]   a worktree session is open (its label, if renamed)
+#   ○ branch            not open yet; choosing it creates the session
 #
 # Typing a branch name that matches nothing creates the worktree with
-# worktrunk (`wt switch --create`), so its hooks run as usual.
+# worktrunk (`wt switch --create`), so its hooks run here, in a terminal.
 set -eu
 
 pause() { printf '\n%s\n[press enter]' "$1"; read -r _; exit 1; }
 
-git rev-parse --git-dir >/dev/null 2>&1 || pause "Not inside a Git repository: $(pwd)"
+list=$(rex do worktrees cwd="$PWD" --json) || pause "Not inside a Git repository: $PWD"
 
-# branch<TAB>path, one per worktree.
-worktrees() {
-  git worktree list --porcelain | awk '
-    /^worktree / { path = substr($0, 10) }
-    /^branch /   { b = substr($0, 8); sub("^refs/heads/", "", b); print b "\t" path }
-    /^detached/  { print "(detached)\t" path }'
-}
-
-open_sessions=$(rex ls --json | jq -r '.sessions[].label')
-
-out=$(worktrees | awk -F '\t' -v open="$open_sessions" '
-  BEGIN { n = split(open, a, "\n"); for (i = 1; i <= n; i++) o[a[i]] = 1 }
-  { printf "%s %s\t%s\n", (($1 in o) ? "●" : "○"), $1, $2 }' |
+out=$(printf '%s' "$list" | jq -r '.worktrees[] |
+    (.branch // (.path | split("/") | last)) as $name |
+    [ (if .session_id then "●" else "○" end) + " "
+        + (if .detached then "(detached) " else "" end) + $name
+        + (if .label and .label != $name then "  [" + .label + "]" else "" end),
+      .path ] | @tsv' |
   fzf --print-query --delimiter '\t' --with-nth 1 --prompt 'worktree> ' \
       --header 'enter: open  ·  new name: create with wt' --reverse) || true
 
 query=$(printf '%s\n' "$out" | sed -n 1p)
-choice=$(printf '%s\n' "$out" | sed -n 2p)
+path=$(printf '%s\n' "$out" | sed -n 2p | cut -f2)
 
-if [ -n "$choice" ]; then
-  branch=$(printf '%s' "$choice" | cut -f1 | sed 's/^[^ ]* //')   # strip "● " / "○ "
-  path=$(printf '%s' "$choice" | cut -f2)
-elif [ -n "$query" ]; then
+if [ -z "$path" ] && [ -n "$query" ]; then
   wt switch --create "$query" --no-cd || pause "wt switch --create failed"
-  branch=$query
-  path=$(worktrees | awk -F '\t' -v b="$branch" '$1 == b { print $2 }')
-  [ -n "$path" ] || pause "Created $branch but could not find its worktree"
-else
-  exit 0
+  path=$(rex do worktrees cwd="$PWD" --json | jq -r --arg b "$query" '.worktrees[] | select(.branch == $b) | .path')
+  [ -n "$path" ] || pause "Created $query but could not find its worktree"
 fi
+[ -n "$path" ] || exit 0
 
-rex do worktree_open path="$path" branch="$branch" >/dev/null || pause "rex do worktree_open failed"
+rex do worktree_open path="$path" >/dev/null || pause "rex do worktree_open failed"
