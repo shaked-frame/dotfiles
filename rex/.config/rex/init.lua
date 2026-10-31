@@ -95,6 +95,57 @@ local function popup(ctx, command, w, h)
   if err then error(err, 0) end
 end
 
+--- Show or hide a named floating pane that keeps running while hidden.
+--- Hiding detaches it from the tab (`detach_block`). A detached block can't be
+--- floated directly, so showing places it as a split beside this tab's first
+--- tiled pane and floats that. Floats are per session; the first toggle starts
+--- `command` (nil = shell) in the focused pane's directory. Quitting the
+--- program closes the pane, and the next toggle starts a fresh one.
+local function toggle_float(ctx, name, command, w, h)
+  local label = "float:" .. name
+  local bounds = { (1 - w) / 2, (1 - h) / 2, w, h }
+  local win = active_window()
+
+  local found
+  local list, err = rex.session.list_blocks{}
+  if not list then error(err, 0) end
+  for _, b in ipairs(list.blocks or {}) do
+    if b.label == label then found = b end
+  end
+
+  if found == nil then
+    local _, e = rex.session.new_layer{
+      bounds = bounds,
+      focus = true,
+      layout = rex.layout.block{
+        flavor = SHELL,
+        label = label,
+        options = { command = command, cwd = fg_cwd(ctx.block_id) },
+      },
+    }
+    if e then error(e, 0) end
+    return
+  end
+
+  -- Showing in this tab: hide it. Showing in another tab: bring it here.
+  if found.placement ~= "detached" then
+    rex.session.detach_block{ block_id = found.block_id }
+    if found.window_id == win.window_id then return end
+  end
+
+  local anchor = window_blocks(win)[1]
+  if anchor == nil then error("no tiled pane in this tab to place the float beside", 0) end
+  local steps = {
+    { "move_block", { block_id = found.block_id, anchor_block_id = anchor.block_id, direction = "horizontal", side = "after" } },
+    { "float_block", { block_id = found.block_id, bounds = bounds } },
+    { "focus_block", { block_id = found.block_id } },
+  }
+  for _, s in ipairs(steps) do
+    local _, e = rex.session[s[1]](s[2])
+    if e then error(s[1] .. ": " .. e, 0) end
+  end
+end
+
 -- Panes =======================================================================
 
 -- vim-herdr-navigation replacement: ctrl+h/j/k/l moves between Rex panes, but
@@ -187,16 +238,16 @@ rex.bind("cmd+right", send("\27[F"))
 
 rex.action{
   name = "lazygit",
-  title = "Lazygit",
+  title = "Toggle Lazygit",
   category = "Git",
-  run = function(ctx) popup(ctx, { "lazygit" }, 0.9, 0.9) end,
+  run = function(ctx) toggle_float(ctx, "lazygit", { "lazygit" }, 0.9, 0.9) end,
 }
 rex.bind(H .. "g", "lazygit")
 
 rex.action{
   name = "scratch",
-  title = "Scratch Terminal",
-  run = function(ctx) popup(ctx, nil, 0.8, 0.8) end,
+  title = "Toggle Scratch Terminal",
+  run = function(ctx) toggle_float(ctx, "scratch", nil, 0.8, 0.8) end,
 }
 rex.bind(H .. "t", "scratch")
 
