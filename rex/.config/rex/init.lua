@@ -408,7 +408,7 @@ rex.bind(H .. "a", "agent_split")
 
 -- Agent panes in this session, those in the caller's tab first. Each entry has
 -- `block_id`, `window_id`, `program` and `here` (same tab as the caller).
--- Read by Neovim's Rex agent adapter (nvim/plugin/61_rex.lua) through
+-- Read by Neovim's host module (nvim/lua/config/host.lua) through
 -- `rex do list_agents --json`, which runs it against $REX_SESSION/$REX_BLOCK.
 rex.action({
 	name = "list_agents",
@@ -562,7 +562,7 @@ rex.bind("ctrl+alt+v", "agent_move")
 --   Hyper+w            floating fzf picker (scripts/worktree-pick.sh). Also
 --                      creates worktrees with `wt`, whose hooks can outlast
 --                      an action's 30 seconds and need a terminal.
---   nvim `space g w`   MiniPick picker (nvim/plugin/61_rex.lua)
+--   nvim `space g w`   vim.ui.select picker (nvim/lua/config/host.lua)
 -- Switching the app's session from the CLI needs Remote Control turned on in
 -- the app (Settings > Rex Server).
 

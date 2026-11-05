@@ -123,18 +123,9 @@ now(function() require('mini.sessions').setup() end)
 -- - `:h MiniStarter-lifecycle` - how to work with Starter buffer
 now(function() require('mini.starter').setup() end)
 
--- Statusline. Sets `:h 'statusline'` to show more info in a line below window.
--- Example usage:
--- - Left most section indicates current mode (text + highlighting).
--- - Second from left section shows "developer info": Git, diff, diagnostics, LSP.
--- - Center section shows the name of displayed buffer.
--- - Second to right section shows more buffer info.
--- - Right most section shows current cursor coordinates and search results.
---
--- See also:
--- - `:h MiniStatusline-example-content` - example of default content. Use it to
---   configure a custom statusline by setting `config.content.active` function.
-now(function() require('mini.statusline').setup() end)
+-- LazyVim-style layout using Mini: mode/branch, pretty path, then recording,
+-- diagnostics, diff, progress and cursor position. No Lualine dependency.
+now(function() require('config.statusline').setup() end)
 
 -- File tabs use 'bufferline.nvim' in 'plugin/40_plugins.lua'.
 -- Don't enable mini.tabline as a second tabline renderer.
@@ -188,26 +179,6 @@ now_if_args(function()
       process_items = process_items,
     },
   })
-
-  -- Guard against completion resolution racing a server shutdown.
-  --
-  -- Accepting a completion item can trigger `apply_text_edits` / `exec_command`
-  -- against the client that produced it. If that client has since stopped (LSP
-  -- restart, `:LspStop`, server crash, switching branches), those calls throw.
-  -- The helpers live in 'mini.completion's private `H` table, reachable only as
-  -- an upvalue of `completefunc_lsp`, so wrap them to drop requests for clients
-  -- that no longer exist.
-  --
-  -- NOTE: this reaches into plugin internals via `debug.getupvalue`, so it is
-  -- written to fail soft - if the lookup stops working after a 'mini.nvim'
-  -- update, `completion_helpers` is simply nil and nothing is patched.
-  local get_completion_helpers = function()
-    for i = 1, 20 do
-      local name, value = debug.getupvalue(MiniCompletion.completefunc_lsp, i)
-      if name == 'H' and type(value) == 'table' then return value end
-    end
-    return nil
-  end
 
   -- Render inline `![alt](data:image/svg+xml;base64,...)` icon previews (used
   -- by `@frame/ui-assets` and `lucide-react` JSDocs) as cached Unicode
@@ -293,27 +264,9 @@ now_if_args(function()
     return orig_open_preview(contents, syntax, opts)
   end
 
-  local completion_helpers = get_completion_helpers()
-  if completion_helpers then
-    local apply_text_edits = completion_helpers.apply_text_edits
-    completion_helpers.apply_text_edits = function(client_id, text_edits)
-      if client_id ~= nil and vim.lsp.get_client_by_id(client_id) == nil then return end
-      return apply_text_edits(client_id, text_edits)
-    end
-
-    local exec_command = completion_helpers.exec_command
-    completion_helpers.exec_command = function(client_id, command)
-      if client_id ~= nil and vim.lsp.get_client_by_id(client_id) == nil then return end
-      return exec_command(client_id, command)
-    end
-
-    local normalize_item_doc = completion_helpers.normalize_item_doc
-    if type(normalize_item_doc) == 'function' then
-      completion_helpers.normalize_item_doc = function(lsp_item, fallback_info)
-        return expand_svg_previews(normalize_item_doc(lsp_item, fallback_info))
-      end
-    end
-  end
+  -- Ignore stopped LSP clients and render icon previews in the `Info` float
+  -- ('lua/config/completion.lua').
+  require('config.completion').patch_mini(MiniCompletion, { doc = expand_svg_previews })
 
   -- Set 'omnifunc' for LSP completion only when needed.
   local on_attach = function(ev)
@@ -333,7 +286,7 @@ now_if_args(function()
   vim.lsp.config('*', { capabilities = MiniCompletion.get_lsp_capabilities() })
 end)
 
--- File explorer ('mini.files' and 'oil.nvim') lives in 'plugin/24_explorer.lua'.
+-- File explorer ('oil.nvim') lives in 'plugin/24_explorer.lua'.
 
 -- Miscellaneous small but useful functions. Example usage:
 -- - `<Leader>oz` - toggle between "zoomed" and regular view of current buffer
@@ -365,7 +318,7 @@ end)
 -- Extra 'mini.nvim' functionality.
 --
 -- See also:
--- - `:h MiniExtra.pickers` - pickers. Most are mapped in `<Leader>f` group.
+-- - `:h MiniExtra.pickers` - optional pickers available through `:Pick`.
 --   Calling `setup()` makes 'mini.pick' respect 'mini.extra' pickers.
 -- - `:h MiniExtra.gen_ai_spec` - 'mini.ai' textobject specifications
 -- - `:h MiniExtra.gen_highlighter` - 'mini.hipatterns' highlighters
@@ -703,17 +656,12 @@ later(function() require('mini.jump2d').setup() end)
 -- - `:h MiniKeymap-examples` - examples of common setups
 -- - `:h MiniKeymap.map_multistep()` - map multi-step action
 -- - `:h MiniKeymap.map_combo()` - map combo
+--
+-- Every Insert-mode accept key (`<Tab>`, `<S-Tab>`, `<CR>`, `<BS>`, `<M-Tab>`,
+-- `<C-l>`) and its priority order lives in 'lua/config/completion.lua'.
 later(function()
   require('mini.keymap').setup()
-  -- Navigate 'mini.completion' menu with `<S-Tab>` (`<Tab>` is owned by
-  -- 'plugin/45_sidekick.lua', which checks `pumvisible()` first and falls
-  -- back to inline completion).
-  MiniKeymap.map_multistep('i', '<S-Tab>', { 'pmenu_prev' })
-  -- On `<CR>` try to accept current completion item, fall back to accounting
-  -- for pairs from 'mini.pairs'
-  MiniKeymap.map_multistep('i', '<CR>', { 'pmenu_accept', 'minipairs_cr' })
-  -- On `<BS>` just try to account for pairs from 'mini.pairs'
-  MiniKeymap.map_multistep('i', '<BS>', { 'minipairs_bs' })
+  require('config.completion').map_keys()
 end)
 
 -- NOTE: 'mini.map' is deliberately NOT enabled here.
@@ -786,35 +734,10 @@ later(function()
   require('mini.pairs').setup({ modes = { command = true } })
 end)
 
--- Pick anything with single window layout and fast matching. This is one of
--- the main usability improvements as it powers a lot of "find things quickly"
--- workflows. How to use a picker:
--- - Start picker, usually with `:Pick <picker-name>` command. Like `:Pick files`.
---   It shows a single window in the bottom left corner filled with possible items
---   to choose from. Current item has special full line highlighting.
---   At the top there is a current query used to filter+sort items.
--- - Type characters (appear at top) to narrow down items. There is fuzzy matching:
---   characters may not match one-by-one, but they should be in correct order.
--- - Navigate down/up with `<C-n>`/`<C-p>`.
--- - Press `<Tab>` to show item's preview. `<Tab>` again goes back to items.
--- - Press `<S-Tab>` to show picker's info. `<S-Tab>` again goes back to items.
--- - Press `<CR>` to choose an item. The exact action depends on the picker: `files`
---   picker opens a selected file, `help` picker opens help page on selected tag.
---   To close picker without choosing an item, press `<Esc>`.
---
--- Example usage:
--- - `<Leader>ff` - *f*ind *f*iles; for best performance requires `ripgrep`
--- - `<Leader>fg` - *f*ind inside files (a.k.a. "to *g*rep"); requires `ripgrep`
--- - `<Leader>fh` - *f*ind *h*elp tag
--- - `<Leader>fr` - *r*esume latest picker
--- - `:h vim.ui.select()` - implemented with 'mini.pick'
---
--- See also:
--- - `:h MiniPick-overview` - overview of picker functionality
--- - `:h MiniPick-examples` - examples of common setups
--- - `:h MiniPick.builtin` and `:h MiniExtra.pickers` - available pickers;
---   Execute one either with Lua function, `:Pick <picker-name>` command, or
---   one of `<Leader>f` mappings defined in 'plugin/20_keymaps.lua'
+-- Regular pickers and `vim.ui.select()` use Snacks ('plugin/40_plugins.lua').
+-- Keep MiniPick for custom terminal/worktree/agent and Grug-Far flows. In those
+-- pickers, <Tab> toggles preview, <C-x> marks items and <C-q> sends to quickfix.
+-- Optional MiniExtra pickers remain available via `:Pick`; see MiniPick-overview.
 later(function()
   require('mini.pick').setup({
     mappings = {
@@ -834,44 +757,8 @@ later(function()
     },
   })
 
-  -- Guard `vim.ui.select` against Neovim 0.12's `vim/lsp/buf.lua:1341` assertion
-  -- failure when an LSP client detaches or restarts between returning code
-  -- actions and formatting or applying them.
-  local orig_ui_select = vim.ui.select
-  ---@diagnostic disable-next-line: duplicate-set-field
-  vim.ui.select = function(items, opts, on_choice)
-    if opts and opts.kind == 'codeaction' and type(items) == 'table' then
-      items = vim.tbl_filter(function(item)
-        return type(item) ~= 'table'
-          or not item.ctx
-          or not item.ctx.client_id
-          or vim.lsp.get_client_by_id(item.ctx.client_id) ~= nil
-      end, items)
-      if #items == 0 then
-        vim.notify('No code actions available', vim.log.levels.INFO)
-        return
-      end
-      if type(opts.format_item) == 'function' then
-        local orig_format = opts.format_item
-        opts = vim.tbl_extend('force', opts, {
-          format_item = function(item)
-            local ok, res = pcall(orig_format, item)
-            if ok and type(res) == 'string' then return res end
-            return (type(item) == 'table' and item.action and item.action.title) or tostring(item)
-          end,
-        })
-      end
-      local orig_on_choice = on_choice
-      on_choice = function(choice, idx)
-        if choice and choice.ctx and choice.ctx.client_id and not vim.lsp.get_client_by_id(choice.ctx.client_id) then
-          vim.notify('LSP client restarted before code action could be applied', vim.log.levels.WARN)
-          return
-        end
-        return orig_on_choice(choice, idx)
-      end
-    end
-    return orig_ui_select(items, opts, on_choice)
-  end
+  -- The guarded Snacks select provider is installed after this block in
+  -- 'plugin/40_plugins.lua'; MiniPick.setup temporarily installs its own.
 end)
 
 -- Manage and expand snippets (templates for a frequently used text).

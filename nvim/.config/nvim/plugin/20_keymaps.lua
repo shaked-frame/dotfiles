@@ -59,7 +59,7 @@ nmap('gw', function() MiniJump2d.start(MiniJump2d.builtin_opts.word_start) end, 
 local pick_lsp_references = function()
   vim.cmd.cclose()
   vim.cmd.lclose()
-  vim.cmd([[Pick lsp scope="references"]])
+  Snacks.picker.lsp_references()
 end
 
 nmap('gd', '<Cmd>lua vim.lsp.buf.definition()<CR>', 'Go to definition')
@@ -119,16 +119,15 @@ for _, key in ipairs({ '<2-LeftMouse>', '<C-LeftMouse>' }) do
     { expr = true, desc = 'Open terminal file at mouse' })
 end
 
--- Navigate windows and Herdr panes from Normal and Terminal mode with `<C-hjkl>`
+-- Navigate windows and host panes from Normal and Terminal mode with `<C-hjkl>`
 -- (Zed: `ctrl-hjkl` = workspace::ActivatePane*). Walks Neovim splits first and
--- crosses into the adjacent Herdr pane at a split edge.
+-- crosses into the adjacent Rex or Herdr pane at a split edge.
 vim.keymap.set({ 'n', 't' }, '<C-h>', function() Config.Splits.navigate('h') end, { desc = 'Go to left window/pane' })
 vim.keymap.set({ 'n', 't' }, '<C-j>', function() Config.Splits.navigate('j') end, { desc = 'Go to lower window/pane' })
 vim.keymap.set({ 'n', 't' }, '<C-k>', function() Config.Splits.navigate('k') end, { desc = 'Go to upper window/pane' })
 vim.keymap.set({ 'n', 't' }, '<C-l>', function() Config.Splits.navigate('l') end, { desc = 'Go to right window/pane' })
 
--- Open the active file explorer (`Config.explorer` in 'init.lua') at the
--- current file with `-`.
+-- Open the file explorer ('plugin/24_explorer.lua') at the current file with `-`.
 nmap('-', function() Config.Explorer.open_at_file() end, 'Explore at file')
 
 -- Many general mappings are created by 'mini.basics'. See 'plugin/30_mini.lua'
@@ -238,7 +237,7 @@ end
 nmap_leader('ba', '<Cmd>b#<CR>',                                 'Alternate')
 nmap_leader('bd', '<Cmd>lua MiniBufremove.delete()<CR>',         'Delete')
 nmap_leader('bD', '<Cmd>lua MiniBufremove.delete(0, true)<CR>',  'Delete!')
-nmap_leader('bg', '<Cmd>Pick buf_lines scope="all"<CR>',         'Grep open buffers')
+nmap_leader('bg', function() Config.Pickers.buffer_lines() end, 'Grep open buffers')
 nmap_leader('bm', close_clean_buffers,                           'Only modified (git)')
 nmap_leader('bn', '<Cmd>enew<CR>',                               'New file')
 nmap_leader('bo', close_other_buffers,                           'Only current')
@@ -260,13 +259,14 @@ local source_plugin_file = function(filename)
   return string.format('<Cmd>source %s/plugin/%s<CR>', vim.fn.stdpath('config'), filename)
 end
 
-nmap_leader('eb', '<Cmd>Pick lsp scope="document_symbol"<CR>', 'Outline (symbols)')
+nmap_leader('eb', function() Snacks.picker.lsp_symbols({ filter = { default = true } }) end, 'Outline (symbols)')
 nmap_leader('ed', function() Config.Explorer.open_cwd() end,     'Directory')
 nmap_leader('ef', function() Config.Explorer.open_at_file() end, 'File directory')
 nmap_leader('ei', '<Cmd>edit $MYVIMRC<CR>',                 'init.lua')
 nmap_leader('ek', edit_plugin_file('20_keymaps.lua'),       'Keymaps config')
 nmap_leader('em', edit_plugin_file('30_mini.lua'),          'MINI config')
 nmap_leader('en', '<Cmd>lua MiniNotify.show_history()<CR>', 'Notifications')
+nmap_leader('eM', '<Cmd>messages<CR>',                     'Messages (native)')
 nmap_leader('eo', edit_plugin_file('10_options.lua'),       'Options config')
 nmap_leader('ep', edit_plugin_file('40_plugins.lua'),       'Plugins config')
 nmap_leader('eq', function() require('quicker').toggle() end,                     'Quickfix list')
@@ -280,25 +280,23 @@ nmap_leader('eR', source_plugin_file('20_keymaps.lua'),     'Reload keymaps')
 -- - `<Leader>fr` - resume latest picker
 -- - `<Leader>fv` - all visited paths; requires 'mini.visits'
 --
--- All these use 'mini.pick'. See `:h MiniPick-overview` for an overview.
-local pick_added_hunks_buf = '<Cmd>Pick git_hunks path="%" scope="staged"<CR>'
-local pick_workspace_symbols_live = '<Cmd>Pick lsp scope="workspace_symbol_live"<CR>'
+-- Regular pickers use Snacks; helpers retain scoped searches and visit labels.
 
 -- File finders live in 'plugin/21_pickers.lua' (`Config.Pickers`).
 
-nmap_leader('f/', '<Cmd>Pick history scope="/"<CR>',            '"/" history')
-nmap_leader('f:', '<Cmd>Pick history scope=":"<CR>',            '":" history')
-nmap_leader('fa', '<Cmd>Pick git_hunks scope="staged"<CR>',     'Added hunks (all)')
-nmap_leader('fA', pick_added_hunks_buf,                         'Added hunks (buf)')
+nmap_leader('f/', function() Snacks.picker.search_history() end, '"/" history')
+nmap_leader('f:', function() Snacks.picker.command_history() end, '":" history')
+nmap_leader('fa', function() Config.Pickers.git_diff({ staged = true, group = false }) end, 'Added hunks (all)')
+nmap_leader('fA', function() Config.Pickers.git_diff({ staged = true, group = false }, true) end, 'Added hunks (buf)')
 nmap_leader('fb', function() Config.Pickers.buffers() end,                 'Buffers')
-nmap_leader('fc', '<Cmd>Pick git_commits<CR>',                  'Commits (all)')
-nmap_leader('fC', '<Cmd>Pick git_commits path="%"<CR>',         'Commits (buf)')
-nmap_leader('fd', '<Cmd>Pick diagnostic scope="all"<CR>',       'Diagnostic workspace')
-nmap_leader('fD', '<Cmd>Pick diagnostic scope="current"<CR>',   'Diagnostic buffer')
-nmap_leader('ff', '<Cmd>Pick files<CR>',                        'Files')
+nmap_leader('fc', function() Config.Pickers.git_log() end, 'Commits (all)')
+nmap_leader('fC', function() Config.Pickers.git_log(true) end, 'Commits (buf)')
+nmap_leader('fd', function() Snacks.picker.diagnostics({ filter = { cwd = false } }) end, 'Diagnostic workspace')
+nmap_leader('fD', function() Snacks.picker.diagnostics_buffer() end, 'Diagnostic buffer')
+nmap_leader('ff', function() Snacks.picker.files() end, 'Files')
 nmap_leader('fF', function() Config.Pickers.files_all() end,               'Files (hidden+ignored)')
-nmap_leader('fg', '<Cmd>Pick grep_live<CR>',                    'Grep live')
-nmap_leader('fG', '<Cmd>Pick grep pattern="<cword>"<CR>',       'Grep current word')
+nmap_leader('fg', function() Snacks.picker.grep() end, 'Grep live')
+nmap_leader('fG', function() Snacks.picker.grep({ search = vim.fn.expand('<cword>'), live = false, regex = false }) end, 'Grep current word')
 xmap_leader('fg', function()
   local mode = vim.fn.mode()
   if mode == 'v' or mode == 'V' or mode == '\22' then
@@ -307,30 +305,28 @@ xmap_leader('fg', function()
   local lines = vim.fn.getregion(vim.fn.getpos("'<"), vim.fn.getpos("'>"), { type = vim.fn.visualmode() })
   local text = table.concat(lines, ' '):gsub('%s+', ' '):gsub('^%s+', ''):gsub('%s+$', '')
   if text == '' then return end
-  require('mini.pick').builtin.grep({ pattern = text })
+  Snacks.picker.grep({ search = text, live = false, regex = false })
 end, 'Grep selection')
 nmap_leader('fe', function() Config.Pickers.frontend_files() end,         'Files (frontend)')
 nmap_leader('fE', function() Config.Pickers.frontend_grep() end,          'Grep (frontend)')
-nmap_leader('fh', '<Cmd>Pick help<CR>',                         'Help tags')
-nmap_leader('fH', '<Cmd>Pick hl_groups<CR>',                    'Highlight groups')
-nmap_leader('fl', '<Cmd>Pick buf_lines scope="all"<CR>',        'Lines (all)')
-nmap_leader('fL', '<Cmd>Pick buf_lines scope="current"<CR>',    'Lines (buf)')
-nmap_leader('fm', '<Cmd>Pick git_hunks<CR>',                    'Modified hunks (all)')
-nmap_leader('fM', '<Cmd>Pick git_hunks path="%"<CR>',           'Modified hunks (buf)')
-nmap_leader('fr', '<Cmd>Pick resume<CR>',                       'Resume')
-nmap_leader('fR', '<Cmd>Pick lsp scope="references"<CR>',       'References (LSP)')
-nmap_leader('fs', pick_workspace_symbols_live,                  'Symbols workspace (live)')
-nmap_leader('fS', '<Cmd>Pick lsp scope="document_symbol"<CR>',  'Symbols document')
-nmap_leader('fv', '<Cmd>Pick visit_paths cwd=""<CR>',           'Visit paths (all)')
-nmap_leader('fV', '<Cmd>Pick visit_paths<CR>',                  'Visit paths (cwd)')
+nmap_leader('fh', function() Snacks.picker.help() end, 'Help tags')
+nmap_leader('fH', function() Snacks.picker.highlights() end, 'Highlight groups')
+nmap_leader('fl', function() Config.Pickers.buffer_lines() end, 'Lines (all)')
+nmap_leader('fL', function() Snacks.picker.lines() end, 'Lines (buf)')
+nmap_leader('fm', function() Config.Pickers.git_diff({ staged = false, group = false }) end, 'Modified hunks (all)')
+nmap_leader('fM', function() Config.Pickers.git_diff({ staged = false, group = false }, true) end, 'Modified hunks (buf)')
+nmap_leader('fr', function() Snacks.picker.resume() end, 'Resume')
+nmap_leader('fR', function() Snacks.picker.lsp_references() end, 'References (LSP)')
+nmap_leader('fs', function() Snacks.picker.lsp_workspace_symbols({ filter = { default = true } }) end, 'Symbols workspace (live)')
+nmap_leader('fS', function() Snacks.picker.lsp_symbols({ filter = { default = true } }) end, 'Symbols document')
+nmap_leader('fv', function() Config.Pickers.visits('') end, 'Visit paths (all)')
+nmap_leader('fV', function() Config.Pickers.visits(nil) end, 'Visit paths (cwd)')
 
 -- g is for 'Git'. Common usage:
 -- - `<Leader>gs` - show information at cursor
 -- - `<Leader>go` - toggle 'mini.diff' overlay to show in-buffer unstaged changes
--- - `<Leader>gd` - show unstaged changes as a patch in separate tabpage
+-- - `<Leader>gd` - browse unstaged files with diff previews (Snacks)
 -- - `<Leader>gL` - show Git log of current file
-local git_log_cmd = [[Git log --pretty=format:\%h\ \%as\ │\ \%s --topo-order]]
-local git_log_buf_cmd = git_log_cmd .. ' --follow -- %'
 
 local stage_buffer = function()
   local buf = vim.api.nvim_get_current_buf()
@@ -349,18 +345,18 @@ local restore_buffer = function()
   if not ok then vim.notify(tostring(err), vim.log.levels.WARN) end
 end
 
-nmap_leader('ga', '<Cmd>Git diff --cached<CR>',             'Added diff')
-nmap_leader('gA', '<Cmd>Git diff --cached -- %<CR>',        'Added diff buffer')
+nmap_leader('ga', function() Config.Pickers.git_diff({ staged = true, group = true }) end, 'Added diff')
+nmap_leader('gA', function() Config.Pickers.git_diff({ staged = true, group = true }, true) end, 'Added diff buffer')
 nmap_leader('gb', '<Cmd>Git blame -- %<CR>',                'Blame buffer')
 nmap_leader('gc', '<Cmd>Git commit<CR>',                    'Commit')
 nmap_leader('gC', '<Cmd>Git commit --amend<CR>',            'Commit amend')
 vim.keymap.set('x', '<Leader>gc', function() return MiniDiff.operator('apply') end, { expr = true, desc = 'Stage selection' })
-nmap_leader('gd', '<Cmd>Git diff<CR>',                      'Diff')
-nmap_leader('gD', '<Cmd>Git diff -- %<CR>',                 'Diff buffer')
+nmap_leader('gd', function() Config.Pickers.git_diff({ staged = false, group = true }) end, 'Diff files')
+nmap_leader('gD', function() Config.Pickers.git_diff({ staged = false, group = true }, true) end, 'Diff buffer')
 vim.keymap.set('n', '<Leader>gh', function() return MiniDiff.operator('apply') .. 'gh' end, { expr = true, remap = true, desc = 'Stage hunk' })
 vim.keymap.set('x', '<Leader>gh', function() return MiniDiff.operator('apply') end, { expr = true, desc = 'Stage selection' })
-nmap_leader('gl', '<Cmd>' .. git_log_cmd .. '<CR>',         'Log')
-nmap_leader('gL', '<Cmd>' .. git_log_buf_cmd .. '<CR>',     'Log buffer')
+nmap_leader('gl', function() Config.Pickers.git_log() end, 'Log')
+nmap_leader('gL', function() Config.Pickers.git_log(true) end, 'Log buffer')
 nmap_leader('go', '<Cmd>lua MiniDiff.toggle_overlay()<CR>', 'Toggle overlay')
 vim.keymap.set('n', '<Leader>gr', function() return MiniDiff.operator('reset') .. 'gh' end, { expr = true, remap = true, desc = 'Restore hunk' })
 vim.keymap.set('x', '<Leader>gr', function() return MiniDiff.operator('reset') end, { expr = true, desc = 'Restore selection' })
@@ -376,6 +372,10 @@ nmap_leader('gu', function()
     vim.cmd('DiffviewOpen')
   end
 end, 'Uncommitted changes')
+-- Worktrees are opened by the host multiplexer (Rex or Herdr), so only there.
+if require('config.host').kind() then
+  nmap_leader('gw', function() require('config.host').pick_worktree() end, 'Worktrees')
+end
 
 xmap_leader('gs', '<Cmd>lua MiniGit.show_at_cursor()<CR>', 'Show at selection')
 
@@ -409,7 +409,7 @@ xmap_leader('lf', '<Cmd>lua require("conform").format()<CR>', 'Format selection'
 -- OpenModifiedFiles). NOTE: 'mini.map' is intentionally disabled so that this
 -- prefix is free. See 'plugin/30_mini.lua'.
 nmap_leader('m',  '<Cmd>lua MiniMisc.zoom()<CR>',           'Zoom toggle')
-nmap_leader('mf', '<Cmd>Pick git_files scope="modified"<CR>', 'Modified files')
+nmap_leader('mf', function() Snacks.picker.git_status() end, 'Modified files')
 
 -- Window sizing standalone mappings (Zed: `space =` EqualizePanes,
 -- `space shift-m` Maximize). `M` is an uppercase alias for the same zoom
@@ -453,6 +453,17 @@ nmap_leader('xr', '<Cmd>Trouble lsp_references toggle<CR>',           'Reference
 -- - `<Leader>ob` - toggle transparent background
 -- - `<Leader>oc` - toggle sticky treesitter context header
 -- - `<Leader>oz` - toggle between "zoomed" and regular view of current buffer
+-- With mini.clue, `<Leader>o<CR>` opens below while keeping the submenu.
+-- Only suppress comment continuation for this open; preserve buffer options.
+local open_without_comment = function(key)
+  return function()
+    return '<Cmd>setlocal formatoptions-=o<CR>' .. key
+      .. '<Cmd>setlocal formatoptions=' .. vim.bo.formatoptions .. '<CR>'
+  end
+end
+vim.keymap.set('n', '<Leader>o', open_without_comment('o'), { expr = true, desc = 'Open below without comment' })
+vim.keymap.set('n', '<Leader>O', open_without_comment('O'), { expr = true, desc = 'Open above without comment' })
+
 nmap_leader('ob', function() Config.toggle_transparency() end,        'Transparent background')
 nmap_leader('oc', '<Cmd>TSContext toggle<CR>',                        'Treesitter context')
 nmap_leader('or', '<Cmd>lua MiniMisc.resize_window()<CR>',            'Resize to default width')

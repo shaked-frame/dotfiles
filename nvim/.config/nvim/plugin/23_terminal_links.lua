@@ -1,5 +1,8 @@
 -- Open paths from terminal output in an editor window, keeping the job alive.
 -- Mouse mappings live in '20_keymaps.lua'; gf is local to terminal scrollback.
+-- The shell's directory and the target window come from 'lua/config/term.lua'.
+
+local term = require('config.term')
 
 Config.TerminalLinks = {}
 local links = Config.TerminalLinks
@@ -31,30 +34,10 @@ links.location = function(text, column)
   end
 end
 
-local terminal_cwd = function(buf, win)
-  return vim.b[buf].terminal_link_cwd
-    or vim.api.nvim_buf_get_name(buf):match('^term://(.-)//%d+:')
-    or vim.fn.getcwd(win)
-end
-
-local editor_window = function(source)
-  local current = vim.api.nvim_get_current_win()
-  local wins = vim.api.nvim_tabpage_list_wins(0)
-  -- Prefer the editor the user is already in, then the alternate editor window.
-  table.insert(wins, 1, vim.fn.win_getid(vim.fn.winnr('#')))
-  table.insert(wins, 1, current)
-  for _, win in ipairs(wins) do
-    if win ~= source and vim.api.nvim_win_is_valid(win) and vim.api.nvim_win_get_config(win).relative == '' then
-      local buf = vim.api.nvim_win_get_buf(win)
-      if vim.bo[buf].buftype == '' and not vim.wo[win].winfixbuf then return win end
-    end
-  end
-end
-
 local open_file = function(source, path, location)
   if not vim.api.nvim_win_is_valid(source) then return end
   vim.cmd('stopinsert')
-  local target = editor_window(source)
+  local target = term.editor_win(source)
   if target then
     vim.api.nvim_set_current_win(target)
   else
@@ -75,11 +58,12 @@ end
 links.open = function(win, row, column)
   if not vim.api.nvim_win_is_valid(win) or row < 1 then return end
   local buf = vim.api.nvim_win_get_buf(win)
-  if vim.bo[buf].buftype ~= 'terminal' then return end
+  local info = term.info(buf)
+  if not info then return end
   local text = vim.api.nvim_buf_get_lines(buf, row - 1, row, false)[1] or ''
   local location = links.location(text, column)
   if not location then return end
-  local cwd = terminal_cwd(buf, win)
+  local cwd = info.cwd
   local path = location.path
   if path:sub(1, 2) == '~/' then path = vim.env.HOME .. path:sub(2) end
   if path:sub(1, 1) == '/' then
@@ -152,24 +136,17 @@ links.mouse = function(fallback)
 end
 
 local attach = function(buf)
-  vim.b[buf].terminal_link_cwd = terminal_cwd(buf, 0)
   vim.keymap.set('n', 'gf', function()
     local cursor = vim.api.nvim_win_get_cursor(0)
     links.open(vim.api.nvim_get_current_win(), cursor[1], cursor[2] + 1)
   end, { buffer = buf, desc = 'Open terminal file at cursor' })
 end
 
-vim.api.nvim_create_autocmd('TermOpen', { callback = function(ev) attach(ev.buf) end })
-vim.api.nvim_create_autocmd('TermRequest', {
-  desc = 'Track terminal shell directory for clickable paths',
-  callback = function(ev)
-    local sequence = ev.data and ev.data.sequence or ''
-    local dir = sequence:match('^\027%]7;file://[^/]*(/.*)')
-    if not dir then return end
-    dir = dir:gsub('\027\\$', ''):gsub('\007$', ''):gsub('%%(%x%x)', function(hex) return string.char(tonumber(hex, 16)) end)
-    if vim.fn.isdirectory(dir) == 1 then vim.b[ev.buf].terminal_link_cwd = dir end
-  end,
+vim.api.nvim_create_autocmd('TermOpen', {
+  group = vim.api.nvim_create_augroup('config-terminal-links', {}),
+  desc = 'Open terminal file at cursor with gf',
+  callback = function(ev) attach(ev.buf) end,
 })
 for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-  if vim.bo[buf].buftype == 'terminal' then attach(buf) end
+  if term.info(buf) then attach(buf) end
 end

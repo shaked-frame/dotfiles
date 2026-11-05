@@ -3,16 +3,16 @@
 -- └────────────────────────────┘
 --
 -- Keep this close to the stock lspconfig setup and resolve Frame's Tailwind v4
--- shared CSS entrypoint from `Config.frame_root()` so worktrees under
+-- shared CSS entrypoint from `Config.frontend()` so worktrees under
 -- `~/worktrees/frame/<name>/frame` use their own checkout's `globals.css`.
 
 local util = require('lspconfig.util')
 
 local function frame_globals_css(fname)
   local start = fname and fname ~= '' and vim.fs.dirname(fname) or nil
-  local root = (Config and Config.frame_root and (Config.frame_root(start) or Config.frame_root()))
-    or (vim.env.HOME and (vim.env.HOME .. '/frame'))
-  return root and (root .. '/frontend/packages/ui/src/styles/globals.css') or nil
+  local frontend = (Config and Config.frontend and (Config.frontend(start) or Config.frontend()))
+    or (vim.env.HOME and (vim.env.HOME .. '/frame/frontend'))
+  return frontend and (frontend .. '/packages/ui/src/styles/globals.css') or nil
 end
 
 return {

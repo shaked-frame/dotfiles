@@ -92,7 +92,7 @@ local gh_json = function(args, on_result)
   vim.system(vim.list_extend({ 'gh' }, args), { text = true }, function(res)
     vim.schedule(function()
       if res.code ~= 0 then
-        vim.notify('gh: ' .. vim.trim(res.stderr), vim.log.levels.ERROR)
+        vim.api.nvim_echo({ { 'gh: ' .. vim.trim(res.stderr) } }, true, { err = true })
         return
       end
       on_result(vim.json.decode(res.stdout))

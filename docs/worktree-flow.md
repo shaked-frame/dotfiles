@@ -6,7 +6,7 @@ Two ways to create a worktree, depending on whether you start from Herdr or from
    Lands in `~/worktrees/<repo>/<branch-slug>/<repo>` and runs `pre-start` hooks from `worktrunk/.config/worktrunk/config.toml` to link `.env.local` files, link `AGENTS.local.md`, run `pnpm i`, and generate `mkcert` certificates via `pnpm setup:certs`.
 2. **Create from Herdr** via `prefix+shift+g` or `herdr worktree create --branch <name>`.
    Lands in the same `~/worktrees/<repo>/<branch-slug>` tree and registers as a Herdr workspace. Run `wt hook pre-start` inside the new checkout to run the bootstrap hooks.
-3. **Open in Herdr** via `prefix+shift+o`, or `<Leader>gw` from nvim (`plugin/60_herdr.lua` focuses the existing workspace via `open_workspace_id` instead of opening a duplicate).
+3. **Open in Herdr** via `prefix+shift+o`, or `<Leader>gw` from nvim (`nvim/.config/nvim/lua/config/host.lua` focuses the existing workspace via `open_workspace_id` instead of opening a duplicate).
 
 Manual helpers in `zsh/.config/zsh/lazygit-functions.zsh` and `~/.local/bin`:
 

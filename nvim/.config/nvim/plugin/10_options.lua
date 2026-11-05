@@ -68,6 +68,9 @@ vim.o.wrap           = false      -- Don't visually wrap lines (toggle with \w)
 
 vim.o.cursorlineopt  = 'screenline,number' -- Show cursor line per screen line
 
+-- Experimental native messages/cmdline UI; keep mini.notify and mini.cmdline.
+require('vim._core.ui2').enable()
+
 -- Special UI symbols. More is set via 'mini.basics' later.
 vim.o.fillchars = 'eob: ,fold:╌,foldopen:,foldclose:,diff:╱'
 

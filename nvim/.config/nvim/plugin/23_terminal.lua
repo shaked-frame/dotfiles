@@ -6,6 +6,8 @@
 -- independent of editor buffers and 'bufferline.nvim'. Keymaps live in
 -- 'plugin/20_keymaps.lua' plus buffer-local bindings attached here.
 
+local term = require('config.term')
+
 Config.Terminal = {}
 
 local state = {
@@ -43,10 +45,7 @@ end
 
 local record_prev_win = function()
   local cur = vim.api.nvim_get_current_win()
-  local buf = vim.api.nvim_win_get_buf(cur)
-  if cur ~= state.win and vim.bo[buf].buftype == '' and vim.api.nvim_win_get_config(cur).relative == '' then
-    state.prev_win = cur
-  end
+  if cur ~= state.win and term.is_editor_win(cur) then state.prev_win = cur end
 end
 
 local restore_prev_win = function()
@@ -183,6 +182,7 @@ end
 -- Session files restart terminal jobs but cannot restore this module's Lua
 -- registry. Ordinary :terminal buffers also bypass new(). Adopt their jobs,
 -- not their processes, and consolidate their visible splits into one dock.
+-- Terminals another module claimed (agent chats, LazyGit) are left alone.
 adopt_terminals = function()
   prune_items()
   local tab = vim.api.nvim_get_current_tabpage()
@@ -202,21 +202,16 @@ adopt_terminals = function()
   local adopted_current
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
     local ft = vim.bo[buf].filetype
-    local name = vim.api.nvim_buf_get_name(buf)
-    local command = name:match('^term://.-//%d+:(.*)') or ''
-    local executable = vim.fn.fnamemodify(command:match('^(%S+)') or '', ':t')
-    local managed_tool = ({ opencode = true, claude = true, codex = true, pi = true, lazygit = true })[executable]
-    local eligible = vim.bo[buf].buftype == 'terminal' and (ft == '' or ft == 'terminal') and not managed_tool
+    local info = term.info(buf)
+    local eligible = info ~= nil and (ft == '' or ft == 'terminal') and not term.claimed(buf)
     for _, win in ipairs(vim.fn.win_findbuf(buf)) do
       if vim.api.nvim_win_get_config(win).relative ~= '' or vim.api.nvim_win_get_tabpage(win) ~= tab then eligible = false end
     end
     if eligible and not tracked[buf] then
-      local job = vim.b[buf].terminal_job_id
-      if type(job) == 'number' and vim.fn.jobwait({ job }, 0)[1] == -1 then
+      if info.running then
         state.counter = state.counter + 1
-        local label = vim.b[buf].terminal_dock_name or (executable .. '-' .. state.counter)
-        local cwd = vim.b[buf].terminal_link_cwd or name:match('^term://(.-)//%d+:') or vim.fn.getcwd()
-        table.insert(state.items, { buf = buf, name = label, cwd = cwd })
+        local label = vim.b[buf].terminal_dock_name or (info.executable .. '-' .. state.counter)
+        table.insert(state.items, { buf = buf, name = label, cwd = info.cwd })
         tracked[buf] = true
         if buf == vim.api.nvim_get_current_buf() then adopted_current = buf end
         vim.b[buf].is_dock_terminal = true
@@ -422,8 +417,11 @@ Config.new_autocmd('WinLeave', nil, function()
   record_prev_win()
 end, 'Track previous editor window for terminal dock')
 
+-- Deferred with `Config.later()`, which runs queued callbacks in order: a
+-- session restored at startup is adopted only after deferred plugins (like
+-- sidekick) claimed their terminals.
 Config.new_autocmd('SessionLoadPost', nil, function()
-  vim.schedule(adopt_terminals)
+  Config.later(adopt_terminals)
 end, 'Adopt restored terminals into the bottom dock')
 
 Config.new_autocmd({ 'TermClose', 'BufWipeout' }, nil, function(ev)

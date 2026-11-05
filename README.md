@@ -21,7 +21,7 @@ Layout mirrors the target tree: `<package>/.config/<name>/...` links to
 | `git` | `.gitconfig`, `.config/git/ignore` |
 | `herdr` | `.config/herdr/config.toml` |
 | `lazygit` | `.config/lazygit` |
-| `nvim` | `.config/nvim` |
+| `nvim` | `.config/nvim` ([picker shortcuts and tests](docs/nvim-pickers.md)) |
 | `rex` | `.config/rex` (app settings such as font, theme and Remote Control: see its `README.md`) |
 | `starship` | `.config/starship.toml` |
 | `worktrunk` | `.config/worktrunk/config.toml` |

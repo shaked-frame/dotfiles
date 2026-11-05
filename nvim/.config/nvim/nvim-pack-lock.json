@@ -37,15 +37,15 @@
       "src": "https://github.com/mason-org/mason.nvim"
     },
     "mini.nvim": {
-      "rev": "6d5a29e86a7352739506c28e0bc50fe214b5216f",
+      "rev": "a321b535c75ca88ba7fddfd8eb5b583fbda50dd6",
       "src": "https://github.com/nvim-mini/mini.nvim"
     },
     "nvim-lspconfig": {
-      "rev": "d8d2fda7aae57030452ce8cd6e770b1eb704514e",
+      "rev": "cc404d425c7752f56b8eaa269107be44d888ea51",
       "src": "https://github.com/neovim/nvim-lspconfig"
     },
     "nvim-treesitter": {
-      "rev": "a9c4e1457e2e59f1b82c8f78dcdb3b2517555200",
+      "rev": "610734c5d3e59761d5f79318d120633374537fa5",
       "src": "https://github.com/nvim-treesitter/nvim-treesitter"
     },
     "nvim-treesitter-context": {
@@ -61,7 +61,7 @@
       "src": "https://github.com/windwp/nvim-ts-autotag"
     },
     "octo.nvim": {
-      "rev": "3c4abf9e7a9378fd7dd5181de91cb65080674b04",
+      "rev": "302ff3223e9ba954955cc518b0199da62d2a757f",
       "src": "https://github.com/pwntester/octo.nvim"
     },
     "oil-git-status.nvim": {
@@ -93,7 +93,7 @@
       "src": "https://github.com/MeanderingProgrammer/render-markdown.nvim"
     },
     "schemastore.nvim": {
-      "rev": "cc6302a0957806dfc0f2687f1f35ee9652686101",
+      "rev": "4794bb7a4cf66b894f0029c3094b7936a8c0e8fe",
       "src": "https://github.com/b0o/schemastore.nvim"
     },
     "sidekick.nvim": {
@@ -109,7 +109,7 @@
       "src": "https://github.com/folke/trouble.nvim"
     },
     "yanky.nvim": {
-      "rev": "adcabd8512bead30184916fa9277e73c021ef099",
+      "rev": "edcbe0f6d693b9e7860626094f886a2d79cfe63b",
       "src": "https://github.com/gbprod/yanky.nvim"
     }
   }

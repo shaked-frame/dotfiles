@@ -103,20 +103,22 @@ Config.on_packchanged = function(plugin_name, kinds, callback, desc)
   Config.new_autocmd('PackChanged', '*', f, desc)
 end
 
--- Frame repo locator: nearest ancestor (up from cwd) holding
--- 'frontend/apps/web'. Covers '~/frame' and any
--- '~/worktrees/frame/<name>/frame' checkout. Returns nil outside frame repos.
--- Shared by 'plugin/21_pickers.lua' (scoped finders),
--- 'plugin/24_explorer.lua' (explorer bookmarks), and
--- 'after/lsp/tailwindcss.lua' (Tailwind v4 CSS entrypoint) so the sentinel,
--- walk direction, and lower bound live in one place. The optional argument
--- (defaulting to cwd) keeps the walk testable through this interface.
-Config.frame_root = function(cwd)
+-- Frame repo locator (see "frame root" and "frontend" in CONTEXT.md): nearest
+-- ancestor of `path` (default: cwd) holding 'frontend/apps/web'. Covers
+-- '~/frame' and any '~/worktrees/frame/<name>/frame' checkout. Both return nil
+-- outside frame repos; each caller picks its own fallback. Used by
+-- 'plugin/21_pickers.lua' (scoped finders), 'plugin/24_explorer.lua'
+-- (bookmarks) and 'after/lsp/tailwindcss.lua' (Tailwind v4 CSS entrypoint).
+Config.frame_root = function(path)
   local home = vim.env.HOME or vim.fn.expand('~')
-  local root = vim.fs.root(cwd or vim.fn.getcwd(), function(_, path)
-    return #path >= #home and vim.fn.isdirectory(path .. '/frontend/apps/web') == 1
+  return vim.fs.root(path or vim.fn.getcwd(), function(_, dir)
+    return #dir >= #home and vim.fn.isdirectory(dir .. '/frontend/apps/web') == 1
   end)
-  return root
+end
+
+Config.frontend = function(path)
+  local root = Config.frame_root(path)
+  return root and (root .. '/frontend') or nil
 end
 
 -- 'mini.nvim' - all-in-one plugin powering most MiniMax features.
@@ -167,8 +169,10 @@ pcall(require, 'vim.deprecated.health')
 -- Ordering in this config is load-bearing. Three rules everything depends on:
 -- 1. Files in 'plugin/' source alphabetically: 10_options < 20_keymaps <
 --    21_pickers < 22_splits < 23_terminal < 24_explorer < 30_mini < 40_plugins <
---    42_lazygit < 43_octo < 44_agent < 45_sidekick < 46_sidekick_cli < 60_herdr <
---    61_rex.
+--    42_lazygit < 43_octo < 44_agent < 45_sidekick.
+--    Modules shared across files live in 'lua/config/' and are `require()`d,
+--    so they work at any time: 'host.lua' (Rex/Herdr), 'term.lua' (terminal
+--    buffers), 'completion.lua' (Insert-mode accept keys) and 'statusline.lua'.
 --    Slice modules (21/22/23/24) sort after the keymap catalog (20), so
 --    keymaps reference `Config.Pickers` / `Config.Splits` / `Config.Terminal` /
 --    `Config.Explorer` inside function bodies (press time), never as a bare
@@ -185,16 +189,14 @@ pcall(require, 'vim.deprecated.health')
 -- - `leader_group_clues`: written at source time in 'plugin/20_keymaps.lua',
 --   read deferred in `later()` by 'plugin/30_mini.lua' (mini.clue setup).
 -- - `Agent`: defined at source time in 'plugin/44_agent.lua'; adapters
---   register via `Config.Agent.register(name, adapter)` ('plugin/60_herdr.lua',
---   'plugin/61_rex.lua' and 'plugin/46_sidekick_cli.lua') and are resolved at
---   press time.
+--   'plugin/45_sidekick.lua' registers via `Config.Agent.register()`; the host
+--   adapter comes from 'lua/config/host.lua'. Both resolve at press time.
 -- - `conform_ready`: written by 'plugin/40_plugins.lua' after
 --   `require('conform').setup()`, read by the format-on-save autocmd in
 --   'plugin/10_options.lua', so a save before setup is a no-op, not an error.
--- - `explorer` / `Explorer`: owned by 'plugin/24_explorer.lua', which exposes
---   `Config.Explorer` (`open_cwd`, `open_at_file`) at source time and
---   initializes the selected adapter ('oil' or 'mini.files') lazily or via
---   `now_if_args()`.
+-- - `Explorer`: owned by 'plugin/24_explorer.lua', which exposes
+--   `Config.Explorer` (`open_cwd`, `open_at_file`) at source time and sets up
+--   Oil lazily or via `now_if_args()`.
 --
 -- Consequences (do not break without updating all sides):
 -- - Mason's bin dir is prepended to $PATH eagerly at source time in

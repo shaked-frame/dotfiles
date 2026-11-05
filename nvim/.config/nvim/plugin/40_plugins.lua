@@ -245,100 +245,15 @@ now_if_args(function()
     'oxlint',
   })
 
-  -- Inline completion (a.k.a. "ghost text" / edit prediction).
-  -- Enabled per buffer whenever an attached server supports it.
-  local enable_inline_completion = function(args)
-    local bufnr = args.buf
+  -- Inline completion (a.k.a. "ghost text" / edit prediction), enabled per
+  -- buffer whenever an attached server supports it. Its accept keys (`<Tab>`,
+  -- `<M-Tab>`, `<C-l>`) are in 'plugin/30_mini.lua' ('mini.keymap').
+  Config.new_autocmd('LspAttach', nil, function(args)
     local client = vim.lsp.get_client_by_id(args.data.client_id)
-    if client == nil then return end
-    if not client:supports_method(vim.lsp.protocol.Methods.textDocument_inlineCompletion, bufnr) then
-      return
+    if client and client:supports_method(vim.lsp.protocol.Methods.textDocument_inlineCompletion, args.buf) then
+      vim.lsp.inline_completion.enable(true, { bufnr = args.buf })
     end
-
-    vim.lsp.inline_completion.enable(true, { bufnr = bufnr })
-
-    -- Accept inline completion word-by-word, one word per press
-    -- (Zed: `alt-tab` = editor::AcceptNextWordEditPrediction).
-    -- `<M-Tab>` is Option+Tab; `<C-l>` is an alternative chord.
-    local get_completor_table = function()
-      for i = 1, 10 do
-        local name, val = debug.getupvalue(vim.lsp.inline_completion.get, i)
-        if name == 'Completor' and type(val) == 'table' then return val end
-      end
-    end
-
-    local accept_word = function(fallback)
-      return function()
-        local pum = vim.fn.pumvisible() == 1
-        local ok = vim.lsp.inline_completion.get({
-          bufnr = bufnr,
-          on_accept = function(item)
-            local ins = item.insert_text
-            local text = type(ins) == 'table' and ins.value or ins
-            if type(text) ~= 'string' or text == '' then return item end
-
-            -- `item.insert_text` starts at `item.range` (often column 0 of the
-            -- line), so keep the prefix already before the cursor and slice one
-            -- word from the ghost-text suffix after the cursor.
-            local prefix_len = 0
-            if item.range then
-              local start_row, start_col = item.range:to_extmark()
-              local cur = vim.api.nvim_win_get_cursor(0)
-              local cur_row, cur_col = cur[1] - 1, cur[2]
-              if start_row == cur_row and cur_col > start_col then
-                prefix_len = cur_col - start_col
-              end
-            end
-
-            local prefix = text:sub(1, prefix_len)
-            local suffix = text:sub(prefix_len + 1)
-            local chunk = suffix:match('^%s*[%w_]+%s*') or suffix:match('^%s*%S+%s*')
-            if not chunk or chunk == '' then return item end
-
-            local full_ins = vim.deepcopy(ins)
-            local orig_range = item.range
-            local new_text = prefix .. chunk
-            local accepted_item = vim.tbl_extend('force', item, {
-              insert_text = type(ins) == 'table' and vim.tbl_extend('force', ins, { value = new_text }) or new_text,
-            })
-
-            -- If more ghost text remains after this word, restore `comp.current`
-            -- with its range end advanced to the new cursor position so rapid
-            -- Option+Tab presses keep stepping word-by-word without duplication.
-            if #chunk < #suffix then
-              vim.schedule(function()
-                local Completor = get_completor_table()
-                local comp = Completor and Completor.active and Completor.active[bufnr]
-                if not comp then return end
-                if orig_range then
-                  local cur = vim.api.nvim_win_get_cursor(0)
-                  orig_range.end_row = cur[1] - 1
-                  orig_range.end_col = cur[2]
-                end
-                comp.current = {
-                  _index = item._index or 1,
-                  client_id = item.client_id,
-                  insert_text = full_ins,
-                  range = orig_range,
-                  _filter_text = item._filter_text,
-                  command = item.command,
-                }
-                pcall(comp.show, comp)
-              end)
-            end
-
-            return accepted_item
-          end,
-        })
-        if ok then return pum and '<C-e>' or '' end
-        return fallback
-      end
-    end
-    vim.keymap.set('i', '<C-l>', accept_word('<C-l>'), { expr = true, buffer = bufnr, desc = 'Accept inline completion word' })
-    vim.keymap.set('i', '<M-Tab>', accept_word('<M-Tab>'), { expr = true, buffer = bufnr, desc = 'Accept inline completion word' })
-  end
-
-  Config.new_autocmd('LspAttach', nil, enable_inline_completion, 'Enable inline completion')
+  end, 'Enable inline completion')
 end)
 
 -- Formatting =================================================================
@@ -416,8 +331,7 @@ later(function()
 
   require('snacks').setup({
     picker = {
-      -- Keep 'mini.pick' as the global `vim.ui.select` handler; 'snacks' is
-      -- only used where explicitly requested ('octo.nvim' and 'sidekick.nvim').
+      -- Installed explicitly below with the stale LSP-code-action guard.
       ui_select = false,
       actions = {
         sidekick_send = function(...)
@@ -428,11 +342,15 @@ later(function()
         input = {
           keys = {
             ['<a-a>'] = { 'sidekick_send', mode = { 'n', 'i' } },
+            ['<C-q>'] = { 'qflist', mode = { 'n', 'i' } },
+            ['<Esc>'] = { 'cancel', mode = { 'n', 'i' } },
           },
         },
       },
     },
   })
+
+  Config.Pickers.setup_select()
 
   require('render-markdown').setup({
     file_types = { 'markdown', 'mdx', 'octo' },

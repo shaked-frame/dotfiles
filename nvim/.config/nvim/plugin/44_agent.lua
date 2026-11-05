@@ -4,16 +4,15 @@
 --
 -- 'Send editor context to an agent' has a single interface here:
 -- focus / attach (stage, no submit) / send (submit now) / prompt.
--- Three adapters sit behind it, chosen in one place (`active_adapter()`):
--- - Herdr panes ('plugin/60_herdr.lua', when HERDR_ENV=1)
--- - Rex panes ('plugin/61_rex.lua', inside Rex, when an agent pane exists
---   and no sidekick chat is open in this tabpage)
--- - sidekick CLI terminal ('plugin/46_sidekick_cli.lua', otherwise)
+-- Two adapters sit behind it, chosen in one place (`active_adapter()`):
+-- - the host's agent panes (`require('config.host').agent`, Rex or Herdr):
+--   always inside Herdr; inside Rex when an agent pane exists and no
+--   sidekick chat is open in this tabpage
+-- - sidekick CLI terminal ('plugin/45_sidekick.lua', otherwise)
 --
--- Adapters register via `Config.Agent.register(name, adapter)` with
--- `focus()`, `attach(text, what)`, `send(text, what)` and are resolved at
--- press time, not source time. Removal: delete one adapter file and the
--- dispatcher falls back to sidekick.
+-- Adapters provide `focus()`, `attach(text, what)`, `send(text, what)` and are
+-- resolved at press time. Sidekick registers via `Config.Agent.register()`
+-- with an extra `visible()`; delete its file and the host is the only one.
 --
 -- Conventions (both adapters):
 -- - Lowercase (`af`/`at`/`av`) attaches context to the agent's input WITHOUT
@@ -57,43 +56,23 @@ end
 
 -- Dispatcher =================================================================
 
+local host = require('config.host')
 local adapters = {}
 
 Config.Agent = {}
-
--- Single HERDR_ENV check across the Neovim config.
-Config.Agent.in_herdr = function()
-  return vim.env.HERDR_ENV == '1'
-end
-
--- The Rex host check lives in `Config.Rex` ('plugin/61_rex.lua'). That file
--- sources later, so only call this at press time.
-Config.Agent.in_rex = function()
-  return Config.Rex ~= nil and Config.Rex.active()
-end
 
 Config.Agent.register = function(name, adapter)
   adapters[name] = adapter
 end
 
-local function sidekick_visible()
-  for _, win in ipairs(vim.api.nvim_tabpage_list_wins(0)) do
-    if vim.bo[vim.api.nvim_win_get_buf(win)].filetype == 'sidekick_terminal' then return true end
-  end
-  return false
-end
-
 local function active_adapter()
-  if Config.Agent.in_herdr() and adapters.herdr ~= nil then
-    return adapters.herdr
-  end
-  -- Inside Rex the agent on screen wins: an open sidekick chat first, then an
-  -- agent running in a Rex pane. With neither, sidekick opens its chat as it
-  -- does outside Rex, so `<Leader>a*` never dead-ends.
-  if Config.Agent.in_rex() and adapters.rex ~= nil and not sidekick_visible() and adapters.rex.available() then
-    return adapters.rex
-  end
-  return adapters.sidekick or adapters.herdr
+  local sidekick = adapters.sidekick
+  if host.agent_panes_only() then return host.agent end
+  -- Otherwise the agent on screen wins: an open sidekick chat first, then an
+  -- agent running in a host pane. With neither (or outside a host), sidekick
+  -- opens its chat, so `<Leader>a*` never dead-ends.
+  if not (sidekick and sidekick.visible()) and host.has_agents() then return host.agent end
+  return sidekick
 end
 
 Config.Agent.active_adapter = active_adapter

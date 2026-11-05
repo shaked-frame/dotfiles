@@ -18,6 +18,9 @@
 -- - The remote command jumps to the previous window, `:drop`s the file there,
 --   then jumps back and closes the LazyGit float.
 
+-- The LazyGit float is not a terminal dock tab ('lua/config/term.lua').
+require("config.term").claim({ "lazygit" })
+
 local ensure_nvim_server = function()
 	if vim.v.servername ~= "" then
 		return vim.v.servername

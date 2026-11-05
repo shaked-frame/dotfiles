@@ -8,14 +8,17 @@ the code in octo.nvim and submit it yourself.
 
 ```sh
 review-pr 4718          # or the PR URL
+review-pr https://github.com/frame-rnd/frame/pull/4718/changes/<from>..<to>
 ```
+
+The `/changes/<from>..<to>` form reviews only the author's commits in that range, plus the conflict resolutions in its merges, and reports which of your earlier comments they address. Use it after the author pushes fixes for your review.
 
 `scripts/review-pr`, linked into `~/.local/bin`:
 
 1. Prunes `~/worktrees/frame/pr-*` worktrees whose PR is merged or closed when the checkout is clean and pushed. `review-pr --prune` runs only this step.
 2. Stops if you already have a pending review on the PR. GitHub allows one per user per PR.
 3. Calls `wt switch --no-cd pr:<N>` with `worktree-path` set to `~/worktrees/frame/pr-<N>/frame`. This reuses an existing worktree on the PR branch or creates a new one and runs the `pre-start` hooks to link `.env.local` files and `AGENTS.local.md`, run `pnpm i`, and generate `mkcert` certificates.
-4. Runs `claude -p` with the `pr-review` skill at `~/.claude/skills/pr-review/SKILL.md`. The skill fetches the Jira ticket as the spec, runs `code-review`, and writes one self-contained comment per finding.
+4. Runs `claude -p` with the `pr-review` skill at `~/.claude/skills/pr-review/SKILL.md`. The skill fetches the Jira ticket as the spec, runs `code-review` alongside a frontend review (Vercel composition and React rules, plus TanStack, form, and CSS lenses picked by the diff's imports), has a sub-agent try to refute each finding, drops refuted findings and those already raised on the PR, and writes one self-contained comment per remaining finding.
 5. Posts the findings with `scripts/post-pending-review.py`. Comments on lines shown in the diff become inline threads; the rest go into the review body.
 6. Sends a macOS notification when the review is ready. Log lives at `~/frame-scratch/pr-reviews/<N>.log`.
 

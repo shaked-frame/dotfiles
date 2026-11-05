@@ -5,6 +5,8 @@
 -- Window split/move mechanics behind `Config.Splits`. The `ss/sv/sl/sh`
 -- keymaps live in 'plugin/20_keymaps.lua'; this file owns only the behavior.
 
+local host = require('config.host')
+
 Config.Splits = {}
 
 -- Runs `split_cmd` (e.g. 'vsplit', 'leftabove vsplit'), then moves the
@@ -77,25 +79,16 @@ Config.Splits.navigate = function(wincmd)
 
   if was_term then vim.cmd('startinsert') end
 
-  -- Rex passes `<C-hjkl>` through while Neovim is the focused program (see
-  -- ~/.config/rex/init.lua), so hand focus to the neighbouring Rex pane here.
-  if Config.Rex and Config.Rex.active() then
-    Config.Rex.focus(dir_names[wincmd])
-    return
-  end
-
-  local pane_id = vim.env.HERDR_PANE_ID
-  if pane_id and pane_id ~= '' then
-    local herdr_bin = (vim.env.HERDR_BIN_PATH and vim.env.HERDR_BIN_PATH ~= '') and vim.env.HERDR_BIN_PATH or 'herdr'
-    vim.system({ herdr_bin, 'pane', 'focus', '--direction', dir_names[wincmd], '--pane', pane_id })
-  end
+  -- Rex and Herdr pass `<C-hjkl>` through while Neovim is the focused program
+  -- (see ~/.config/rex/init.lua), so hand focus to the neighbouring pane here.
+  host.focus(dir_names[wincmd])
 end
 
 -- Resize by moving the current window's border in `dir` ('h'|'j'|'k'|'l'):
 -- its right/bottom border when a window lies past it, else its left/top one.
 -- Same rule as Rex's `resize` action, so Hyper+6/7/8/9 feel identical in both.
--- With no Neovim split on that axis there is nothing to resize here, so inside
--- Rex the Rex pane is resized instead (`rex=true` stops Rex sending it back).
+-- With no Neovim split on that axis there is nothing to resize here, so the
+-- host pane is resized instead (Rex only; Herdr has no resize).
 Config.Splits.resize = function(dir)
   local horizontal = dir == 'h' or dir == 'l'
   local before, after = horizontal and 'h' or 'k', horizontal and 'l' or 'j'
@@ -103,7 +96,7 @@ Config.Splits.resize = function(dir)
   local has_before, has_after = vim.fn.winnr(before) ~= cur, vim.fn.winnr(after) ~= cur
 
   if not (has_before or has_after) then
-    if Config.Rex and Config.Rex.active() then Config.Rex.action('resize', { direction = dir_names[dir], rex = true }) end
+    host.resize(dir_names[dir])
     return
   end
 
