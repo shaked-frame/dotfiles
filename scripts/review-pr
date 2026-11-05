@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Review a frame PR headlessly and leave the findings as a pending GitHub
+# review, ready to triage in octo.nvim (<Leader>gpr).
+#
+#   review-pr 4718
+#   review-pr https://github.com/frame-rnd/frame/pull/4718
+#   review-pr https://github.com/frame-rnd/frame/pull/4718/changes/<from>..<to>   # only that range
+#   review-pr --prune     # only remove worktrees of merged/closed PRs
+#
+# Reuses the worktree already on the PR branch, or creates
+# ~/worktrees/frame/pr-<N>/frame via `wt switch` and runs the `pre-start`
+# hooks. Skips PRs where you already have a pending review.
+# Log: ~/frame-scratch/pr-reviews/<N>.log
+#
+# Every run first prunes ~/worktrees/frame/pr-*/frame whose PR is merged or
+# closed, when the worktree is clean and its commits are pushed. Worktrees
+# outside pr-* are never touched.
+set -euo pipefail
+
+REPO=frame-rnd/frame
+MAIN=~/frame
+[[ $# -eq 1 ]] || { echo "usage: $(basename "$0") <pr-number|pr-url> | --prune" >&2; exit 2; }
+CALLER_PWD=$PWD
+cd "$MAIN"
+
+notify() { osascript -e "display notification \"$2\" with title \"$1\"" >/dev/null 2>&1 || true; }
+
+prune() {
+  local wt n state head_oid branch
+  for wt in ~/worktrees/frame/pr-*/frame; do
+    [[ -d "$wt" ]] || continue
+    n="${wt%/frame}"; n="${n##*/pr-}"
+    read -r state head_oid < <(gh pr view "$n" --repo "$REPO" --json state,headRefOid -q '"\(.state) \(.headRefOid)"') || continue
+    [[ "$state" == MERGED || "$state" == CLOSED ]] || continue
+    if [[ "$CALLER_PWD/" == "$wt/"* ]]; then
+      echo "prune: kept $wt (#$n $state): your shell is inside it"; continue
+    fi
+    if [[ -n "$(git -C "$wt" status --porcelain)" ]]; then
+      echo "prune: kept $wt (#$n $state): uncommitted changes"; continue
+    fi
+    if [[ "$(git -C "$wt" rev-parse HEAD)" != "$head_oid" && -n "$(git -C "$wt" rev-list HEAD --not --remotes | head -n 1)" ]]; then
+      echo "prune: kept $wt (#$n $state): unpushed commits"; continue
+    fi
+    branch=$(git -C "$wt" symbolic-ref --quiet --short HEAD || true)
+    git -C "$MAIN" worktree remove "$wt"
+    rmdir "${wt%/frame}" 2>/dev/null || true
+    if [[ -n "$branch" ]] && ! git -C "$MAIN" worktree list --porcelain | grep -qx "branch refs/heads/$branch"; then
+      git -C "$MAIN" branch --quiet -D "$branch"
+    fi
+    rm -f ~/frame-scratch/pr-reviews/"$n".*
+    echo "prune: removed $wt (#$n $state)"
+  done
+}
+
+prune
+[[ "$1" == --prune ]] && exit 0
+N="${1##*/pull/}"; N="${N%%[/#?]*}"
+
+read -r HEAD URL < <(gh pr view "$N" --repo "$REPO" --json headRefName,url -q '"\(.headRefName) \(.url)"')
+TARGET=$URL
+[[ "$1" == */changes/*..* ]] && TARGET=$1
+
+PENDING=$(gh api graphql -F n="$N" -f query='query($n:Int!){repository(owner:"frame-rnd",name:"frame"){pullRequest(number:$n){reviews(states:PENDING,first:10){nodes{viewerDidAuthor}}}}}' \
+  -q '[.data.repository.pullRequest.reviews.nodes[] | select(.viewerDidAuthor)] | length')
+if [[ "$PENDING" != 0 ]]; then
+  echo "#$N already has your pending review; open it with <Leader>gpr, or discard it with <Leader>gpX first."
+  exit 0
+fi
+
+WT=$(wt -C "$MAIN" \
+  --config-set "worktree-path = \"~/worktrees/{{ repo }}/pr-$N/{{ repo }}\"" \
+  switch --no-cd --format=json "pr:$N" | jq -r .path)
+if ! git -C "$WT" merge --quiet --ff-only "origin/$HEAD" 2>/dev/null; then
+  echo "warning: $WT has diverged from origin/$HEAD; reviewing local HEAD" >&2
+fi
+
+mkdir -p ~/frame-scratch/pr-reviews
+LOG=~/frame-scratch/pr-reviews/$N.log
+echo "Reviewing #$N in $WT (log: $LOG)"
+
+cd "$WT"
+if claude -p "Use the pr-review skill on $TARGET" \
+  --add-dir ~/frame-scratch \
+  --allowedTools "Bash(gh:*)" "Bash(git:*)" "Bash(python3:*)" "Bash(mkdir:*)" "Bash(npx @tanstack/intent@latest:*)" \
+    Read Grep Glob Write Skill Agent mcp__claude_ai_Atlassian__getJiraIssue \
+  >"$LOG" 2>&1; then
+  tail -n 30 "$LOG"
+  notify "PR #$N reviewed" "Pending review ready: <Leader>gpr in $WT"
+else
+  tail -n 30 "$LOG" >&2
+  notify "PR #$N review failed" "See $LOG"
+  exit 1
+fi

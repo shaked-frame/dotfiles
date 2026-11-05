@@ -1,7 +1,7 @@
 -- Run: nvim --headless -u NONE -l scripts/test-terminal-links.lua
 -- Isolated child Neovim with a real terminal job and synthetic mouse input.
 local repo = vim.fn.getcwd()
-local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(vim.env.TMPDIR or '/tmp', 'terminal-links-XXXXXX')))
+local root = assert(vim.uv.fs_realpath(assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(vim.env.TMPDIR or '/tmp', 'terminal-links-XXXXXX')))))
 local child = vim.fn.jobstart({ vim.v.progpath, '--embed', '--headless', '-u', 'NONE', '-n' }, { rpc = true })
 local exec = function(code, ...) return vim.rpcrequest(child, 'nvim_exec_lua', code, { ... }) end
 local wait = function(code, message)
@@ -25,6 +25,7 @@ local ok, err = xpcall(function()
   exec([[
     local repo, root = ...
     Config = {}
+    vim.opt.rtp:prepend(repo .. '/nvim/.config/nvim')
     vim.o.mouse = 'a'
     vim.o.mousetime = 0
     vim.o.hidden = true
@@ -119,7 +120,7 @@ local ok, err = xpcall(function()
     local root = ...
     vim.api.nvim_chan_send(job, '\27]7;file://' .. root .. '/frontend\27\\\n')
   ]], root)
-  wait("return vim.b[term_buf].terminal_link_cwd:match('/frontend$') ~= nil", 'Real OSC 7 directory update missing')
+  wait("return require('config.term').info(term_buf).cwd:match('/frontend$') ~= nil", 'Real OSC 7 directory update missing')
   exec([[
     local root = ...
     assert(vim.fn.getcwd() == root .. '/frontend/apps/web')
@@ -154,7 +155,7 @@ local ok, err = xpcall(function()
   exec([[
     -- With only a terminal left, opening creates an editor instead of replacing it.
     vim.api.nvim_win_close(editor, true)
-    vim.b[term_buf].terminal_link_cwd = ...
+    vim.b[term_buf].osc7_dir = ...
     for row, text in ipairs(vim.api.nvim_buf_get_lines(term_buf, 0, -1, false)) do
       if text:find('TS2322', 1, true) then Config.TerminalLinks.open(terminal, row, 20) break end
     end

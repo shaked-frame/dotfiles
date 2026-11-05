@@ -13,7 +13,7 @@ for host in plain herdr rex herdr-in-rex; do
     rex)          herdr_env=0 rex_block=block:smoke ;;
     herdr-in-rex) herdr_env=1 rex_block=block:smoke ;;
   esac
-  out=$(HERDR_ENV="$herdr_env" REX_BLOCK="$rex_block" nvim --headless \
+  out=$(HERDR_ENV="$herdr_env" HERDR_PANE_ID= REX_BLOCK="$rex_block" nvim --headless \
     --cmd "cd /tmp" \
     --cmd "lua dofile('$REPO/scripts/smoke-keymaps.lua')" \
     -c "lua SmokeVerify()" \

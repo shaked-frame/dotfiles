@@ -1,7 +1,7 @@
 -- Run: nvim --headless -u NONE -l scripts/test-terminal-dock.lua
 -- Exercise dock ownership with real terminal jobs, file links, and Ctrl-/.
 local repo = vim.fn.getcwd()
-local root = assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(vim.env.TMPDIR or '/tmp', 'terminal-dock-XXXXXX')))
+local root = assert(vim.uv.fs_realpath(assert(vim.uv.fs_mkdtemp(vim.fs.joinpath(vim.env.TMPDIR or '/tmp', 'terminal-dock-XXXXXX')))))
 vim.fn.writefile({ 'first line', 'second line' }, root .. '/example.ts')
 
 local run = function(name, code)
@@ -9,6 +9,13 @@ local run = function(name, code)
   local ok, err = pcall(vim.rpcrequest, child, 'nvim_exec_lua', [[
     local repo, root, code = ...
     Config = {}
+    vim.opt.rtp:prepend(repo .. '/nvim/.config/nvim')
+    -- Deferred work runs on demand: `run_later()` drains it, like startup does.
+    later_queue = {}
+    Config.later = function(f) table.insert(later_queue, f) end
+    run_later = function()
+      while #later_queue > 0 do table.remove(later_queue, 1)() end
+    end
     Config.new_autocmd = function(event, pattern, callback, desc)
       vim.api.nvim_create_autocmd(event, { pattern = pattern, callback = callback, desc = desc })
     end
@@ -176,6 +183,38 @@ local ok, err = xpcall(function()
     assert(vim.api.nvim_win_get_buf(agent_win) == agent, 'Dock replaced the agent buffer')
   ]])
 
+  run('A terminal running a claimed command (agent chat, LazyGit) stays out of the dock', [[
+    local term = require('config.term')
+    vim.cmd('vsplit')
+    vim.api.nvim_set_current_buf(vim.api.nvim_create_buf(false, true))
+    vim.fn.jobstart({ '/bin/cat' }, { term = true })
+    local chat, chat_win = vim.api.nvim_get_current_buf(), vim.api.nvim_get_current_win()
+    assert(not term.claimed(chat), 'unclaimed terminal reported as claimed')
+    term.claim({ 'cat' })
+    assert(term.claimed(chat), 'claim by command executable failed')
+    vim.o.shell = '/bin/sh'
+    vim.api.nvim_set_current_win(editor)
+    Config.Terminal.toggle()
+    assert(vim.api.nvim_get_current_buf() ~= chat, 'Dock adopted the claimed terminal')
+    assert(vim.api.nvim_win_get_buf(chat_win) == chat, 'Dock replaced the claimed terminal window')
+  ]])
+
+  run('Terminal info: start directory, then the shell directory (OSC 7)', [[
+    local term = require('config.term')
+    assert(term.info(vim.api.nvim_get_current_buf()) == nil, 'file buffer reported as a terminal')
+    vim.cmd('split')
+    vim.api.nvim_set_current_buf(vim.api.nvim_create_buf(false, true))
+    vim.fn.jobstart({ '/bin/cat', '-u' }, { term = true })
+    local info = term.info(vim.api.nvim_get_current_buf())
+    assert(info.cwd == vim.fn.getcwd() and info.executable == 'cat' and info.running, vim.inspect(info))
+    vim.b.osc7_dir = '/elsewhere'
+    assert(term.info(vim.api.nvim_get_current_buf()).cwd == '/elsewhere', 'OSC 7 directory ignored')
+    -- A `winfixbuf` window is never where a file opens, but focus may return to it.
+    vim.wo[editor].winfixbuf = true
+    assert(term.editor_win() ~= editor, 'opened a file in a winfixbuf window')
+    assert(term.is_editor_win(editor), 'winfixbuf window no longer counts as an editor window')
+  ]])
+
   run('Closing an adopted terminal removes only its dock tab', [[
     local buffers, jobs = {}, {}
     for i = 1, 2 do
@@ -197,8 +236,26 @@ local ok, err = xpcall(function()
     Config.Terminal.new()
     vim.cmd('mksession! dock-session.vim')
   ]])
+  run('A chat restored before its owner loads is claimed before the dock adopts it', [[
+    local term = require('config.term')
+    vim.cmd('split')
+    vim.api.nvim_set_current_buf(vim.api.nvim_create_buf(false, true))
+    vim.fn.jobstart({ '/bin/cat' }, { term = true })
+    local chat = vim.api.nvim_get_current_buf()
+    vim.api.nvim_set_current_win(editor)
+    vim.api.nvim_exec_autocmds('SessionLoadPost', {})
+    assert(#later_queue == 1, 'restore adoption was not deferred behind startup work')
+    -- The owner (sidekick) loads in a deferred callback queued at startup.
+    table.insert(later_queue, 1, function() term.claim({ 'cat' }) end)
+    run_later()
+    vim.o.shell = '/bin/sh'
+    Config.Terminal.toggle()
+    assert(vim.api.nvim_get_current_buf() ~= chat, 'Dock adopted the restored chat')
+  ]])
+
   run('Session-restored terminal is reused without spawning another job', [[
     vim.cmd('source dock-session.vim')
+    run_later()
     local restored
     for _, buf in ipairs(vim.api.nvim_list_bufs()) do
       if vim.bo[buf].buftype == 'terminal' then restored = buf break end
