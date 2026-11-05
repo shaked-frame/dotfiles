@@ -150,6 +150,48 @@ local ok, err = xpcall(function()
   assert(files['one.txt'] and files['one.txt'].staged and files['one.txt'].unstaged, 'gd hides a staged side: ' .. vim.inspect(files))
   assert(files['two.txt'], 'gd lost a file: ' .. vim.inspect(files))
   print('gd lists staged and unstaged changes of every file: OK')
+
+  -- Completion menu in the prompt: Neovim fires `TextChangedP` instead of
+  -- `TextChangedI` while it is open, and results must still follow the text.
+  local prompt = Snacks.picker({ items = { { text = 'alpha' }, { text = 'beta' } } })
+  assert(vim.wait(1000, function() return prompt.input.win:valid() and #prompt:items() == 2 end), 'Picker did not open')
+  local pbuf = prompt.input.win.buf
+  vim.api.nvim_buf_set_lines(pbuf, 0, -1, false, { 'alp' })
+  vim.api.nvim_exec_autocmds('TextChangedP', { buffer = pbuf })
+  assert(vim.wait(1000, function() return #prompt:items() == 1 end), 'Results froze while the completion menu was open')
+  -- Prompt keys drive the menu when it is open, else the picker.
+  local pumvisible, feedkeys, complete_info = vim.fn.pumvisible, vim.api.nvim_feedkeys, vim.fn.complete_info
+  local fed, acted, menu, selected_item
+  vim.fn.pumvisible = function() return menu and 1 or 0 end
+  vim.fn.complete_info = function() return { selected = selected_item } end
+  vim.api.nvim_feedkeys = function(keys) fed = keys end
+  prompt.action = function(_, name) acted = name end
+  local press = function(key, open, sel)
+    fed, acted, menu, selected_item = nil, nil, open, sel or -1
+    local map = vim.api.nvim_buf_call(pbuf, function() return vim.fn.maparg(key, 'i', false, true) end)
+    assert(type(map.callback) == 'function', 'No prompt mapping for ' .. key)
+    map.callback()
+    return fed and vim.fn.keytrans(fed) or acted
+  end
+  local key_ok, key_err = pcall(function()
+    for key, want in pairs({ ['<C-n>'] = { '<C-N>', 'list_down' }, ['<C-p>'] = { '<C-P>', 'list_up' } }) do
+      assert(press(key, true) == want[1], key .. ' does not move in the open menu')
+      assert(press(key, false) == want[2], key .. ' lost its picker action')
+    end
+    -- Multi-select wins over the menu: selecting files is what Tab is for here.
+    prompt.action = nil
+    assert(press('<Tab>', true) == nil and #prompt:selected() == 1, '<Tab> must multi-select even with the menu open')
+    assert(press('<S-Tab>', true) == nil and #prompt:selected() == 0, '<S-Tab> must multi-select even with the menu open')
+    prompt.action = function(_, name) acted = name end
+    assert(press('<CR>', true, 0) == '<C-Y>', '<CR> does not accept the highlighted item')
+    assert(press('<CR>', true) == 'confirm', '<CR> with no highlighted item should confirm')
+    assert(press('<CR>', false) == 'confirm', '<CR> lost confirm')
+  end)
+  vim.fn.pumvisible, vim.api.nvim_feedkeys, vim.fn.complete_info = pumvisible, feedkeys, complete_info
+  prompt.action = nil
+  prompt:close()
+  assert(key_ok, key_err)
+  print('Completion menu in the picker prompt: live results and menu keys: OK')
   print('Real Snacks staged/unstaged diff finder and current-file filtering: OK')
 end, debug.traceback)
 if picker then Snacks.picker = picker end

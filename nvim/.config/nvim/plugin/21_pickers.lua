@@ -95,6 +95,54 @@ Config.Pickers.git_log = function(current_file)
   if current_file then Snacks.picker.git_log_file(opts) else Snacks.picker.git_log(opts) end
 end
 
+-- Completion menu in the prompt ('mini.completion' runs there too). Snacks
+-- refilters on `TextChangedI`, which Neovim replaces with `TextChangedP` while
+-- the menu is open, so forward it to the picker's own handler (its augroup
+-- only, not every `TextChangedI` listener). Results then follow both typing
+-- and the menu item being previewed.
+Config.Pickers.prompt_refresh = function(ev)
+  for _, picker in ipairs(Snacks.picker.get({ tab = false })) do
+    local win = picker.input.win
+    if win.buf == ev.buf and win.augroup then
+      vim.api.nvim_exec_autocmds('TextChangedI', { group = win.augroup, buffer = ev.buf })
+    end
+  end
+end
+Config.new_autocmd('FileType', 'snacks_picker_input', function(ev)
+  vim.api.nvim_create_autocmd('TextChangedP', {
+    buffer = ev.buf, desc = 'Refilter picker while completing',
+    callback = function(e) Config.Pickers.prompt_refresh(e) end,
+  })
+end, 'Refilter picker while completing')
+
+-- `<C-n>`/`<C-p>`/`<CR>` drive the menu while it is open, else the picker
+-- action. `<Tab>`/`<S-Tab>` stay Snacks' multi-select at all times.
+local feed = function(keys)
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(keys, true, false, true), 'n', false)
+end
+local pum_or = function(keys, action)
+  return function(picker)
+    if vim.fn.pumvisible() == 1 then return feed(keys) end
+    picker:action(action)
+  end
+end
+Config.Pickers.prompt_actions = {
+  pum_next = pum_or('<C-n>', 'list_down'),
+  pum_prev = pum_or('<C-p>', 'list_up'),
+  -- `<CR>` accepts a highlighted item; with none (`noselect`), it confirms.
+  pum_confirm = function(picker)
+    if vim.fn.pumvisible() == 1 and vim.fn.complete_info({ 'selected' }).selected ~= -1 then
+      return feed('<C-y>')
+    end
+    picker:action('confirm')
+  end,
+}
+Config.Pickers.prompt_keys = {
+  ['<C-n>'] = { 'pum_next', mode = { 'i' } },
+  ['<C-p>'] = { 'pum_prev', mode = { 'i' } },
+  ['<CR>'] = { 'pum_confirm', mode = { 'i' } },
+}
+
 -- Keep the Neovim 0.12 stale-code-action protection around the Snacks provider.
 Config.Pickers.setup_select = function()
   local select = require('snacks.picker').select

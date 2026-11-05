@@ -281,6 +281,9 @@ now_if_args(function()
   end
   Config.new_autocmd('LspDetach', nil, stop_completion, 'Stop completion on LSP detach')
 
+  -- Picker prompts keep completion; 'plugin/21_pickers.lua' makes the menu
+  -- usable there (`Config.Pickers.prompt_*`).
+
   -- Advertise to servers that Neovim now supports certain set of completion and
   -- signature features through 'mini.completion'.
   vim.lsp.config('*', { capabilities = MiniCompletion.get_lsp_capabilities() })

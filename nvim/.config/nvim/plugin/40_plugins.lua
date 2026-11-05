@@ -333,18 +333,20 @@ later(function()
     picker = {
       -- Installed explicitly below with the stale LSP-code-action guard.
       ui_select = false,
-      actions = {
+      -- `pum_*`: prompt keys that drive the completion menu while it is open
+      -- ('plugin/21_pickers.lua').
+      actions = vim.tbl_extend('error', Config.Pickers.prompt_actions, {
         sidekick_send = function(...)
           return require('sidekick.cli.picker.snacks').send(...)
         end,
-      },
+      }),
       win = {
         input = {
-          keys = {
+          keys = vim.tbl_extend('error', Config.Pickers.prompt_keys, {
             ['<a-a>'] = { 'sidekick_send', mode = { 'n', 'i' } },
             ['<C-q>'] = { 'qflist', mode = { 'n', 'i' } },
             ['<Esc>'] = { 'cancel', mode = { 'n', 'i' } },
-          },
+          }),
         },
       },
     },
