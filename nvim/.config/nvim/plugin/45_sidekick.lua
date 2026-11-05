@@ -171,6 +171,14 @@ Config.later(function()
         -- `/name` as chat input runs the command, so the library can trigger
         -- them. `{this}` becomes the command's `$ARGUMENTS`.
         create_pr = '/create-pr {this}',
+        explain_symbol = 'Explain {symbol}.',
+        symbol = '{symbol}',
+      },
+      -- `{symbol}`: the LSP symbol around the cursor, e.g. "method `Foo.bar`
+      -- in `src/foo.ts` (lines 3-9)" ('lua/config/symbol.lua', also behind
+      -- `<Leader>as`). `ctx.win` is the code window, even from inside the chat.
+      context = {
+        symbol = function(ctx) return require('config.symbol').describe(ctx.win) end,
       },
       win = {
         keys = {
@@ -204,10 +212,51 @@ Config.later(function()
   -- fallback is `<C-i>`, not a literal `<Tab>`: they are the same keycode and
   -- Normal mode's default for it is jump-forward in the jumplist, which
   -- mapping `<Tab>` at all would otherwise shadow.
+  --
+  -- An accepted suggestion lands exactly as Copilot wrote it: the server
+  -- re-indents inline completions to the buffer's `'expandtab'`/`'shiftwidth'`
+  -- but not next edits, so they can miss the file's style. Once one is
+  -- applied (sidekick's `User SidekickNesDone`):
+  -- - if it left a syntax error in a buffer that parsed cleanly before, undo
+  --   it (`<C-r>` takes it back);
+  -- - otherwise format the buffer as a save would ('conform.nvim'), joined
+  --   into the suggestion's undo step so one `u` reverts both.
+  local syntax_ok = function(buf)
+    local ok, parser = pcall(vim.treesitter.get_parser, buf)
+    if not (ok and parser) then return nil end
+    local tree = parser:parse()[1]
+    return tree ~= nil and not tree:root():has_error()
+  end
+  local before -- the buffer as `<Tab>` found it
+
   vim.keymap.set('n', '<Tab>', function()
+    local buf = vim.api.nvim_get_current_buf()
+    before = { buf = buf, seq = vim.fn.undotree(buf).seq_cur, clean = syntax_ok(buf) }
     if require('sidekick').nes_jump_or_apply() then return end
+    before = nil
     return '<C-i>'
   end, { expr = true, desc = 'Goto/Apply Next Edit Suggestion' })
+
+  Config.new_autocmd('User', 'SidekickNesDone', function(ev)
+    local buf, prev = ev.data and ev.data.buffer, before
+    before = nil
+    if not (prev and prev.buf == buf and vim.api.nvim_buf_is_valid(buf)) then return end
+
+    if prev.clean and syntax_ok(buf) == false then
+      -- Undo only when the suggestion is still the latest change.
+      if vim.fn.undotree(buf).seq_cur == prev.seq + 1 then
+        vim.api.nvim_buf_call(buf, function() vim.cmd('silent undo') end)
+        vim.notify('Reverted the next edit suggestion: it left a syntax error (<C-r> keeps it)', vim.log.levels.WARN)
+      else
+        vim.notify('The next edit suggestion left a syntax error', vim.log.levels.WARN)
+      end
+      return
+    end
+
+    if Config.conform_ready then
+      require('conform').format({ bufnr = buf, async = true, quiet = true, undojoin = true })
+    end
+  end, 'Format or revert an accepted next edit suggestion')
 
   local cli = require('sidekick.cli')
 
@@ -247,8 +296,9 @@ Config.later(function()
   vim.keymap.set({ 'n', 'x' }, '<Leader>ao', with_chat(function() cli.toggle({ name = 'opencode' }) end), { desc = 'Opencode toggle' })
   vim.keymap.set({ 'n', 'x' }, '<Leader>ac', with_chat(function() cli.toggle({ name = 'claude' }) end),   { desc = 'Claude toggle' })
   vim.keymap.set({ 'n', 'x' }, '<Leader>ax', with_chat(function() cli.toggle({ name = 'codex' }) end),    { desc = 'Codex toggle' })
-  -- Pick from installed CLI tools.
-  vim.keymap.set('n', '<Leader>as', with_chat(function() cli.select({ filter = { installed = true } }) end), { desc = 'AI CLI select' })
+  -- Pick from installed CLI tools (`<Leader>as` attaches the symbol instead,
+  -- 'plugin/44_agent.lua').
+  vim.keymap.set('n', '<Leader>al', with_chat(function() cli.select({ filter = { installed = true } }) end), { desc = 'AI CLI select' })
   -- Prompt library picker (built-ins + custom `prompts` above). Lowercase
   -- `<Leader>ap` (dispatcher, 'plugin/44_agent.lua') asks for free text;
   -- uppercase here picks a canned prompt and sends it, matching the

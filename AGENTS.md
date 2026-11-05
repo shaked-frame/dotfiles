@@ -11,3 +11,7 @@ Default five-role vocabulary, label strings equal role names. See `docs/agents/t
 ### Domain docs
 
 Single-context layout (`CONTEXT.md` + `docs/adr/`). See `docs/agents/domain.md`.
+
+## Checks
+
+After changing `nvim/` or `scripts/`, run `sh scripts/test.sh`. Writing or debugging a test or headless probe: read `scripts/README.md` first.

@@ -1,0 +1,10 @@
+# Format-on-save (conform) and accepted next edit suggestions run stylua with
+# `--search-parent-directories`. Without this file stylua falls back to tabs
+# and double quotes. MiniMax style, which this config started from.
+column_width = 120
+line_endings = "Unix"
+indent_type = "Spaces"
+indent_width = 2
+quote_style = "AutoPreferSingle"
+call_parentheses = "Always"
+collapse_simple_statement = "Always"

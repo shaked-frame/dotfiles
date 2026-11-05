@@ -15,9 +15,10 @@
 -- with an extra `visible()`; delete its file and the host is the only one.
 --
 -- Conventions (both adapters):
--- - Lowercase (`af`/`at`/`av`) attaches context to the agent's input WITHOUT
---   submitting it, focusing the agent UI so more can be added and Enter
---   pressed manually. Uppercase (`aF`/`aT`/`aV`) sends it immediately.
+-- - Lowercase (`af`/`at`/`as`/`aq`/`ad`/`av`) attaches context to the
+--   agent's input WITHOUT submitting it, focusing the agent UI so more can be
+--   added and Enter pressed manually. Uppercase (`aF`/`aT`/`aS`/`aQ`/`aD`/`aV`)
+--   sends it immediately.
 
 -- Context builders (adapter-agnostic Markdown) ===============================
 
@@ -52,6 +53,38 @@ local function selection_message()
   local selection = visual_selection()
   if selection == '' then return nil end
   return string.format('In `%s`:\n\n```\n%s\n```', path, selection)
+end
+
+-- `nil` without a symbol is not a dead end: the location goes instead.
+local function symbol_message()
+  local symbol = require('config.symbol').describe()
+  if not symbol then
+    vim.notify('No LSP symbol at the cursor; using the line instead', vim.log.levels.INFO)
+    return location_message()
+  end
+  return string.format('Look at %s, around line %d.', symbol, vim.fn.line('.'))
+end
+
+-- Quickfix and diagnostics reuse sidekick's context renderers (`{quickfix}`,
+-- `{diagnostics}`), so every adapter gets the same text as sidekick's prompt
+-- library. Sidekick loads in every host; without it these keys only warn.
+local function sidekick_message(msg, empty)
+  local ok, context = pcall(require, 'sidekick.cli.context')
+  if not ok then
+    vim.notify('sidekick.nvim is not loaded', vim.log.levels.WARN)
+    return nil
+  end
+  local text = context.get():render({ msg = msg, this = false })
+  if not text or text == '' then vim.notify(empty, vim.log.levels.INFO) end
+  return text ~= '' and text or nil
+end
+
+local function quickfix_message()
+  return sidekick_message('Look at these quickfix entries:\n{quickfix}', 'The quickfix list is empty')
+end
+
+local function diagnostics_message()
+  return sidekick_message('Look at these diagnostics:\n{diagnostics}', 'No diagnostics in this buffer')
 end
 
 -- Dispatcher =================================================================
@@ -119,6 +152,23 @@ end, { desc = 'Send file to agent' })
 
 vim.keymap.set('n', '<Leader>at', function() Config.Agent.attach(location_message(), 'location') end, { desc = 'Attach location to agent' })
 vim.keymap.set('n', '<Leader>aT', function() Config.Agent.send(location_message(), 'location') end,   { desc = 'Send location to agent' })
+
+vim.keymap.set('n', '<Leader>as', function() Config.Agent.attach(symbol_message(), 'symbol') end, { desc = 'Attach symbol to agent' })
+vim.keymap.set('n', '<Leader>aS', function() Config.Agent.send(symbol_message(), 'symbol') end,   { desc = 'Send symbol to agent' })
+
+vim.keymap.set('n', '<Leader>aq', function()
+  local m = quickfix_message(); if m then Config.Agent.attach(m, 'quickfix') end
+end, { desc = 'Attach quickfix to agent' })
+vim.keymap.set('n', '<Leader>aQ', function()
+  local m = quickfix_message(); if m then Config.Agent.send(m, 'quickfix') end
+end, { desc = 'Send quickfix to agent' })
+
+vim.keymap.set('n', '<Leader>ad', function()
+  local m = diagnostics_message(); if m then Config.Agent.attach(m, 'diagnostics') end
+end, { desc = 'Attach diagnostics to agent' })
+vim.keymap.set('n', '<Leader>aD', function()
+  local m = diagnostics_message(); if m then Config.Agent.send(m, 'diagnostics') end
+end, { desc = 'Send diagnostics to agent' })
 
 vim.keymap.set('x', '<Leader>av', function()
   local m = selection_message(); if m then Config.Agent.attach(m, 'selection') end
