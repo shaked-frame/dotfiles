@@ -1,0 +1,27 @@
+# worktrunk configuration
+# Docs: https://worktrunk.dev/config/
+# Verify with: wt config show
+
+# Match Herdr's ~/worktrees/<repo>/<slug>/<repo> layout so Config.frame_root()
+# in Neovim, Starship's `wt` path shortening, and Herdr workspaces all agree.
+worktree-path = "~/worktrees/{{ repo }}/{{ branch | sanitize }}/{{ repo }}"
+
+# Frame monorepo bootstrap.
+# Uses pre-start so `wt switch -c <branch>` blocks until env files, local
+# agent rules, dependencies, generated API types, and mkcert certificates are
+# ready. Agents can run commands or tests as soon as `wt switch -c` returns.
+[[projects."github.com/frame-rnd/frame".pre-start]]
+env = "link-worktree-env"
+agents = "ln -sfn {{ primary_worktree_path }}/AGENTS.local.md AGENTS.local.md"
+# Claude Code doesn't load AGENTS.local.md on its own. Written, not symlinked,
+# so the @import resolves here. Nested AGENTS.md files (frontend/ and below)
+# load lazily via pluginConfigs."cc-plugin-agents-md@builtin" in
+# ~/.claude/settings.json, so they are not imported here.
+claude = "printf '@AGENTS.local.md\\n' > CLAUDE.local.md"
+deps = "pnpm i"
+
+# api-types: autogen-types is untracked; a stale copy fails check-types locally
+# while CI (which regenerates first) passes.
+[[projects."github.com/frame-rnd/frame".pre-start]]
+certs = "pnpm setup:certs"
+api-types = "pnpm turbo run build --filter=@frame/api"

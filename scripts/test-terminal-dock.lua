@@ -9,7 +9,7 @@ local run = function(name, code)
   local ok, err = pcall(vim.rpcrequest, child, 'nvim_exec_lua', [[
     local repo, root, code = ...
     Config = {}
-    vim.opt.rtp:prepend(repo .. '/nvim/.config/nvim')
+    vim.opt.rtp:prepend(repo .. '/home/dot_config/nvim')
     -- Deferred work runs on demand: `run_later()` drains it, like startup does.
     later_queue = {}
     Config.later = function(f) table.insert(later_queue, f) end
@@ -23,9 +23,9 @@ local run = function(name, code)
     vim.o.shell = '/bin/cat'
     vim.g.mapleader = ' '
     vim.cmd.cd(root)
-    dofile(repo .. '/nvim/.config/nvim/plugin/20_keymaps.lua')
-    dofile(repo .. '/nvim/.config/nvim/plugin/23_terminal.lua')
-    dofile(repo .. '/nvim/.config/nvim/plugin/23_terminal_links.lua')
+    dofile(repo .. '/home/dot_config/nvim/plugin/20_keymaps.lua')
+    dofile(repo .. '/home/dot_config/nvim/plugin/23_terminal.lua')
+    dofile(repo .. '/home/dot_config/nvim/plugin/23_terminal_links.lua')
     editor = vim.api.nvim_get_current_win()
     count_terminals = function()
       local count = 0

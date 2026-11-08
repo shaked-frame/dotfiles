@@ -6,10 +6,10 @@ When changing any row, check the other three.
 
 | Layer | Chords | Source |
 | ----- | ------ | ------ |
-| Herdr (multiplexer panes) | `ctrl+h/j/k/l` (via `vim-herdr-navigation`), `prefix+h/j/k/l`, direct `ctrl+alt+h/j/k/l`, `prefix+a` last pane | `herdr/.config/herdr/config.toml` `[keys]` |
-| Ghostty (splits) | `super+h/l` goto split | `ghostty/.config/ghostty/config` |
+| Herdr (multiplexer panes) | `ctrl+h/j/k/l` (via `vim-herdr-navigation`), `prefix+h/j/k/l`, direct `ctrl+alt+h/j/k/l`, `prefix+a` last pane | `home/dot_config/herdr/config.toml` `[keys]` |
+| Ghostty (splits) | `super+h/l` goto split | `home/dot_config/ghostty/config` |
 | nvim (windows + Herdr edge handoff) | `<C-h/j/k/l>` in Normal and Terminal modes (`Config.Splits.navigate`), `<M-h/j/k/l>` in insert/cmd | `plugin/20_keymaps.lua`, `plugin/22_splits.lua`, `plugin/30_mini.lua` |
-| Zed (panes) | `ctrl-h/j/k/l` ActivatePane* | `zed/.config/zed/keymap.json` |
+| Zed (panes) | `ctrl-h/j/k/l` ActivatePane* | `home/dot_config/zed/keymap.json` |
 
 Standing surrenders (do not reclaim without updating all sides):
 - `<C-a>` never reaches nvim inside Herdr (it is Herdr's prefix) — hence
@@ -25,7 +25,7 @@ Standing surrenders (do not reclaim without updating all sides):
 Ghostty forces raw CSI-u for the six Hyper chords nvim maps (`Hyper+8/7/9/0`
 resize, `Hyper+\` next diagnostic, `Hyper+p` next hunk) — Super has no legacy
 encoding, so without this the chord arrives as nothing. See the Hyper section in
-`ghostty/.config/ghostty/config`. Narrow by design: shells ignore CSI-u and
+`home/dot_config/ghostty/config`. Narrow by design: shells ignore CSI-u and
 Herdr binds no Super chords, so unlike the retired byte-injecting chords these
 cannot trigger multiplexer actions. Zed is a separate app and unaffected
 (it reads macOS keys directly).

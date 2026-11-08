@@ -6,11 +6,11 @@
 -- whatever `symbols` holds, and a stub adapter records what the dispatcher
 -- hands over.
 local repo = vim.fn.getcwd()
-vim.opt.rtp:prepend(repo .. '/nvim/.config/nvim')
+vim.opt.rtp:prepend(repo .. '/home/dot_config/nvim')
 vim.opt.rtp:append(vim.fn.stdpath('data') .. '/site/pack/core/opt/sidekick.nvim')
 Config = {}
 vim.g.mapleader = ' '
-dofile(repo .. '/nvim/.config/nvim/plugin/44_agent.lua')
+dofile(repo .. '/home/dot_config/nvim/plugin/44_agent.lua')
 
 local got
 Config.Agent.register('sidekick', {

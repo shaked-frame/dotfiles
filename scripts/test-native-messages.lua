@@ -1,7 +1,7 @@
 -- Run: nvim --headless -u NONE -l scripts/test-native-messages.lua
 -- Canned CLI failures must reach native history without notification popups.
-local plugin = vim.fn.getcwd() .. '/nvim/.config/nvim/plugin/'
-vim.opt.rtp:prepend(vim.fn.getcwd() .. '/nvim/.config/nvim')
+local plugin = vim.fn.getcwd() .. '/home/dot_config/nvim/plugin/'
+vim.opt.rtp:prepend(vim.fn.getcwd() .. '/home/dot_config/nvim')
 local host = require('config.host')
 local original_system, original_notify = vim.system, vim.notify
 local original_echo, original_select = vim.api.nvim_echo, vim.ui.select

@@ -90,7 +90,7 @@ local ok, err = xpcall(function()
   vim.bo.buftype = 'nofile'
   assert(render():find('SomeFile.ts', 1, true), 'Special buffer name was lost')
 
-  vim.cmd('colorscheme onedark')
+  vim.cmd('colorscheme solarized-osaka')
   check_left_colors()
   assert(vim.api.nvim_get_hl(0, { name = 'ConfigStatuslineFilename' }).bold, 'Theme reload lost filename styling')
   assert(vim.o.laststatus == 3, 'Global statusline was changed')

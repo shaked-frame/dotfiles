@@ -1,9 +1,9 @@
 -- Run: nvim --headless -u NONE -l scripts/test-open-without-comment.lua
 -- Exercise the mappings, option restoration, and existing Other shortcuts.
-vim.opt.rtp:prepend(vim.fn.getcwd() .. '/nvim/.config/nvim')
+vim.opt.rtp:prepend(vim.fn.getcwd() .. '/home/dot_config/nvim')
 Config = {}
 vim.g.mapleader = ' '
-dofile(vim.fn.getcwd() .. '/nvim/.config/nvim/plugin/20_keymaps.lua')
+dofile(vim.fn.getcwd() .. '/home/dot_config/nvim/plugin/20_keymaps.lua')
 local type_keys = function(keys)
   vim.api.nvim_feedkeys(vim.keycode(keys), 'xt', false)
 end

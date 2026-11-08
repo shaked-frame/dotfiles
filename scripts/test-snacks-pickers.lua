@@ -82,7 +82,7 @@ local ok, err = xpcall(function()
   assert(vim.wait(500, function() return command ~= nil end))
   local commit_command = command
   vim.fn.maparg(' gu', 'n', false, true).callback()
-  assert(command == 'DiffviewOpen', 'Space gu no longer opens Diffview')
+  assert(command == 'CodeDiff', 'Space gu no longer opens CodeDiff')
   vim.cmd, original_cmd = original_cmd, nil
   assert(closed and commit_command == 'Git show abcdef0', 'Commit browsing changed checkout state')
   Snacks.picker = picker

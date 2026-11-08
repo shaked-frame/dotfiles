@@ -1,0 +1,13 @@
+{{- /* Rendered by `chezmoi init` into ~/.config/chezmoi/chezmoi.toml. */ -}}
+{{- $machine := promptChoiceOnce . "machine" "Machine type" (list "work" "personal") -}}
+# Keep the repo at ~/dotfiles; `.chezmoiroot` points chezmoi at its `home/`.
+sourceDir = "~/dotfiles"
+# Plain files become symlinks into the repo, so edits under $HOME are live.
+# Templates, executables and private files are still copied: edit those in
+# the repo and run `chezmoi apply`.
+mode = "symlink"
+
+[data]
+machine = {{ $machine | quote }}
+personalEmail = "shakedc200@gmail.com"
+workEmail = "shaked@frame.security"

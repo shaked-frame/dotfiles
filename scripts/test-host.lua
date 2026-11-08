@@ -14,11 +14,11 @@ local run = function(name, env, code)
     for _, k in ipairs({ 'REX_BLOCK', 'REX_BIN_DIR', 'HERDR_ENV', 'HERDR_PANE_ID', 'HERDR_WORKSPACE_ID', 'HERDR_BIN_PATH' }) do
       vim.env[k] = env[k]
     end
-    vim.opt.rtp:prepend(repo .. '/nvim/.config/nvim')
+    vim.opt.rtp:prepend(repo .. '/home/dot_config/nvim')
     Config = {}
     vim.g.mapleader = ' '
-    dofile(repo .. '/nvim/.config/nvim/plugin/22_splits.lua')
-    dofile(repo .. '/nvim/.config/nvim/plugin/44_agent.lua')
+    dofile(repo .. '/home/dot_config/nvim/plugin/22_splits.lua')
+    dofile(repo .. '/home/dot_config/nvim/plugin/44_agent.lua')
     host = require('config.host')
 
     -- Recorder: every CLI call lands in `calls` (binary in `bin`, the rest in

@@ -2,7 +2,7 @@
 
 `sh scripts/test.sh` runs them all (~10 s); `sh scripts/test.sh host theme`
 runs `test-host.lua` and `test-theme.lua`. The pre-commit hook in `.githooks/`
-runs it when a commit touches `nvim/` or `scripts/` (enable per clone with
+runs it when a commit touches `home/dot_config/nvim/` or `scripts/` (enable per clone with
 `git config core.hooksPath .githooks`). `test-rex-worktrees.sh` needs a live
 Rex server and runs by hand.
 
@@ -11,7 +11,7 @@ Rex server and runs by hand.
 The `-- Run:` header on line 1–2 picks the mode, and `test.sh` reads it:
 
 - **Isolated** (`nvim --headless -u NONE -l`): no config, no plugins. The test
-  prepends `nvim/.config/nvim` to `'runtimepath'`, sets `Config = {}`, and
+  prepends `home/dot_config/nvim` to `'runtimepath'`, sets `Config = {}`, and
   `dofile`s only the files it covers. Use for logic with a seam to stub.
 - **Full config** (`nvim --headless -n -i NONE -c "lua dofile(...)"`): the real
   `~/.config/nvim` with every plugin. Wrap the body in `xpcall`, end with

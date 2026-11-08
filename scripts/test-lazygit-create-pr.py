@@ -10,7 +10,7 @@ import tempfile
 import unittest
 
 
-SCRIPT = Path(__file__).resolve().parents[1] / "lazygit/.config/lazygit/scripts/create-pr.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "home/dot_config/lazygit/scripts/create-pr.py"
 
 
 class CreatePRTests(unittest.TestCase):

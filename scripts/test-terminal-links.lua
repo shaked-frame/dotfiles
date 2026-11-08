@@ -25,13 +25,13 @@ local ok, err = xpcall(function()
   exec([[
     local repo, root = ...
     Config = {}
-    vim.opt.rtp:prepend(repo .. '/nvim/.config/nvim')
+    vim.opt.rtp:prepend(repo .. '/home/dot_config/nvim')
     vim.o.mouse = 'a'
     vim.o.mousetime = 0
     vim.o.hidden = true
     vim.g.mapleader = ' '
-    dofile(repo .. '/nvim/.config/nvim/plugin/20_keymaps.lua')
-    dofile(repo .. '/nvim/.config/nvim/plugin/23_terminal_links.lua')
+    dofile(repo .. '/home/dot_config/nvim/plugin/20_keymaps.lua')
+    dofile(repo .. '/home/dot_config/nvim/plugin/23_terminal_links.lua')
     vim.cmd.cd(root .. '/frontend/apps/web')
     editor = vim.api.nvim_get_current_win()
     vim.cmd('botright 12split')

@@ -2,5 +2,5 @@
 # Run the regression suite (scripts/test.sh, ~10 s) when a commit touches the
 # Neovim config or the test scripts. Enable once per clone:
 #   git config core.hooksPath .githooks
-git diff --cached --name-only | grep -qE '^(nvim/|scripts/|\.stylua\.toml$)' || exit 0
+git diff --cached --name-only | grep -qE '^(home/dot_config/nvim/|scripts/|\.stylua\.toml$)' || exit 0
 exec sh scripts/test.sh

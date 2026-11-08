@@ -1,31 +1,12 @@
 # macOS noise
 .DS_Store
 
-# Editor / plugin runtime state, not configuration
-nvim/.config/nvim/nvim.log
+# chezmoi links individual files, so runtime state (logs, sockets, sessions,
+# approvals, editor backups) stays in $HOME and never lands here.
 
-# Zed local backups
-zed/.config/zed/settings_backup.json
-zed/.config/zed/*.bak
-
-# herdr runtime state (sockets, logs, live session) - config.toml only
-herdr/.config/herdr/*.log
-herdr/.config/herdr/*.sock
-herdr/.config/herdr/session.json
-herdr/.config/herdr/.plugins.lock
-
-# worktrunk local command approvals - config.toml only
-worktrunk/.config/worktrunk/approvals.toml
-
-# atuin installer metadata, rewritten by cargo-dist on every upgrade
-atuin/.config/atuin/atuin-receipt.json
-
-# Editor backups left next to stowed configs
-zellij/.config/zellij/*.bak
-
-# This repo is public. Nothing below is stowed, see README "Never add these",
-# but ignore them by name anyway so copying a whole config dir later cannot
-# commit a live token.
+# This repo is public. Never `chezmoi add` these (see README "Never add
+# these"), but ignore them by name anyway so adding a whole config dir later
+# cannot commit a live token.
 **/.npmrc
 **/hosts.yml
 **/auth.json
