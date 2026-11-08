@@ -1,0 +1,22 @@
+{{- if eq .chezmoi.os "darwin" -}}
+#!/bin/sh
+# Installs the Homebrew packages listed in .chezmoidata/packages.yaml.
+# chezmoi re-runs this script whenever its rendered content changes, i.e.
+# whenever that list changes. Installs only what is missing (no upgrades).
+# It runs before files are applied, so tools a config depends on exist first.
+set -eu
+
+if ! command -v brew >/dev/null 2>&1; then
+  echo 'install-packages: Homebrew is missing. Install it from https://brew.sh, then rerun chezmoi apply.' >&2
+  exit 1
+fi
+
+brew bundle --no-upgrade --file=/dev/stdin <<'EOF'
+{{ range .packages.darwin.brews -}}
+brew {{ . | quote }}
+{{ end -}}
+{{ range .packages.darwin.casks -}}
+cask {{ . | quote }}
+{{ end -}}
+EOF
+{{ end -}}

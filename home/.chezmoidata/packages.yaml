@@ -1,0 +1,69 @@
+# Packages installed by `run_onchange_before_install-packages.sh.tmpl`.
+# Editing this file and running `chezmoi apply` installs what was added; it
+# never uninstalls (remove those by hand with `brew uninstall`).
+# Tap-qualified names (`owner/tap/name`) tap their repo automatically.
+packages:
+  darwin:
+    brews:
+      # Shell
+      - atuin
+      - bat # `zf` preview in .zshrc
+      - carapace
+      - eza # fzf-tab previews in .zshrc
+      - fd
+      - fzf
+      - ripgrep # nvim pickers, grep
+      - starship
+      - zoxide
+      - zsh
+      # Editor and terminal
+      - neovim
+      - tree-sitter-cli
+      - harper
+      - yazi
+      - zellij
+      - tmux
+      - btop
+      - chafa
+      - tree
+      # Git
+      - git
+      - git-delta
+      - git-filter-repo
+      - git-lfs
+      - gh
+      - gitleaks # pre-commit secret scan in this repo
+      - lazygit
+      - lefthook
+      - pre-commit
+      - worktrunk
+      - gnupg
+      # Languages and toolchains
+      - mise
+      - go
+      - node
+      - make
+      # Infra and CLIs
+      - awscli
+      - cloudflared
+      - hashicorp/tap/terraform
+      - actionlint
+      - mkcert
+      - nss
+      - yq
+      - graphviz
+      - ffmpeg # frame backend: watermark and media utils shell out to it
+      - imagemagick
+      - tectonic
+      - serpl
+      - opencode
+      - fresh-editor
+      - chezmoi
+    casks:
+      - codex
+      - dockdoor
+      - ghostty
+      - hammerspoon
+      - terraform-linters/tap/tflint
+      - visual-studio-code
+      - vlc

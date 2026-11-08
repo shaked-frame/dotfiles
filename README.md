@@ -10,7 +10,10 @@ and the agent files stay outside the managed tree.
 brew install chezmoi
 git clone git@github.com:shakedhagag/dotfiles.git ~/dotfiles
 chezmoi init --source ~/dotfiles --apply   # asks once: work or personal
+git -C ~/dotfiles config core.hooksPath .githooks
 ```
+
+The first `apply` also installs the Homebrew packages (see "Packages").
 
 `chezmoi init` renders `home/.chezmoi.toml.tmpl` into
 `~/.config/chezmoi/chezmoi.toml`, which holds `sourceDir`, `mode = "symlink"`
@@ -37,12 +40,36 @@ Source names follow chezmoi's conventions: `dot_config/` is `.config/`,
 `dot_zshrc` is `.zshrc`, `executable_` sets the exec bit, `.tmpl` is rendered
 with the machine data.
 
+## Packages
+
+`home/.chezmoidata/packages.yaml` lists the Homebrew formulae and casks.
+`home/run_onchange_before_install-packages.sh.tmpl` feeds that list to
+`brew bundle --no-upgrade`, and chezmoi re-runs it whenever the list changes.
+To add a tool, add a line and run `chezmoi apply`. It never upgrades or
+uninstalls: use `brew upgrade` / `brew uninstall` for that.
+
 ## Tool versions (mise)
 
 chezmoi only places config files. Language runtimes and CLI versions are
 mise's job: `~/frame` pins its toolchain in its own `mise.toml`. No global mise
 config is managed here yet; see `docs/adr/0001-chezmoi-over-stow.md` for where
 it would go.
+
+## Secrets scanning
+
+[gitleaks](https://github.com/gitleaks/gitleaks) checks for API keys, tokens
+and private keys twice:
+
+- `.githooks/pre-commit` scans staged changes and blocks the commit on a
+  finding. It warns and continues if gitleaks is not installed.
+- `.github/workflows/gitleaks.yml` scans the full history on every push and
+  PR, in both GitHub repos. It catches what the hook misses (`--no-verify`, a
+  clone without `core.hooksPath`). Keep its `GITLEAKS_VERSION` in step with
+  Homebrew's.
+
+For a false positive, add the finding's fingerprint (printed in the output) to
+a `.gitleaksignore` file at the repo root. For a real secret that was pushed,
+rotate it: rewriting history does not unpublish it.
 
 ## Managed
 

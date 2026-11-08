@@ -1,6 +1,19 @@
 #!/bin/sh
-# Run the regression suite (scripts/test.sh, ~10 s) when a commit touches the
-# Neovim config or the test scripts. Enable once per clone:
+# Pre-commit checks. Enable once per clone:
 #   git config core.hooksPath .githooks
+
+# 1. Secrets: this repo is public. Block any staged secret (gitleaks, from the
+#    Brewfile). CI (.github/workflows/gitleaks.yml) scans again on push.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --pre-commit --staged --redact --no-banner . || {
+    echo 'pre-commit: gitleaks found a secret in the staged changes (see above).' >&2
+    exit 1
+  }
+else
+  echo 'pre-commit: gitleaks not installed, skipping the secret scan (run chezmoi apply).' >&2
+fi
+
+# 2. Regression suite (scripts/test.sh, ~10 s) when a commit touches the
+#    Neovim config or the test scripts.
 git diff --cached --name-only | grep -qE '^(home/dot_config/nvim/|scripts/|\.stylua\.toml$)' || exit 0
 exec sh scripts/test.sh
