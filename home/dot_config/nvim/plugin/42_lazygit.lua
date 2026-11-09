@@ -74,7 +74,14 @@ local lazygit = function(open)
     table.insert(config_files, ensure_lazygit_remote_config())
     vim.env.LG_CONFIG_FILE = table.concat(config_files, ',')
 
-    Snacks.lazygit[open]({ configure = false })
+    -- 80% opaque: the code underneath shows faintly through LazyGit's empty
+    -- areas. Raise winblend for more see-through (100 = invisible). Set in
+    -- `on_win` because Snacks zeroes `wo.winblend` under a transparent
+    -- color scheme before applying window options.
+    Snacks.lazygit[open]({
+      configure = false,
+      win = { on_win = function(win) vim.wo[win.win].winblend = 20 end },
+    })
   end
 end
 

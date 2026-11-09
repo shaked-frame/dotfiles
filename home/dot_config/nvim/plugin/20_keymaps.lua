@@ -215,10 +215,12 @@ end
 local new_scratch_buffer = function()
   vim.api.nvim_win_set_buf(0, vim.api.nvim_create_buf(true, true))
 end
+-- Listed-but-unloaded buffers count too: a session restore, `nvim a b c` and
+-- `:badd` list files without loading them until visited.
 local close_other_buffers = function()
   local current = vim.api.nvim_get_current_buf()
   for _, buf in ipairs(vim.api.nvim_list_bufs()) do
-    if buf ~= current and vim.bo[buf].buflisted and vim.api.nvim_buf_is_loaded(buf) then
+    if buf ~= current and vim.bo[buf].buflisted then
       MiniBufremove.delete(buf)
     end
   end
@@ -260,6 +262,7 @@ nmap_leader('bW', '<Cmd>lua MiniBufremove.wipeout(0, true)<CR>', 'Wipeout!')
 
 -- e is for 'Explore' and 'Edit'. Common usage:
 -- - `<Leader>ed` - open explorer at current working directory
+-- - `<Leader>ee` - toggle the file tree sidebar (Snacks explorer)
 -- - `<Leader>ef` - open directory of current file (needs to be present on disk)
 -- - `<Leader>ei` - edit 'init.lua'
 -- - All mappings that use `edit_plugin_file` - edit 'plugin/' config files
@@ -274,6 +277,7 @@ end
 
 nmap_leader('eb', function() Snacks.picker.lsp_symbols({ filter = { default = true } }) end, 'Outline (symbols)')
 nmap_leader('ed', function() Config.Explorer.open_cwd() end,     'Directory')
+nmap_leader('ee', function() Snacks.explorer() end,              'File tree')
 nmap_leader('ef', function() Config.Explorer.open_at_file() end, 'File directory')
 nmap_leader('ei', '<Cmd>edit $MYVIMRC<CR>',                 'init.lua')
 nmap_leader('ek', edit_plugin_file('20_keymaps.lua'),       'Keymaps config')

@@ -64,6 +64,7 @@ packages:
       - dockdoor
       - ghostty
       - hammerspoon
+      - karabiner-elements # Caps Lock as Hyper on the laptop keyboard
       - terraform-linters/tap/tflint
       - visual-studio-code
       - vlc

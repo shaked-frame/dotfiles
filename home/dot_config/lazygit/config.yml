@@ -11,25 +11,48 @@ gui:
   showFileTree: true
   skipRewordInEditorWarning: true
   showCommandLog: false
-  # Ghostty and Zed's terminal are both on IoskeleyMonoTerm Nerd Font.
+  # Rex, Ghostty and Zed's terminal are all on IoskeleyMonoTerm Nerd Font.
   nerdFontsVersion: "3"
   showNumstatInFilesView: true
   # Match the --date=iso forced in branchLogCmd / allBranchesLogCmds below.
   timeFormat: "2006-01-02"
   shortTimeFormat: "15:04"
   theme:
-    # Default 'blue' background washes out branch/file text (e.g. #4BADE8 on
-    # blue). '#3E4451' is Atom One Dark's selection grey (Ghostty theme is
-    # Atom One Dark): visible cursor, foreground colours stay readable.
+    # Solarized Osaka (vivid), matching Neovim: values from the lazygit extra
+    # that scripts/gen-themes.lua prints. Exception: the selected line uses
+    # base02 (#063540) instead of the extra's blue #1a6397, which washes out
+    # branch and file text the same way lazygit's default blue did.
+    activeBorderColor:
+      - '#fb724a'
+      - bold
+    inactiveBorderColor:
+      - '#664c00'
+    searchingActiveBorderColor:
+      - '#fb724a'
+      - bold
+    optionsTextColor:
+      - '#5aaefa'
     selectedLineBgColor:
-      - '#3E4451'
+      - '#063540'
+    cherryPickedCommitFgColor:
+      - '#5aaefa'
+    cherryPickedCommitBgColor:
+      - '#fe67a8'
+    markedBaseCommitFgColor:
+      - '#5aaefa'
+    markedBaseCommitBgColor:
+      - '#dba500'
+    unstagedChangesColor:
+      - '#ff8c8a'
+    defaultFgColor:
+      - '#b6c5c6'
     authorColors:
       'Shaked Hagag': cyan
       '*': magenta
     branchColorPatterns:
-      '^(task)/': '#4BADE8' # Jira work branches
-      '^(bugfix)/': '#F15B50' # conventional, changes behaviour
-      '^(feature)/': '#6A9A22' # conventional, housekeeping
+      '^(task)/': '#5aaefa' # Jira work branches
+      '^(bugfix)/': '#ff6c6a' # conventional, changes behaviour
+      '^(feature)/': '#a2bb00' # conventional, housekeeping
 git:
   mainBranches:
     - main
@@ -40,7 +63,7 @@ git:
   diffRenderers:
     # These omit --no-gitconfig on purpose, so they inherit [delta] from
     # ~/.gitconfig: dark, navigate, line-numbers, hyperlinks,
-    # syntax-theme = TwoDark, tabs = 4. Everything below is a lazygit-only
+    # the Solarized Osaka colors, tabs = 4. Everything below is a lazygit-only
     # override.
     #   --paging=never             lazygit is the pager
     #   --dark                     delta's background auto-detect misfires

@@ -37,11 +37,18 @@ local ok, err = xpcall(function()
     assert(config.options.diagnostics == 'nvim_lsp' and config.options.diagnostics_update_on_event, 'Refresh native LSP indicators when diagnostics change')
     assert(config.options.show_buffer_close_icons and config.options.show_close_icon, 'Use the standard close buttons')
     assert(config.options.custom_areas == nil, 'Remove the custom outer frame')
-    assert(next(config.user.highlights or {}) == nil, 'Let Bufferline derive highlights from the theme')
     for _, group in ipairs({ 'BufferLineBufferSelected', 'BufferLineBackground', 'BufferLineFill' }) do
       assert(not hl(group).overline and not hl(group).underline, group .. ' kept a custom outline')
     end
     assert(hl('BufferLineBufferSelected').fg, 'Bufferline did not derive colors from the theme')
+    -- Transparent Normal leaves Bufferline nothing to derive backgrounds from,
+    -- so the config paints them from the Osaka palette.
+    local c = require('solarized-osaka.colors').setup()
+    local bg = function(group) return string.format('#%06x', hl(group).bg or 0) end
+    assert(bg('BufferLineFill') == c.base02, 'Tab bar should use base02')
+    assert(bg('BufferLineBackground') == c.base03, 'Other tabs should use base03')
+    assert(bg('BufferLineBufferSelected') == c.base04, 'Current tab should match the editor background')
+    assert(string.format('#%06x', hl('BufferLineSeparator').fg) == c.base02, 'Slants should be drawn in the bar color')
   end
   check_file_tabs()
   local previous = vim.api.nvim_get_current_buf()

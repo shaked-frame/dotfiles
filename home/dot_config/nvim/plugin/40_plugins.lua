@@ -347,6 +347,32 @@ later(function()
           }),
         },
       },
+      sources = {
+        -- File tree (`<Leader>ee`). Entering a directory re-roots the tree on
+        -- it, so only that directory is shown; `;;` (or `<BS>`) goes back up
+        -- to the parent. Files open as usual.
+        explorer = {
+          actions = {
+            explorer_enter = function(picker, item, action)
+              if item and item.dir and not picker.input.filter.meta.searching then
+                picker:set_cwd(item.file)
+                picker:find()
+              else
+                require('snacks.explorer.actions').actions.confirm(picker, item, action)
+              end
+            end,
+          },
+          win = {
+            list = {
+              keys = {
+                ['<CR>'] = 'explorer_enter',
+                ['l'] = 'explorer_enter',
+                [';;'] = 'explorer_up',
+              },
+            },
+          },
+        },
+      },
     },
   })
 
@@ -712,5 +738,24 @@ Config.now(function()
       close_command = function(buf) require('mini.bufremove').delete(buf) end,
       right_mouse_command = false,
     },
+    -- Bufferline derives tab colors from Normal's background, which the
+    -- transparent color scheme leaves empty: every tab, the bar and the slant
+    -- separators came out colorless. Paint them from the Osaka palette like
+    -- its own TabLine groups: bar in base02, other tabs in base03, and the
+    -- current tab in the editor background so it merges into the window.
+    -- Runs again on every :colorscheme (the transparency toggle included).
+    highlights = function(defaults)
+      local c = require('solarized-osaka.colors').setup()
+      local fill, tab, current = c.base02, c.base03, c.base04
+      local hl = {}
+      for name, spec in pairs(defaults.highlights) do
+        local bg = name:match('selected$') and current or tab
+        hl[name] = vim.tbl_extend('force', spec, { bg = name == 'fill' and fill or bg })
+        -- A slant is drawn in the bar color against its tab's background.
+        if name:match('separator') then hl[name].fg = fill end
+      end
+      hl.tab_selected.fg = c.yellow500
+      return hl
+    end,
   })
 end)

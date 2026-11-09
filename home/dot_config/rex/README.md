@@ -12,6 +12,10 @@ defaults write com.superlogical.rex Workspace.terminalFallbackFontNames -array "
 # Line height (Ghostty adjust-cell-height = 17%): set in Settings > Terminal.
 ```
 
+Theme: import `~/.config/ghostty/themes/solarized-osaka-vivid` (a Ghostty theme
+file generated from Neovim's colors by `scripts/gen-terminal-theme.lua`) in
+Settings and pick it as the dark theme. Re-import after regenerating it.
+
 - **Remote Control** (Settings > Rex Server) must be on. `rex do worktree_open`
   switches the app's session from the CLI, which the app refuses otherwise.
 - **Notifications**: Rex itself sends macOS notifications when a program
