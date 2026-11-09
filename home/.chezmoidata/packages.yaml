@@ -62,6 +62,7 @@ packages:
     casks:
       - codex
       - dockdoor
+      - font-geist-mono-nerd-font # Rex fallback: box-drawing and icons for Geist Mono
       - ghostty
       - hammerspoon
       - karabiner-elements # Caps Lock as Hyper on the laptop keyboard

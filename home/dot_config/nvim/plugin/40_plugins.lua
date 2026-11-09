@@ -185,9 +185,7 @@ end)
 -- Doing it here is just string manipulation - no plugin is loaded - so it is
 -- safe to run unconditionally on every startup.
 local mason_bin = vim.fs.joinpath(vim.fn.stdpath('data'), 'mason', 'bin')
-if not (vim.env.PATH or ''):find(mason_bin, 1, true) then
-  vim.env.PATH = mason_bin .. ':' .. (vim.env.PATH or '')
-end
+if not (vim.env.PATH or ''):find(mason_bin, 1, true) then vim.env.PATH = mason_bin .. ':' .. (vim.env.PATH or '') end
 
 -- Language Server Protocol (LSP) is a set of conventions that power creation of
 -- language specific tools. It requires two parts:
@@ -311,9 +309,7 @@ end)
 -- snippet files. They are organized in 'snippets/' directory (mostly) per language.
 -- 'mini.snippets' is designed to work with it as seamlessly as possible.
 -- See `:h MiniSnippets.gen_loader.from_lang()`.
-later(function()
-  add({ 'https://github.com/rafamadriz/friendly-snippets' })
-end)
+later(function() add({ 'https://github.com/rafamadriz/friendly-snippets' }) end)
 
 -- Snacks & Markdown rendering ================================================
 --
@@ -331,12 +327,57 @@ later(function()
     picker = {
       -- Installed explicitly below with the stale LSP-code-action guard.
       ui_select = false,
+      -- Prompt at the bottom, best match next to it (`reverse`), and the
+      -- picker a few rows below the top of the screen. The completion menu opens
+      -- below the prompt when 'pumheight' (10 + border) fits underneath, so
+      -- it no longer covers the results. Snacks' `default`/`vertical` with
+      -- the prompt moved; sources with their own layout (explorer, select)
+      -- keep it.
+      layout = {
+        preset = function() return vim.o.columns >= 120 and 'prompt_bottom' or 'prompt_bottom_vertical' end,
+      },
+      layouts = {
+        prompt_bottom = {
+          reverse = true,
+          layout = {
+            box = 'horizontal',
+            row = 4,
+            width = 0.8,
+            min_width = 120,
+            height = 0.65,
+            {
+              box = 'vertical',
+              border = true,
+              title = '{title} {live} {flags}',
+              { win = 'list', border = 'none' },
+              { win = 'input', height = 1, border = 'top' },
+            },
+            { win = 'preview', title = '{preview}', border = true, width = 0.5 },
+          },
+        },
+        prompt_bottom_vertical = {
+          reverse = true,
+          layout = {
+            backdrop = false,
+            row = 4,
+            width = 0.5,
+            min_width = 80,
+            height = 0.65,
+            min_height = 16,
+            box = 'vertical',
+            border = true,
+            title = '{title} {live} {flags}',
+            title_pos = 'center',
+            { win = 'preview', title = '{preview}', height = 0.4, border = 'bottom' },
+            { win = 'list', border = 'none' },
+            { win = 'input', height = 1, border = 'top' },
+          },
+        },
+      },
       -- `pum_*`: prompt keys that drive the completion menu while it is open
       -- ('plugin/21_pickers.lua').
       actions = vim.tbl_extend('error', Config.Pickers.prompt_actions, {
-        sidekick_send = function(...)
-          return require('sidekick.cli.picker.snacks').send(...)
-        end,
+        sidekick_send = function(...) return require('sidekick.cli.picker.snacks').send(...) end,
       }),
       win = {
         input = {
@@ -448,9 +489,7 @@ later(function()
         return (rel:gsub(' ', '\\ '))
       end, paths)
       vim.schedule(function()
-        if inst:is_valid() then
-          inst:update_input_values({ paths = table.concat(escaped, '\n') }, false)
-        end
+        if inst:is_valid() then inst:update_input_values({ paths = table.concat(escaped, '\n') }, false) end
       end)
     end
 
@@ -469,9 +508,7 @@ later(function()
       apply_paths({ item_path(item) })
     end
 
-    local choose_many = function(items)
-      apply_paths(vim.tbl_map(item_path, items or {}))
-    end
+    local choose_many = function(items) apply_paths(vim.tbl_map(item_path, items or {})) end
 
     local opts = {
       source = {
@@ -501,41 +538,31 @@ later(function()
         text = 'Paths: Buffers',
         keymap = { n = '<localleader>u' },
         description = 'Fill Paths with <buflist> (all open listed buffers).',
-        action = function()
-          inst:update_input_values({ paths = '<buflist>' }, false)
-        end,
+        action = function() inst:update_input_values({ paths = '<buflist>' }, false) end,
       },
       {
         text = 'Paths: Quickfix',
         keymap = { n = '<localleader>Q' },
         description = 'Fill Paths with <qflist> (all files in the quickfix list).',
-        action = function()
-          inst:update_input_values({ paths = '<qflist>' }, false)
-        end,
+        action = function() inst:update_input_values({ paths = '<qflist>' }, false) end,
       },
       {
         text = 'Pick Path Files',
         keymap = { n = '<localleader>g' },
         description = 'Pick project files via mini.pick (<C-x> to mark multiple) and fill Paths.',
-        action = function()
-          pick_into_grug_paths(buf, 'files')
-        end,
+        action = function() pick_into_grug_paths(buf, 'files') end,
       },
       {
         text = 'Pick Path Buffers',
         keymap = { n = '<localleader>B' },
         description = 'Pick open buffers via mini.pick (<C-x> to mark multiple) and fill Paths.',
-        action = function()
-          pick_into_grug_paths(buf, 'buffers')
-        end,
+        action = function() pick_into_grug_paths(buf, 'buffers') end,
       },
       {
         text = 'Toggle Flags Help',
         keymap = { n = '<localleader>h' },
         description = 'Toggle --help in Flags to view ripgrep flag documentation in the results list.',
-        action = function()
-          inst:toggle_flags({ '--help' })
-        end,
+        action = function() inst:toggle_flags({ '--help' }) end,
       },
     }
 
@@ -601,21 +628,21 @@ later(function()
     vim.keymap.set(mode, lhs, function() dial_map.manipulate(direction, kind) end, { desc = desc })
   end
 
-  dial('n', '<C-Up>',    'increment', 'normal',  'Increment')
-  dial('n', '<C-Down>',  'decrement', 'normal',  'Decrement')
-  dial('x', '<C-Up>',    'increment', 'visual',  'Increment')
-  dial('x', '<C-Down>',  'decrement', 'visual',  'Decrement')
-  dial('n', 'g<C-Up>',   'increment', 'gnormal', 'Increment sequentially')
+  dial('n', '<C-Up>', 'increment', 'normal', 'Increment')
+  dial('n', '<C-Down>', 'decrement', 'normal', 'Decrement')
+  dial('x', '<C-Up>', 'increment', 'visual', 'Increment')
+  dial('x', '<C-Down>', 'decrement', 'visual', 'Decrement')
+  dial('n', 'g<C-Up>', 'increment', 'gnormal', 'Increment sequentially')
   dial('n', 'g<C-Down>', 'decrement', 'gnormal', 'Decrement sequentially')
-  dial('x', 'g<C-Up>',   'increment', 'gvisual', 'Increment sequentially')
+  dial('x', 'g<C-Up>', 'increment', 'gvisual', 'Increment sequentially')
   dial('x', 'g<C-Down>', 'decrement', 'gvisual', 'Decrement sequentially')
 
   -- 'yanky.nvim' replaces the put mappings to enable cycling with `]y`/`[y`
-  vim.keymap.set({ 'n', 'x' }, 'p',  '<Plug>(YankyPutAfter)')
-  vim.keymap.set({ 'n', 'x' }, 'P',  '<Plug>(YankyPutBefore)')
+  vim.keymap.set({ 'n', 'x' }, 'p', '<Plug>(YankyPutAfter)')
+  vim.keymap.set({ 'n', 'x' }, 'P', '<Plug>(YankyPutBefore)')
   vim.keymap.set({ 'n', 'x' }, 'gp', '<Plug>(YankyGPutAfter)')
   vim.keymap.set({ 'n', 'x' }, 'gP', '<Plug>(YankyGPutBefore)')
-  vim.keymap.set('n', ']y', '<Plug>(YankyCycleForward)',  { desc = 'Next yank' })
+  vim.keymap.set('n', ']y', '<Plug>(YankyCycleForward)', { desc = 'Next yank' })
   vim.keymap.set('n', '[y', '<Plug>(YankyCycleBackward)', { desc = 'Previous yank' })
 end)
 
@@ -662,9 +689,15 @@ Config.now(function()
   local theme_config = {
     style = 'vivid',
     transparent = true,
+    -- Floats (pickers, LazyGit, hover docs) let Rex's background show through
+    -- too. A solid float background drew hard rectangles over Rex's gradient.
+    styles = { floats = 'transparent' },
     -- Theme-independent groups, re-applied on every load (including the
     -- transparency toggle below).
-    on_highlights = function(hl)
+    on_highlights = function(hl, c)
+      -- With no float background, the border is the picker's only edge;
+      -- the theme's base02 barely shows against the editor.
+      hl.SnacksPickerBorder = { fg = c.base01 }
       -- Plain `:diffthis` keeps delta's dark defaults (as in lazygit).
       -- `fg = 'none'` keeps syntax highlighting on changed lines; DiffText is
       -- delta's word-level emphasis.

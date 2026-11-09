@@ -5,10 +5,13 @@ Font, theme and Remote Control are app
 settings (`defaults read com.superlogical.rex`) and are set like this:
 
 ```sh
-# Font: matches ghostty/config
-defaults write com.superlogical.rex Workspace.terminalFontName -string "Ioskeley Mono"
+# Font: Geist Mono for its ligatures (=> !== ->). It has only 5 of the 128
+# box-drawing characters, so the Nerd Font build of Geist (all 128, plus icons,
+# but no ligatures) comes first in the fallbacks: border corners then match
+# Geist's lines instead of Ioskeley's.
+defaults write com.superlogical.rex Workspace.terminalFontName -string "Geist Mono"
 defaults write com.superlogical.rex Workspace.terminalFontPointSize -float 14
-defaults write com.superlogical.rex Workspace.terminalFallbackFontNames -array "IoskeleyMonoTerm Nerd Font"
+defaults write com.superlogical.rex Workspace.terminalFallbackFontNames -array "GeistMono Nerd Font Mono" "IoskeleyMonoTerm Nerd Font"
 # Line height (Ghostty adjust-cell-height = 17%): set in Settings > Terminal.
 ```
 

@@ -11,20 +11,22 @@
 --   yazi/theme.toml                       yazi
 --   lazygit/config.yml gui.theme          by hand: copy from the lazygit extra
 --
--- Background and text color are what Neovim draws: Normal is transparent, so
--- the terminal background shows behind windows, and floats (the Snacks picker)
--- paint NormalFloat's. Making the terminal use NormalFloat's color makes the
--- two the same. Rerun after changing the colorscheme's `style` or upgrading
--- the plugin, then `chezmoi apply` (rebuilds bat's cache) and re-import the
--- Ghostty file in Rex.
+-- Background and text color are what Neovim draws: Normal and floats are
+-- transparent, so the terminal background shows behind everything; it is
+-- Osaka's base04, what Neovim paints with transparency toggled off.
+-- Rerun after changing the colorscheme's `style` or upgrading the plugin,
+-- then `chezmoi apply` (rebuilds bat's cache) and re-import the Ghostty file
+-- in Rex.
 
 vim.wait(5000, function() return Config.later_pending == 0 end)
 
 local hex = function(n) return string.format('#%06x', n) end
 local normal = vim.api.nvim_get_hl(0, { name = 'Normal', link = false })
-local float = vim.api.nvim_get_hl(0, { name = 'NormalFloat', link = false })
+-- Terminal themes need solid colors: the exporters read the float background
+-- (fzf's fails without one), which `styles.floats = 'transparent'` empties.
+require('solarized-osaka.config').options.styles.floats = 'dark'
 local colors = require('solarized-osaka.colors').setup()
-colors.bg = hex(float.bg)
+colors.bg = colors.base04 -- the background Neovim paints when not transparent
 colors.fg = hex(normal.fg)
 
 local root = 'home/dot_config/'
