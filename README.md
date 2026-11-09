@@ -81,6 +81,7 @@ rotate it: rewriting history does not unpublish it.
 | `~/.config/nvim` | `home/dot_config/nvim` ([picker shortcuts and tests](docs/nvim-pickers.md)) |
 | `~/.config/{atuin,ghostty,herdr,lazygit,rex,starship.toml,worktrunk,yazi,zed,zellij}` | `home/dot_config/...` |
 | `~/.atuin/permissions.ai.toml` | `home/dot_atuin/permissions.ai.toml` |
+| VS Code `keybindings.json` (`~/Library/Application Support/Code/User/`) | `home/private_Library/private_Application Support/private_Code/User/keybindings.json`; `settings.json` is not tracked (it holds per-project chat auto-approve rules) |
 
 On the work Mac, `~/.gitconfig` includes the untracked `~/.gitconfig-personal`
 for `~/personal/` and `~/dotfiles/`, so commits here use the personal email and
