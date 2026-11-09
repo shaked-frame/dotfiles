@@ -22,7 +22,7 @@ marker_selected = { fg = "#5aaefa", bg = "#5aaefa" }
 
 # Tab
 tab_active   = { fg = "#b6c5c6", bg = "#002c38" }
-tab_inactive = { fg = "#7b99a2", bg = "#001419" }
+tab_inactive = { fg = "#7b99a2", bg = "#001d24" }
 tab_width    = 1
 
 # Count
@@ -35,13 +35,13 @@ border_symbol = "│"
 border_style  = { fg = "#063540" }
 
 [mode]
-normal_main = { fg = "#001419", bg = "#5aaefa", bold = true }
+normal_main = { fg = "#001d24", bg = "#5aaefa", bold = true }
 normal_alt  = { fg = "#5aaefa", bg = "#7b99a2" }
 
-select_main = { fg = "#001419", bg = "#fe67a8", bold = true }
+select_main = { fg = "#001d24", bg = "#fe67a8", bold = true }
 select_alt  = { fg = "#fe67a8", bg = "#7b99a2" }
 
-unset_main  = { fg = "#001419", bg = "#9498ea", bold = true }
+unset_main  = { fg = "#001d24", bg = "#9498ea", bold = true }
 unset_alt   = { fg = "#9498ea", bg = "#7b99a2" }
 
 [status]
@@ -51,7 +51,7 @@ separator_close   = ""
 
 # Progress
 progress_label  = { fg = "#b6c5c6", bold = true }
-progress_normal = { fg = "#001419" }
+progress_normal = { fg = "#001d24" }
 progress_error  = { fg = "#ff6c6a" }
 
 # Permissions
@@ -59,7 +59,7 @@ perm_type  = { fg = "#5aaefa" }
 perm_read  = { fg = "#dba500" }
 perm_write = { fg = "#ff6c6a" }
 perm_exec  = { fg = "#a2bb00" }
-perm_sep   = { fg = "#001419" }
+perm_sep   = { fg = "#001d24" }
 
 [pick]
 border   = { fg = "#063540" }
@@ -129,7 +129,7 @@ icon_info = ""
 on      = { fg = "#a2bb00" }
 run     = { fg = "#fe67a8" }
 hovered = { bg = "#002c38" }
-footer  = { fg = "#b6c5c6", bg = "#001419" }
+footer  = { fg = "#b6c5c6", bg = "#001d24" }
 
 [filetype]
 

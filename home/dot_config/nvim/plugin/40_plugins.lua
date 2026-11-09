@@ -692,6 +692,15 @@ Config.now(function()
     -- Floats (pickers, LazyGit, hover docs) let Rex's background show through
     -- too. A solid float background drew hard rectangles over Rex's gradient.
     styles = { floats = 'transparent' },
+    -- A slightly lighter background than Osaka's base04 (hsl 192 100% 5%,
+    -- #001419): 7% lightness. Every color derived from base04 follows, and
+    -- scripts/gen-themes.lua carries it to the terminal themes.
+    on_colors = function(c)
+      local old, new = c.base04, '#001d24'
+      for k, v in pairs(c) do
+        if v == old then c[k] = new end
+      end
+    end,
     -- Theme-independent groups, re-applied on every load (including the
     -- transparency toggle below).
     on_highlights = function(hl, c)
