@@ -213,25 +213,38 @@ Config.later(function()
   -- Normal mode's default for it is jump-forward in the jumplist, which
   -- mapping `<Tab>` at all would otherwise shadow.
   --
-  -- An accepted suggestion lands exactly as Copilot wrote it: the server
-  -- re-indents inline completions to the buffer's `'expandtab'`/`'shiftwidth'`
-  -- but not next edits, so they can miss the file's style. Once one is
-  -- applied (sidekick's `User SidekickNesDone`):
-  -- - if it left a syntax error in a buffer that parsed cleanly before, undo
-  --   it (`<C-r>` takes it back);
+  -- Copilot's edit ranges can disagree with their text, doubling or dropping
+  -- brackets; each edit's range is repaired before sidekick shows it
+  -- ('lua/config/nes_repair.lua'). `_handler` is sidekick's private response
+  -- handler, looked up per response, so wrapping the field takes effect.
+  local repair = require('config.nes_repair')
+  local Nes = require('sidekick.nes')
+  local nes_handler = Nes._handler
+  if type(nes_handler) == 'function' then
+    Nes._handler = function(err, res, ctx)
+      local client = ctx and vim.lsp.get_client_by_id(ctx.client_id)
+      if not err and client and type(res) == 'table' and type(res.edits) == 'table' then
+        for _, edit in ipairs(res.edits) do
+          pcall(repair.edit, edit, client.offset_encoding)
+        end
+      end
+      return nes_handler(err, res, ctx)
+    end
+  end
+
+  -- An accepted suggestion lands as Copilot wrote it: the server re-indents
+  -- inline completions to the buffer's `'expandtab'`/`'shiftwidth'` but not
+  -- next edits, so they can miss the file's style. Once one is applied
+  -- (sidekick's `User SidekickNesDone`):
+  -- - if it added syntax errors (tree-sitter ERROR/MISSING nodes; a buffer
+  --   mid-edit may already have some), undo it (`<C-r>` takes it back);
   -- - otherwise format the buffer as a save would ('conform.nvim'), joined
   --   into the suggestion's undo step so one `u` reverts both.
-  local syntax_ok = function(buf)
-    local ok, parser = pcall(vim.treesitter.get_parser, buf)
-    if not (ok and parser) then return nil end
-    local tree = parser:parse()[1]
-    return tree ~= nil and not tree:root():has_error()
-  end
   local before -- the buffer as `<Tab>` found it
 
   vim.keymap.set('n', '<Tab>', function()
     local buf = vim.api.nvim_get_current_buf()
-    before = { buf = buf, seq = vim.fn.undotree(buf).seq_cur, clean = syntax_ok(buf) }
+    before = { buf = buf, seq = vim.fn.undotree(buf).seq_cur, errors = repair.buf_errors(buf) }
     if require('sidekick').nes_jump_or_apply() then return end
     before = nil
     return '<C-i>'
@@ -242,13 +255,14 @@ Config.later(function()
     before = nil
     if not (prev and prev.buf == buf and vim.api.nvim_buf_is_valid(buf)) then return end
 
-    if prev.clean and syntax_ok(buf) == false then
+    local errors = prev.errors and repair.buf_errors(buf)
+    if errors and errors > prev.errors then
       -- Undo only when the suggestion is still the latest change.
       if vim.fn.undotree(buf).seq_cur == prev.seq + 1 then
         vim.api.nvim_buf_call(buf, function() vim.cmd('silent undo') end)
-        vim.notify('Reverted the next edit suggestion: it left a syntax error (<C-r> keeps it)', vim.log.levels.WARN)
+        vim.notify('Reverted the next edit suggestion: it added a syntax error (<C-r> keeps it)', vim.log.levels.WARN)
       else
-        vim.notify('The next edit suggestion left a syntax error', vim.log.levels.WARN)
+        vim.notify('The next edit suggestion added a syntax error', vim.log.levels.WARN)
       end
       return
     end

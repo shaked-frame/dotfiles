@@ -39,6 +39,71 @@ Config.Pickers.files_all = function()
   Snacks.picker.files({ title = 'Files (all)', hidden = true, ignored = true, follow = true, exclude = { '.git' } })
 end
 
+-- Explain keymaps where you browse them: what to press, what it does and what
+-- it runs. Snacks' finder, list and confirm (Enter feeds the keys) stay as
+-- they are; only its preview - a jump to the defining code - is replaced by
+-- text, so `<Leader>fk` never navigates away from the picker.
+local keymap_modes = {
+  n = 'Normal', v = 'Visual', x = 'Visual', s = 'Select', o = 'Operator-pending',
+  i = 'Insert', c = 'Command', t = 'Terminal', [' '] = 'Normal+Visual', ['!'] = 'Insert+Command',
+}
+
+-- The API returns lhs with Leader/LocalLeader already expanded to their
+-- literal first key (`<Space>gpr`, `\ca`); show the names the mappings were
+-- written with so the preview reads like 'plugin/20_keymaps.lua'.
+local keymap_lhs = function(lhs)
+  local key = Snacks.util.normkey(lhs)
+  local under = function(name, leader)
+    leader = Snacks.util.normkey(leader or '\\')
+    if leader ~= '' and key:sub(1, #leader) == leader then return name .. key:sub(#leader + 1) end
+  end
+  return under('<Leader>', vim.g.mapleader) or under('<LocalLeader>', vim.g.maplocalleader) or key
+end
+
+Config.Pickers.keymaps = function()
+  Snacks.picker.keymaps({
+    preview = function(ctx)
+      local km = ctx.item.item --[[@as vim.api.keyset.get_keymap]]
+      local runs = km.rhs ~= '' and km.rhs or nil
+      local from
+      if km.callback then
+        runs = 'Lua function'
+        local info = debug.getinfo(km.callback, 'S')
+        if info.what == 'Lua' then
+          local source = info.source:gsub('^@', '')
+          local file = source:gsub('^vim/', vim.env.VIMRUNTIME .. '/lua/vim/')
+          local config, runtime = vim.fn.stdpath('config'), vim.env.VIMRUNTIME
+          if vim.startswith(file, config .. '/') then
+            from = file:sub(#config + 2)
+          elseif vim.startswith(file, runtime .. '/') then
+            from = 'runtime/' .. file:sub(#runtime + 2)
+          else
+            from = vim.fn.fnamemodify(file, ':~:.')
+          end
+          from = string.format('%s:%d', from, info.linedefined)
+        end
+      end
+      if km.expr == 1 and runs then runs = runs .. ' (expr)' end
+      local rows = {
+        { 'Keys', keymap_lhs(km.lhs) },
+        { 'Mode', keymap_modes[km.mode] or km.mode },
+        { 'Scope', (km.buffer or 0) > 0 and 'Buffer-local' or 'Global' },
+        { 'Does', km.desc or '(no description)' },
+        { 'Runs', runs },
+        { 'From', from },
+      }
+      local lines = {}
+      for _, row in ipairs(rows) do
+        if row[2] then lines[#lines + 1] = string.format('%-5s %s', row[1], row[2]) end
+      end
+      ctx.preview:reset()
+      ctx.preview:set_title(rows[1][2])
+      ctx.preview:set_lines(lines)
+      ctx.preview:highlight({ ft = 'vim' })
+    end,
+  })
+end
+
 -- Scoped finders search the frontend ('init.lua'), or cwd outside frame repos.
 local frontend_or_cwd = function() return Config.frontend() or vim.fn.getcwd() end
 

@@ -5,6 +5,7 @@
 -- extras exporters, so the terminal, git diffs and pickers match the editor:
 --
 --   ghostty/themes/solarized-osaka-vivid  Ghostty; Rex imports the same file
+--   kitty/themes/solarized-osaka-vivid.conf  kitty, the Ghostty colors in kitty syntax
 --   delta/solarized-osaka.gitconfig       delta diff colors (included from ~/.gitconfig)
 --   bat/themes/solarized-osaka.tmTheme    syntax colors for bat and delta
 --   fzf/fzfrc                             fzf colors ($FZF_DEFAULT_OPTS_FILE in ~/.zshrc)
@@ -42,6 +43,40 @@ local function write(path, comment, body)
 end
 
 write('ghostty/themes/solarized-osaka-vivid', '#', extra('ghostty', colors))
+
+-- kitty takes the Ghostty theme's values, not solarized-osaka's own kitty
+-- exporter: that one has other bright colors and selection, and kitty should
+-- look exactly like Ghostty and Rex. Tab and border colors have no Ghostty
+-- counterpart, so they come from the palette.
+local kitty_keys = {
+  background = 'background',
+  foreground = 'foreground',
+  ['cursor-color'] = 'cursor',
+  ['selection-background'] = 'selection_background',
+  ['selection-foreground'] = 'selection_foreground',
+}
+local kitty = {}
+for line in extra('ghostty', colors):gmatch('[^\n]+') do
+  local n, color = line:match('^palette%s*=%s*(%d+)=(#%x+)')
+  local key, value = line:match('^([%w-]+)%s*=%s*(#%x+)')
+  if n then
+    table.insert(kitty, ('color%s %s'):format(n, color))
+  elseif key and kitty_keys[key] then
+    table.insert(kitty, ('%s %s'):format(kitty_keys[key], value))
+  end
+end
+vim.list_extend(kitty, {
+  'cursor_text_color ' .. colors.bg,
+  'url_color ' .. colors.cyan,
+  'tab_bar_background ' .. colors.bg,
+  'active_tab_background ' .. colors.bg_highlight,
+  'active_tab_foreground ' .. colors.fg,
+  'inactive_tab_background ' .. colors.bg,
+  'inactive_tab_foreground ' .. colors.base00,
+  'active_border_color ' .. colors.blue,
+  'inactive_border_color ' .. colors.bg_highlight,
+})
+write('kitty/themes/solarized-osaka-vivid.conf', '#', table.concat(kitty, '\n') .. '\n')
 
 write(
   'delta/solarized-osaka.gitconfig',

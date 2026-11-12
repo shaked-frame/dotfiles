@@ -294,6 +294,7 @@ nmap_leader('eR', source_plugin_file('20_keymaps.lua'),     'Reload keymaps')
 -- - `<Leader>ff` - find files; for best performance requires `ripgrep`
 -- - `<Leader>fg` - find inside files; requires `ripgrep`
 -- - `<Leader>fh` - find help tag
+-- - `<Leader>fk` - search all keymaps (preview explains each)
 -- - `<Leader>fr` - resume latest picker
 -- - `<Leader>fv` - all visited paths; requires 'mini.visits'
 --
@@ -327,6 +328,7 @@ end, 'Grep selection')
 nmap_leader('fe', function() Config.Pickers.frontend_files() end,         'Files (frontend)')
 nmap_leader('fE', function() Config.Pickers.frontend_grep() end,          'Grep (frontend)')
 nmap_leader('fh', function() Snacks.picker.help() end, 'Help tags')
+nmap_leader('fk', function() Config.Pickers.keymaps() end, 'Keymaps')
 nmap_leader('fH', function() Snacks.picker.highlights() end, 'Highlight groups')
 nmap_leader('fl', function() Config.Pickers.buffer_lines() end, 'Lines (all)')
 nmap_leader('fL', function() Snacks.picker.lines() end, 'Lines (buf)')

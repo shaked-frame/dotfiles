@@ -28,7 +28,7 @@ local ok, err = xpcall(function()
   vim.api.nvim_buf_set_lines(buf, 0, -1, false, { 'unsaved picker test text' })
   for keys, source in pairs({
     [' '] = 'buffers', fb = 'buffers', ff = 'files', fF = 'files', fg = 'grep', fG = 'grep',
-    fh = 'help', fH = 'highlights', fL = 'lines', fd = 'diagnostics', fD = 'diagnostics_buffer',
+    fh = 'help', fH = 'highlights', fk = 'keymaps', fL = 'lines', fd = 'diagnostics', fD = 'diagnostics_buffer',
     ['f/'] = 'search_history', ['f:'] = 'command_history', fr = 'resume',
     fR = 'lsp_references', lR = 'lsp_references', fs = 'lsp_workspace_symbols',
     fS = 'lsp_symbols', eb = 'lsp_symbols', mf = 'git_status',
@@ -44,6 +44,36 @@ local ok, err = xpcall(function()
   local all = invoke('fF', 'files')
   assert(all.hidden and all.ignored and all.follow, 'All-files search lost hidden/ignored/symlink support')
   assert(invoke('fb', 'buffers').win.input.keys['<C-d>'][1] == 'bufdelete', 'Buffer delete shortcut lost')
+
+  -- The keymap preview explains the binding instead of jumping to its source.
+  local keymap_opts = invoke('fk', 'keymaps')
+  assert(type(keymap_opts.preview) == 'function', 'fk should replace the keymap preview')
+  local title, preview_lines
+  local ctx = {
+    item = { item = vim.fn.maparg(' fk', 'n', false, true) },
+    preview = {
+      reset = function() end,
+      set_title = function(_, value) title = value end,
+      set_lines = function(_, value) preview_lines = value end,
+      highlight = function() end,
+    },
+  }
+  keymap_opts.preview(ctx)
+  local text = table.concat(preview_lines, '\n')
+  assert(title == '<Leader>fk', 'Preview title should show the keys: ' .. tostring(title))
+  assert(text:find('Mode%s+Normal'), 'Preview should name the mode:\n' .. text)
+  assert(text:find('Scope%s+Global'), 'Preview should name the scope:\n' .. text)
+  assert(text:find('Does%s+Keymaps'), 'Preview should show the description:\n' .. text)
+  assert(text:find('Runs%s+Lua function'), 'Preview should show what runs:\n' .. text)
+  assert(text:find('From%s+plugin/20_keymaps%.lua:%d+'), 'Preview should show the defining file:\n' .. text)
+  -- A command mapping shows its right-hand side and has no defining file.
+  ctx.item.item = vim.fn.maparg('[p', 'n', false, true)
+  keymap_opts.preview(ctx)
+  text = table.concat(preview_lines, '\n')
+  assert(text:find('Keys%s+<Leader>%[p') == nil, 'A non-leader mapping should not show <Leader>:\n' .. text)
+  assert(text:find('Does%s+Paste Above'), 'Preview should show the description:\n' .. text)
+  assert(text:find('Runs%s+<Cmd>exe'), 'Preview should show the command:\n' .. text)
+  assert(not text:find('From'), 'A command mapping has no defining file:\n' .. text)
 
   -- Real resolution against a frame-shaped tree, from a nested directory.
   local cwd = vim.fn.getcwd()

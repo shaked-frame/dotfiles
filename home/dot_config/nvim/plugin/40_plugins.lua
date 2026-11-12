@@ -328,11 +328,11 @@ later(function()
       -- Installed explicitly below with the stale LSP-code-action guard.
       ui_select = false,
       -- Prompt at the bottom, best match next to it (`reverse`), and the
-      -- picker a few rows below the top of the screen. The completion menu opens
-      -- below the prompt when 'pumheight' (10 + border) fits underneath, so
-      -- it no longer covers the results. Snacks' `default`/`vertical` with
-      -- the prompt moved; sources with their own layout (explorer, select)
-      -- keep it.
+      -- picker centered on screen (no `row`). The prompt's completion menu
+      -- opens below the prompt when 'pumheight' (10 + border) fits in the
+      -- 17.5% left under the picker (about 70+ lines), else above it, over
+      -- the results. Snacks' `default`/`vertical` with the prompt moved;
+      -- sources with their own layout (explorer, select) keep it.
       layout = {
         preset = function() return vim.o.columns >= 120 and 'prompt_bottom' or 'prompt_bottom_vertical' end,
       },
@@ -341,7 +341,6 @@ later(function()
           reverse = true,
           layout = {
             box = 'horizontal',
-            row = 4,
             width = 0.8,
             min_width = 120,
             height = 0.65,
@@ -359,7 +358,6 @@ later(function()
           reverse = true,
           layout = {
             backdrop = false,
-            row = 4,
             width = 0.5,
             min_width = 80,
             height = 0.65,
