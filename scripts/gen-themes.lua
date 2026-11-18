@@ -10,6 +10,8 @@
 --   bat/themes/solarized-osaka.tmTheme    syntax colors for bat and delta
 --   fzf/fzfrc                             fzf colors ($FZF_DEFAULT_OPTS_FILE in ~/.zshrc)
 --   yazi/theme.toml                       yazi
+--   opencode/themes/solarized-osaka-vivid.json  OpenCode V2
+--   tableplus/themes/solarized-osaka-vivid.json  TablePlus; import in Settings > Fonts & Themes
 --   lazygit/config.yml gui.theme          by hand: copy from the lazygit extra
 --
 -- Background and text color are what Neovim draws: Normal and floats are
@@ -91,6 +93,190 @@ write('bat/themes/solarized-osaka.tmTheme', nil, extra('sublime', colors))
 -- match paths with `url` (yazi refuses to load a rule keyed `name`).
 local yazi = extra('yazi', colors):gsub('%[manager%]', '[mgr]'):gsub('{ name = ', '{ url = ')
 write('yazi/theme.toml', '#', yazi)
+
+-- OpenCode V2 uses semantic tokens plus nine-step hue scales. Keep Osaka's
+-- own scales rather than interpolating new colors from the ANSI palette.
+local hue = {}
+for name, source in pairs({ gray = false, red = 'red', orange = 'orange', yellow = 'yellow',
+  green = 'green', cyan = 'cyan', blue = 'blue', purple = 'violet' }) do
+  if source then
+    hue[name] = {}
+    for step = 1, 9 do hue[name][tostring(step * 100)] = colors[source .. step * 100] end
+  end
+end
+hue.gray = {
+  ['100'] = colors.base3, ['200'] = colors.fg, ['300'] = colors.base00,
+  ['400'] = colors.base01, ['500'] = colors.blue700, ['600'] = colors.base02,
+  ['700'] = colors.base03, ['800'] = colors.base04, ['900'] = colors.base04,
+}
+hue.accent, hue.interactive, hue.neutral = '$hue.cyan', '$hue.blue', '$hue.gray'
+local feedback = function(color) return { base = color } end
+local opencode = {
+  ['$schema'] = 'https://opencode.ai/theme.json',
+  base = {
+    categorical = { 'accent', 'purple', 'green', 'blue', 'orange', 'red' },
+    text = {
+      base = colors.fg, muted = colors.base01,
+      action = {
+        primary = { base = '$text.base', ['$disabled'] = '$text.muted',
+          ['$focused'] = colors.base3, ['$selected'] = colors.cyan },
+        secondary = { base = '$text.muted', ['$hovered'] = '$text.base' },
+        destructive = { base = colors.base04, ['$disabled'] = '$text.muted' },
+      },
+      formfield = { base = '$text.base', ['$focused'] = colors.blue,
+        ['$disabled'] = '$text.muted', ['$selected'] = colors.blue },
+      feedback = { error = feedback(colors.red), warning = feedback(colors.yellow),
+        success = feedback(colors.green), info = feedback(colors.blue) },
+    },
+    background = {
+      base = colors.bg,
+      raised = { base = colors.base03, high = colors.base02, max = colors.blue900 },
+      action = {
+        primary = { base = 'transparent', ['$hovered'] = colors.base02,
+          ['$focused'] = colors.blue700, ['$selected'] = 'transparent' },
+        secondary = { base = 'transparent' }, destructive = { base = colors.red },
+      },
+      formfield = feedback('$background.base'),
+      feedback = { error = feedback('$background.base'), warning = feedback('$background.base'),
+        success = feedback('$background.base'), info = feedback('$background.base') },
+    },
+    border = feedback(colors.base02), scrollbar = feedback(colors.base01),
+    diff = {
+      text = { added = colors.green, removed = colors.red, context = colors.fg, hunkHeader = colors.blue },
+      background = { added = colors.cyan900, removed = colors.red950, context = '$background.base' },
+      highlight = { added = colors.green900, removed = colors.red900 },
+      lineNumber = { text = colors.base01, background = { added = colors.cyan900, removed = colors.red950 } },
+    },
+    syntax = {
+      comment = colors.base01, keyword = colors.green, ['function'] = colors.blue,
+      variable = colors.fg, string = colors.cyan, number = colors.magenta,
+      type = colors.yellow, operator = colors.green, punctuation = colors.base00,
+    },
+    markdown = {
+      text = colors.fg, heading = colors.orange, link = colors.blue, linkText = colors.cyan,
+      code = colors.cyan, blockQuote = colors.base00, emphasis = colors.violet, strong = colors.orange,
+      horizontalRule = colors.base01, listItem = colors.green, listEnumeration = colors.magenta,
+      image = colors.blue, imageText = colors.cyan, codeBlock = colors.fg,
+    },
+    ['@dialog'] = { background = { base = '$background.raised.base',
+      action = { primary = { ['$hovered'] = '$background.raised.high' } } } },
+  },
+  dark = { hue = hue },
+}
+-- JSON has no comments; $schema must remain the only metadata field.
+write('opencode/themes/solarized-osaka-vivid.json', nil, vim.json.encode(opencode) .. '\n')
+
+-- TablePlus imports JSON files. Use dark hue shades for status backgrounds
+-- so the normal foreground stays readable; SQL tokens match Neovim.
+local tableplus = {
+  name = 'Solarized Osaka Vivid',
+  base = 'dark',
+  version = '1.0.0',
+  author = { name = 'Solarized Osaka contributors' },
+  colors = {
+    AppChartPaletteColor1 = colors.red,
+    AppChartPaletteColor2 = colors.yellow,
+    AppChartPaletteColor3 = colors.blue,
+    AppChartPaletteColor4 = colors.green,
+    AppChartPaletteColor5 = colors.magenta,
+    AppConnectionColorPreset1 = colors.green700,
+    AppConnectionColorPreset2 = colors.cyan700,
+    AppConnectionColorPreset3 = colors.blue700,
+    AppConnectionColorPreset4 = colors.yellow700,
+    AppConnectionColorPreset5 = colors.red700,
+    AppConnectionStatusBorder = colors.base01,
+    AppConnectionStatusDefaultBackground = colors.base02,
+    AppConnectionStatusDisconnectedBackground = colors.red900,
+    AppConnectionStatusErrorBackground = colors.red900,
+    AppConnectionStatusReconnectingBackground = colors.yellow900,
+    AppContentBackground = colors.bg,
+    AppControlBackground = colors.base03,
+    AppControlBorder = colors.base02,
+    AppInputInvalidBackground = colors.red900,
+    AppInputValidBackground = colors.green900,
+    AppLogText = colors.fg,
+    AppNotificationErrorBackground = colors.red900,
+    AppNotificationSuccessBackground = colors.green900,
+    AppNotificationWarningBackground = colors.yellow900,
+    AppPluginUpdateText = colors.green,
+    AppQueryMessageText = colors.fg,
+    AppSeparator = colors.base02,
+    AppSidebarBackground = colors.bg,
+    AppTabBackground = colors.base03,
+    AppTabButtonHoverBackground = colors.base02,
+    AppTabHoverBackground = colors.base02,
+    AppTabSelectedBackground = colors.blue900,
+    AppTabSelectedBarInactiveText = colors.base0,
+    AppTabSelectedWindowInactiveBackground = colors.base02,
+    AppTabSelectedWindowInactiveText = colors.base0,
+    AppTabUnselectedText = colors.base0,
+    AppWelcomeButtonBackground = colors.base02,
+    AppWindowBackground = colors.bg,
+    ContentDeletedRowBackground = colors.red950,
+    ContentInsertedBackground = colors.green950,
+    ContentModifiedBackground = colors.yellow950,
+    EditorBacktickQuotedText = colors.yellow,
+    EditorBracketQuotedText = colors.yellow,
+    EditorCommentText = colors.base01,
+    EditorCurrentQueryBackground = colors.base03,
+    EditorDoubleQuotedText = colors.yellow,
+    EditorErrorBackground = colors.red950,
+    EditorFunctionText = colors.blue,
+    EditorIdentifierText = colors.fg,
+    EditorInvisibleCharacterText = colors.base01,
+    EditorKeywordText = colors.green,
+    EditorMatchingBracketBackground = colors.blue900,
+    EditorNumberText = colors.magenta,
+    EditorSelectionBackground = colors.blue700,
+    EditorSingleQuotedText = colors.cyan,
+    EditorText = colors.fg,
+    GridAccessoryForeground = colors.base00,
+    GridCellSelectionBorder = colors.blue,
+    GridDateTimeText = colors.violet,
+    GridDropdownText = colors.fg,
+    GridEvenRowBackground = colors.base03,
+    GridHeaderBackground = colors.base03,
+    GridHeaderText = colors.base1,
+    GridIconCellText = colors.fg,
+    GridInactiveSelectionText = colors.base0,
+    GridLinkText = colors.blue,
+    GridNumberText = colors.magenta,
+    GridOddRowBackground = colors.bg,
+    GridPlaceholderText = colors.base01,
+    GridRowDetailText = colors.fg,
+    GridRowHeaderForeground = colors.base00,
+    GridSeparator = colors.base02,
+    GridText = colors.fg,
+    JSONKeyText = colors.blue,
+    SearchResultCountText = colors.base00,
+    SpatialPreviewGeometryStroke = colors.cyan,
+    SpatialPreviewPolygonFill1 = colors.green900,
+    SpatialPreviewPolygonFill2 = colors.yellow900,
+    SpatialPreviewPolygonFill3 = colors.blue900,
+  },
+  icons = vim.empty_dict(),
+}
+-- Pretty-print in stable key order so exported themes are easy to edit/import.
+local tableplus_json = { '{' }
+for _, key in ipairs({ 'name', 'base', 'version', 'author', 'colors', 'icons' }) do
+  if key == 'colors' then
+    table.insert(tableplus_json, '  "colors": {')
+    local keys = vim.tbl_keys(tableplus.colors)
+    table.sort(keys)
+    for i, name in ipairs(keys) do
+      table.insert(tableplus_json, ('    %s: %s%s'):format(
+        vim.json.encode(name), vim.json.encode(tableplus.colors[name]), i < #keys and ',' or ''
+      ))
+    end
+    table.insert(tableplus_json, '  },')
+  else
+    table.insert(tableplus_json, ('  "%s": %s%s'):format(
+      key, vim.json.encode(tableplus[key]), key ~= 'icons' and ',' or ''
+    ))
+  end
+end
+table.insert(tableplus_json, '}')
+write('tableplus/themes/solarized-osaka-vivid.json', nil, table.concat(tableplus_json, '\n') .. '\n')
 
 -- Colors only: the exporter also sets layout and border options, which are
 -- not a theme's business.

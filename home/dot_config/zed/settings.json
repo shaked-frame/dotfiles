@@ -213,7 +213,7 @@
   "theme": {
     "mode": "dark",
     "light": "One Light",
-    "dark": "One Dark",
+    "dark": "Solarized Osaka",
   },
   "buffer_font_family": "Ioskeley Mono",
   "ui_font_family": "Ioskeley Mono",

@@ -1,0 +1,641 @@
+{
+  "editor.fontFamily": "GeistMono Nerd Font",
+  "editor.tabSize": 2,
+  "workbench.editor.revealIfOpen": true,
+  "editor.suggestOnTriggerCharacters": false,
+  "files.associations": {
+    "*.css": "tailwindcss",
+  },
+  "editor.formatOnPaste": true,
+  "editor.tabCompletion": "on",
+  "tailwindCSS.includeLanguages": {
+    "plaintext": "html",
+  },
+  "js/ts.validate.enabled": false,
+  "editor.linkedEditing": true,
+  "editor.quickSuggestions": {
+    "strings": "on",
+  },
+  "editor.links": true,
+  "explorer.openEditors.visible": 1,
+  "editor.parameterHints.enabled": true,
+  "files.trimTrailingWhitespace": true,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  "terminal.integrated.lineHeight": 1,
+  "terminal.integrated.env.osx": {
+    "PYTHONPATH": "${workspaceFolder}",
+  },
+  "terminal.integrated.allowChords": false,
+  "terminal.integrated.commandsToSkipShell": [
+    "workbench.action.navigateLeft",
+    "workbench.action.navigateRight",
+    "workbench.action.navigateUp",
+    "workbench.action.navigateDown",
+    "workbench.action.terminal.split",
+    "workbench.action.focusActiveEditorGroup",
+    "workbench.action.terminal.toggleTerminal",
+  ],
+  "explorer.confirmDelete": false,
+  "editor.matchBrackets": "always",
+  "workbench.editor.highlightModifiedTabs": true,
+  "js/ts.updateImportsOnFileMove.enabled": "always",
+  "git.autofetch": true,
+  "[json]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+  },
+  "[html]": {
+    "editor.defaultFormatter": "vscode.html-language-features",
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "oxc.oxc-vscode",
+  },
+  "diffEditor.ignoreTrimWhitespace": true,
+  "css.validate": false,
+  "editor.largeFileOptimizations": false,
+  "editor.renderWhitespace": "none",
+  "extensions.ignoreRecommendations": true,
+  "emmet.excludeLanguages": ["markdown"],
+  "emmet.showExpandedAbbreviation": "never",
+  "security.workspace.trust.untrustedFiles": "open",
+  "terminal.integrated.showExitAlert": false,
+  "editor.inlineSuggest.enabled": true,
+  "editor.cursorStyle": "line",
+  "terminal.integrated.cursorStyle": "line",
+  "workbench.editor.customLabels.patterns": {
+    "**/route.ts": "${dirname}/${filename}",
+    "**/page.tsx": "${dirname}/${filename}",
+    "**/layout.tsx": "${dirname}/${filename}",
+  },
+  "zenMode.centerLayout": false,
+  "zenMode.fullScreen": false,
+  "zenMode.hideLineNumbers": false,
+  "git.openRepositoryInParentFolders": "never",
+  "[python]": {
+    "editor.formatOnType": true,
+  },
+  "[css]": {
+    "editor.defaultFormatter": "vscode.css-language-features",
+  },
+  "vim.startInInsertMode": false,
+  "editor.accessibilitySupport": "off",
+  "explorer.confirmDragAndDrop": false,
+  "git.ignoreRebaseWarning": true,
+  "accessibility.signals.terminalBell": {
+    "sound": "on",
+  },
+  "terminal.integrated.enableVisualBell": true,
+  "editor.minimap.enabled": false,
+  "terminal.integrated.fontSize": 14,
+  "window.commandCenter": true,
+  "editor.stickyScroll.enabled": false,
+  "vim.cursorStylePerMode.insert": "line-thin",
+  "vim.cursorStylePerMode.normal": "block",
+  "vim.cursorStylePerMode.replace": "block-outline",
+  "vim.targets.enable": true,
+  "vim.handleKeys": {
+    "<C-d>": true, // Vim page down (half-page scroll)
+    "<C-u>": true, // Vim page up (half-page scroll)
+    "<C-f>": false, // VSCode find (don't override with Vim's full page down)
+    "<C-b>": false, // VSCode sidebar toggle (don't override with Vim's page up)
+    "<C-h>": false, // VSCode window navigation (defined in keybindings.json)
+    "<C-j>": false, // VSCode window navigation (defined in keybindings.json)
+    "<C-k>": false, // VSCode window navigation (defined in keybindings.json)
+    "<C-l>": false, // VSCode window navigation (defined in keybindings.json)
+    "<C-w>": false, // VSCode close tab (don't override Vim's window commands)
+    "<C-s>": false, // VSCode save file (standard shortcut)
+    "<C-a>": false, // VSCode select all (standard shortcut)
+    "<C-c>": false, // VSCode copy (standard shortcut)
+    "<C-v>": false, // VSCode paste (standard shortcut)
+    "<C-z>": false, // VSCode undo (standard shortcut)
+  },
+  "vim.enableNeovim": true,
+  "vim.neovimUseConfigFile": true,
+  "multiCommand.commands": [
+    {
+      // Toggle maximized terminal panel and focus terminal
+      "command": "multiCommand.toggleMaximizedPanelAndFocusTerminal",
+      "sequence": ["workbench.action.toggleMaximizedPanel", "workbench.action.terminal.focus"],
+    },
+    {
+      // Create new terminal and focus it
+      "command": "multiCommand.newTerminalAndFocus",
+      "sequence": ["workbench.action.terminal.new", "workbench.action.terminal.focus"],
+    },
+  ],
+  "workbench.editor.editorActionsLocation": "titleBar",
+  "githubPullRequests.pullBranch": "never",
+  // Ensure comment decorations are enabled
+  "githubPullRequests.fileListLayout": "tree",
+  // Enable comment threading
+  "githubPullRequests.pushBranch": "always",
+  "workbench.experimental.share.enabled": true,
+  "diffEditor.experimental.useTrueInlineView": true,
+  // One column, so <leader>go draws deletions in the file instead of a side-by-side diff.
+  "diffEditor.renderSideBySide": false,
+  "diffEditor.hideUnchangedRegions.contextLineCount": 6,
+  "vim.camelCaseMotion.enable": true,
+  "vim.cursorStylePerMode.visual": "block-outline",
+  "editor.fontSize": 14,
+  "git.replaceTagsWhenPull": true,
+  "git.blame.editorDecoration.enabled": true,
+
+  "coderabbit.agentType": "opencode",
+  "workbench.activityBar.location": "top",
+  "security.promptForLocalFileProtocolHandling": false,
+  "editor.lineNumbers": "relative", // Relative line numbers (Vim-style)
+  "editor.scrollBeyondLastLine": false, // Don't scroll past end of file
+  "editor.cursorSurroundingLines": 8, // Keep 8 lines above/below cursor (matches LazyVim scrolloff)
+  "editor.smoothScrolling": true, // Smooth scrolling animations
+  "editor.bracketPairColorization.enabled": true, // Colour matching brackets
+  "editor.guides.bracketPairs": true, // Show bracket pair guides
+  "editor.minimap.renderCharacters": false, // Simplified minimap
+  "editor.minimap.scale": 2, // Larger minimap scale
+  "editor.cursorBlinking": "solid", // Solid cursor (Vim-like)
+  "editor.formatOnSave": false, // Format on save (set to true if desired)
+  "search.seedWithNearestWord": true,
+  "vim.leader": "<space>", // Space as leader key (LazyVim standard)
+  "vim.useSystemClipboard": true, // Use system clipboard for yank/paste
+  "vim.useCtrlKeys": true, // Enable Vim Ctrl key bindings
+  "vim.smartRelativeLine": true, // Absolute line numbers in insert mode
+  "vim.easymotion": false, // disabled: <leader><leader> (space space) collided with the tab-switcher binding
+  "vim.sneak": false, // disabled: plain "s" collided with the s-prefixed pane split/move bindings
+  "vim.surround": true, // Enable vim-surround (ys/ds/cs commands)
+  "vim.foldfix": true, // Better folding support
+  "vim.incsearch": true, // Incremental search (show matches as you type)
+  "vim.hlsearch": true, // Highlight search results
+  "vim.searchHighlightColor": "rgba(180, 142, 173, 0.5)", // Search highlight colour
+  "vim.highlightedyank.enable": true, // Briefly highlight yanked text
+  "vim.highlightedyank.duration": 200, // Highlight duration in milliseconds
+  "vim.statusBarColorControl": true, // Enable status bar colour changes
+  "vim.statusBarColors.normal": "#519aba", // Blue for normal mode
+  "vim.statusBarColors.insert": "#98c379", // Green for insert mode
+  "vim.statusBarColors.visual": "#c678dd", // Purple for visual mode
+  "vim.statusBarColors.visualline": "#c678dd", // Purple for visual line mode
+  "vim.statusBarColors.visualblock": "#c678dd", // Purple for visual block mode
+  "vim.statusBarColors.replace": "#e06c75", // Red for replace mode
+  "workbench.colorCustomizations": {
+    "statusBar.background": "#519aba",
+    "statusBar.noFolderBackground": "#519aba",
+    "statusBar.debuggingBackground": "#519aba",
+    "statusBar.foreground": "#ffffff",
+    "statusBar.debuggingForeground": "#ffffff",
+  },
+  "vim.insertModeKeyBindings": [
+    {
+      "before": ["j", "k"], // jk to escape (LazyVim default)
+      "after": ["<Esc>"],
+    },
+    {
+      "before": ["j", "j"], // jj to escape (alternative)
+      "after": ["<Esc>"],
+    },
+  ],
+  "vim.normalModeKeyBindingsNonRecursive": [
+    {
+      "before": ["^"],
+      "after": ["0"],
+    },
+    {
+      "before": ["<leader>", "d"], // <leader>d = delete line (dd shortcut)
+      "after": ["d", "d"],
+    },
+    {
+      "before": ["<Esc>"], // Escape clears search highlight
+      "commands": [":nohl"],
+    },
+    {
+      "before": ["<leader>", "u", "r"], // <leader>ur = clear search (LazyVim "unredraw")
+      "commands": [":nohl"],
+    },
+    {
+      "before": ["K"], // K = show hover documentation (LSP)
+      "commands": ["editor.action.showHover"],
+    },
+    {
+      "before": ["<leader>", "/"], // <leader>/ = search in files (Live Grep equivalent)
+      "commands": ["workbench.action.findInFiles"],
+    },
+    {
+      "before": ["<leader>", "f", "f"], // <leader>ff = find files (same as <leader><space>)
+      "commands": ["workbench.action.quickOpen"],
+    },
+    {
+      "before": ["<leader>", "f", "r"], // <leader>fr = recent files
+      "commands": ["workbench.action.openRecent"],
+    },
+    {
+      "before": ["<leader>", "f", "n"], // <leader>fn = new file
+      "commands": ["workbench.action.files.newUntitledFile"],
+    },
+    {
+      "before": ["<leader>", "f", "b"], // <leader>fb = buffers (open editors)
+      "commands": ["workbench.action.showAllEditors"],
+    },
+    {
+      "before": ["<leader>", "f", "e"], // <leader>fe = file explorer (reveal active file)
+      "commands": ["workbench.files.action.showActiveFileInExplorer"],
+    },
+    {
+      "before": ["<leader>", "f", "t"], // <leader>ft = toggle terminal
+      "commands": ["workbench.action.terminal.toggleTerminal"],
+    },
+    {
+      "before": ["<leader>", "f", "p"], // <leader>fp = recent projects (Zed parity alias of fr)
+      "commands": ["workbench.action.openRecent"],
+    },
+    {
+      "before": ["<leader>", "b", "n"], // <leader>bn = new file (Zed parity alias of fn)
+      "commands": ["workbench.action.files.newUntitledFile"],
+    },
+    {
+      "before": ["<leader>", "t", "t"], // <leader>tt = new terminal (Zed parity, distinct from ft toggle)
+      "commands": ["workbench.action.terminal.new"],
+    },
+    {
+      "before": ["<leader>", "e", "b"], // <leader>eb = focus outline panel (replaces ambiguous bare <leader>e)
+      "commands": ["outline.focus"],
+    },
+    {
+      "before": ["<leader>", "e", "d"], // <leader>ed = toggle sidebar (replaces ambiguous bare <leader>e)
+      "commands": ["workbench.action.toggleSidebarVisibility"],
+    },
+    {
+      "before": ["<leader>", "E"], // <leader>E = focus file explorer
+      "commands": ["workbench.files.action.focusFilesExplorer"],
+    },
+    // ┌────────────────────────────────────────────────────────────────────────────────┐
+    // │ SEARCH OPERATIONS - <leader>s* prefix                                          │
+    // └────────────────────────────────────────────────────────────────────────────────┘
+    //
+    // LazyVim search operations for finding text, symbols, and configuration
+    //
+    {
+      "before": ["<leader>", "s", "w"], // <leader>sw = search word under cursor
+      "commands": ["workbench.action.findInFiles"],
+    },
+    {
+      "before": ["<leader>", "s", "r"], // <leader>sr = search and replace in files
+      "commands": ["workbench.action.replaceInFiles"],
+    },
+    {
+      "before": ["<leader>", "r", "r"], // <leader>rr = replace in files (Zed parity alias)
+      "commands": ["workbench.action.replaceInFiles"],
+    },
+    {
+      "before": ["<leader>", "s", "s"], // <leader>ss = goto symbol in file
+      "commands": ["workbench.action.gotoSymbol"],
+    },
+    {
+      "before": ["<leader>", "s", "S"], // <leader>sS = goto symbol in workspace
+      "commands": ["workbench.action.showAllSymbols"],
+    },
+    {
+      "before": ["<leader>", "s", "k"], // <leader>sk = keymaps (open keyboard shortcuts)
+      "commands": ["workbench.action.openGlobalKeybindings"],
+    },
+    {
+      "before": ["<leader>", "s", "c"], // <leader>sc = command palette
+      "commands": ["workbench.action.showCommands"],
+    },
+    {
+      "before": ["<leader>", "s", "h"], // <leader>sh = help (all commands)
+      "commands": ["workbench.action.showCommands"],
+    },
+    // ┌────────────────────────────────────────────────────────────────────────────────┐
+    // │ CODE ACTIONS - <leader>c* prefix (LSP operations)                              │
+    // └────────────────────────────────────────────────────────────────────────────────┘
+    //
+    // LazyVim code actions for LSP features like formatting, refactoring, diagnostics
+    //
+    {
+      "before": ["<leader>", "c", "a"], // <leader>ca = code action (quick fix)
+      "commands": ["editor.action.quickFix"],
+    },
+    {
+      "before": ["<leader>", "c", "A"], // <leader>cA = source action
+      "commands": ["editor.action.sourceAction"],
+    },
+    {
+      "before": ["<leader>", "c", "f"], // <leader>cf = format document
+      "commands": ["editor.action.formatDocument"],
+    },
+    {
+      "before": ["<leader>", "c", "F"], // <leader>cF = format selection
+      "commands": ["editor.action.formatSelection"],
+    },
+    {
+      "before": ["<leader>", "c", "r"], // <leader>cr = rename symbol
+      "commands": ["editor.action.rename"],
+    },
+    {
+      "before": ["<leader>", "c", "d"], // <leader>cd = line diagnostics (hover)
+      "commands": ["editor.action.showHover"],
+    },
+    {
+      "before": ["<leader>", "c", "l"], // <leader>cl = open problems panel
+      "commands": ["workbench.action.problems.focus"],
+    },
+    {
+      "before": ["<leader>", "c", "o"], // <leader>co = organise imports
+      "commands": ["editor.action.organizeImports"],
+    },
+    // ┌────────────────────────────────────────────────────────────────────────────────┐
+    // │ LSP NAVIGATION - g* prefix (goto definitions, references, etc.)                │
+    // └────────────────────────────────────────────────────────────────────────────────┘
+    //
+    // Standard Vim LSP navigation bindings (matches LazyVim defaults)
+    //
+    {
+      "before": ["g", "d"], // gd = goto definition
+      "commands": ["editor.action.revealDefinition"],
+    },
+    {
+      "before": ["g", "D"], // gD = goto declaration
+      "commands": ["editor.action.revealDeclaration"],
+    },
+    {
+      "before": ["g", "r", "r"], // g r r = goto references (Zed parity; replaces bare "gr" so the 3-key chain isn't shadowed)
+      "commands": ["editor.action.goToReferences"],
+    },
+    {
+      "before": ["g", "r", "n"], // g r n = rename symbol
+      "commands": ["editor.action.rename"],
+    },
+    {
+      "before": ["g", "r", "a"], // g r a = code action
+      "commands": ["editor.action.codeAction"],
+    },
+    {
+      "before": ["g", "r", "i"], // g r i = goto implementation in a split
+      "commands": ["workbench.action.splitEditor", "editor.action.goToImplementation"],
+    },
+    {
+      "before": ["g", "r", "v"], // g r v = goto references in a split
+      "commands": ["workbench.action.splitEditor", "editor.action.goToReferences"],
+    },
+    {
+      "before": ["g", "I"], // gI = goto implementation
+      "commands": ["editor.action.goToImplementation"],
+    },
+    {
+      "before": ["g", "y"], // gy = goto type definition
+      "commands": ["editor.action.goToTypeDefinition"],
+    },
+    {
+      "before": ["g", "K"], // gK = signature help (parameter hints)
+      "commands": ["editor.action.triggerParameterHints"],
+    },
+    // ┌────────────────────────────────────────────────────────────────────────────────┐
+    // │ BUFFER MANAGEMENT - <leader>b* prefix                                          │
+    // └────────────────────────────────────────────────────────────────────────────────┘
+    //
+    // LazyVim buffer operations for managing open files/tabs
+    //
+    {
+      "before": ["<leader>", "b", "D"], // <leader>bD = delete other buffers
+      "commands": ["workbench.action.closeOtherEditors"],
+    },
+    {
+      "before": ["<leader>", "b", "d"], // <leader>bd = close current buffer (Zed parity)
+      "commands": ["workbench.action.closeActiveEditor"],
+    },
+    {
+      "before": ["<leader>", "b", "o"], // <leader>bo = close other buffers (Zed parity alias)
+      "commands": ["workbench.action.closeOtherEditors"],
+    },
+    {
+      "before": ["<leader>", "b", "p"], // <leader>bp = pin buffer (pin tab)
+      "commands": ["workbench.action.pinEditor"],
+    },
+    {
+      "before": ["<leader>", "b", "P"], // <leader>bP = unpin buffer
+      "commands": ["workbench.action.unpinEditor"],
+    },
+    {
+      "before": ["<leader>", "`"], // <leader>` = last buffer (alternate file)
+      "commands": ["workbench.action.quickOpenPreviousRecentlyUsedEditorInGroup"],
+    },
+    // ┌────────────────────────────────────────────────────────────────────────────────┐
+    // │ GIT OPERATIONS - <leader>g* prefix (requires GitLens extension)                │
+    // └────────────────────────────────────────────────────────────────────────────────┘
+    //
+    // LazyVim git operations. Most features require GitLens extension for full functionality.
+    // Without GitLens, basic git commands (gg, gs, gd) still work with native VSCode git.
+    //
+    {
+      "before": ["<leader>", "g", "s"], // <leader>gs = git status (same as gg)
+      "commands": ["workbench.view.scm"],
+    },
+    // <leader>gg is bound in keybindings.json to the LazyGit user task.
+    // A second mapping here runs as well and opens a duplicate prompt.
+    {
+      "before": ["<leader>", "g", "b"], // <leader>gb = git blame toggle (built-in, no GitLens dependency)
+      "commands": ["git.blame.toggleEditorDecoration"],
+    },
+    {
+      "before": ["<leader>", "g", "d"], // <leader>gd = git diff (show changes)
+      "commands": ["git.openChange"],
+    },
+    {
+      "before": ["<leader>", "g", "o"], // <leader>go = inline diff of this file (mini.diff overlay)
+      "commands": ["git.openChange"],
+    },
+    {
+      "before": ["<leader>", "g", "l"], // <leader>gl = source control history/graph (built-in, no GitLens dependency)
+      "commands": ["workbench.scm.history.focus"],
+    },
+    {
+      "before": ["<leader>", "g", "r"], // <leader>gr = git restore/clean (Zed parity)
+      "commands": ["git.clean"],
+    },
+    {
+      "before": ["<leader>", "g", "w"], // <leader>gw = git worktree (Zed parity)
+      "commands": ["git.createWorktree"],
+    },
+    {
+      "before": ["<leader>", "g", "u"], // <leader>gu = view uncommitted changes (Zed parity)
+      "commands": ["git.viewChanges"],
+    },
+    {
+      "before": ["<leader>", "m", "f"], // <leader>mf = view modified files (Zed parity)
+      "commands": ["workbench.view.scm"],
+    },
+    // ┌────────────────────────────────────────────────────────────────────────────────┐
+    // │ WINDOW MANAGEMENT - <leader>w* and <leader>-/| prefix                          │
+    // └────────────────────────────────────────────────────────────────────────────────┘
+    //
+    // LazyVim window/split operations
+    //
+    {
+      "before": ["<leader>", "w", "d"], // <leader>wd = close window (close split/editor)
+      "commands": ["workbench.action.closeActiveEditor"],
+    },
+    {
+      "before": ["<leader>", "w", "w"], // <leader>ww = switch window (focus other group)
+      "commands": ["workbench.action.focusNextGroup"],
+    },
+    {
+      "before": ["<leader>", "w", "m"], // <leader>wm = maximise window (toggle editor width)
+      "commands": ["workbench.action.toggleEditorWidths"],
+    },
+    {
+      "before": ["<leader>", "m"], // <leader>m = toggle maximized editor group (Zed parity)
+      "commands": ["workbench.action.toggleMaximizeEditorGroup"],
+    },
+    {
+      "before": ["<leader>", "="], // <leader>= = even editor widths (Zed parity)
+      "commands": ["workbench.action.evenEditorWidths"],
+    },
+    {
+      "before": ["<leader>", "-"], // <leader>- = split window below
+      "commands": ["workbench.action.splitEditorDown"],
+    },
+    {
+      "before": ["<leader>", "|"], // <leader>| = split window right
+      "commands": ["workbench.action.splitEditorRight"],
+    },
+    // ┌────────────────────────────────────────────────────────────────────────────────┐
+    // │ DIAGNOSTICS/QUICKFIX - <leader>x* prefix and [ ] navigation                    │
+    // └────────────────────────────────────────────────────────────────────────────────┘
+    //
+    // LazyVim diagnostics and error navigation. Bracket prefix mappings ([d, ]d) are
+    // defined in keybindings.json because they use special key codes (oem_4, oem_6).
+    //
+    {
+      "before": ["<leader>", "x", "x"], // <leader>xx = diagnostics list (problems panel)
+      "commands": ["workbench.action.problems.focus"],
+    },
+    {
+      "before": ["<leader>", "x", "X"], // <leader>xX = workspace diagnostics
+      "commands": ["workbench.actions.view.problems"],
+    },
+    {
+      "before": ["<leader>", "x", "l"], // <leader>xl = location list (same as xx)
+      "commands": ["workbench.action.problems.focus"],
+    },
+    // Note: [d, ]d, [e, ]e navigation defined in keybindings.json
+    // ┌────────────────────────────────────────────────────────────────────────────────┐
+    // │ UI TOGGLES - <leader>u* prefix                                                 │
+    // └────────────────────────────────────────────────────────────────────────────────┘
+    //
+    // LazyVim UI toggle operations. Line number toggling requires Settings Cycler extension.
+    // Install: hoovercj.vscode-settings-cycler
+    // Configure settings.cycle in this file (see bottom section).
+    //
+    {
+      "before": ["<leader>", "u", "w"], // <leader>uw = toggle word wrap
+      "commands": ["editor.action.toggleWordWrap"],
+    },
+    {
+      "before": ["<leader>", "u", "z"], // <leader>uz = toggle zen mode
+      "commands": ["workbench.action.toggleZenMode"],
+    },
+    // Requires Settings Cycler extension - uncomment after installing:
+    // {
+    //   "before": ["<leader>", "u", "l"],              // <leader>ul = toggle line numbers
+    //   "commands": ["settings.cycle.lineNumbers"]
+    // },
+    // {
+    //   "before": ["<leader>", "u", "L"],              // <leader>uL = toggle relative numbers
+    //   "commands": ["settings.cycle.relativeLineNumbers"]
+    // },
+    // ┌────────────────────────────────────────────────────────────────────────────────┐
+    // │ QUIT - <leader>q* prefix                                                       │
+    // └────────────────────────────────────────────────────────────────────────────────┘
+    {
+      "before": ["<leader>", "q", "q"], // <leader>qq = quit VSCode
+      "commands": ["workbench.action.closeWindow"],
+    },
+    {
+      "before": ["<leader>", "q", "a"], // <leader>qa = quit all windows
+      "commands": ["workbench.action.quit"],
+    },
+    // Hunks and diagnostics. keybindings.json chords on [ / ] never fire:
+    // the Vim extension consumes those keys before the chord completes.
+    {
+      "before": ["[", "h"],
+      "commands": ["editor.action.dirtydiff.previous"],
+    },
+    {
+      "before": ["]", "h"],
+      "commands": ["editor.action.dirtydiff.next"],
+    },
+    {
+      "before": ["[", "d"],
+      "commands": ["editor.action.marker.prev"],
+    },
+    {
+      "before": ["]", "d"],
+      "commands": ["editor.action.marker.next"],
+    },
+  ],
+  // ──────────────────────────────────────────────────────────────────────────────────────
+  // VISUAL MODE KEYBINDINGS - Selection operations
+  // ──────────────────────────────────────────────────────────────────────────────────────
+  //
+  // Visual mode enhancements for better selection handling and LazyVim parity
+  //
+  "vim.visualModeKeyBindings": [
+    {
+      "before": ["^"],
+      "after": ["0"],
+    },
+    {
+      "before": ["<leader>", "/"], // <leader>/ = search selected text
+      "commands": ["workbench.action.findInFiles"],
+    },
+    {
+      "before": ["<leader>", "c", "a"], // <leader>ca = code action on selection
+      "commands": ["editor.action.quickFix"],
+    },
+    {
+      "before": ["<leader>", "c", "f"], // <leader>cf = format selection
+      "commands": ["editor.action.formatSelection"],
+    },
+    {
+      "before": ["g", "c"], // gc = comment toggle
+      "commands": ["editor.action.commentLine"],
+    },
+  ],
+  "extensions.experimental.affinity": {
+    "vscodevim.vim": 1,
+  },
+  "workbench.colorTheme": "Solarized Osaka",
+  "githubPullRequests.hideViewedFiles": true,
+  "terminal.integrated.fontLigatures.enabled": true,
+  "terminal.integrated.fontFamily": "Ioskeley Nerd Font Mono",
+  "terminal.integrated.profiles.osx": {
+    "zsh": {
+      "path": "zsh",
+      "args": ["-l"],
+    },
+    "lazygit": {
+      "path": "/opt/homebrew/bin/lazygit",
+      "overrideName": true,
+      "args": [
+        "--use-config-file",
+        "/Users/shakedhagag/.config/lazygit/config.yml,/Users/shakedhagag/Library/Application Support/Cursor/User/lazygit-cursor.yml",
+      ],
+    },
+  },
+  "terminal.integrated.defaultProfile.osx": "zsh",
+  "yaml.disableSchemaDetection": [
+    "**/.github/workflows/*.yml",
+    "**/.github/workflows/*.yaml",
+    "**/.gitea/workflows/*.yml",
+    "**/.gitea/workflows/*.yaml",
+    "**/.forgejo/workflows/*.yml",
+    "**/.forgejo/workflows/*.yaml",
+  ],
+  "git.detectWorktrees": true,
+  "workbench.startupEditor": "none",
+  "claudeCode.preferredLocation": "panel",
+  "go.toolsManagement.autoUpdate": true,
+}

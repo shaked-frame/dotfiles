@@ -255,6 +255,9 @@ function bup() {
 # Holds worktree-setup, link-worktree-zed and a pn function.
 source "$HOME/.config/zsh/lazygit-functions.zsh"
 
+# Machine-local work functions, kept out of this public repo.
+[[ -f "$HOME/.config/zsh/frame-functions.zsh" ]] && source "$HOME/.config/zsh/frame-functions.zsh"
+
 # ╔══════════════════════════════════════════════════════════════════════════════╗
 # ║                                   PATH                                       ║
 # ╚══════════════════════════════════════════════════════════════════════════════╝

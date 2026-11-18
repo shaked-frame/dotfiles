@@ -82,6 +82,7 @@ rotate it: rewriting history does not unpublish it.
 | `~/.config/{atuin,ghostty,herdr,lazygit,rex,starship.toml,worktrunk,yazi,zed,zellij}` | `home/dot_config/...` |
 | `~/.atuin/permissions.ai.toml` | `home/dot_atuin/permissions.ai.toml` |
 | VS Code `keybindings.json` (`~/Library/Application Support/Code/User/`) | `home/private_Library/private_Application Support/private_Code/User/keybindings.json`; `settings.json` is not tracked (it holds per-project chat auto-approve rules) |
+| Cursor `settings.json`, `keybindings.json`, `tasks.json` (`~/Library/Application Support/Cursor/User/`) | `home/private_Library/private_Application Support/private_Cursor/User/`; settings exclude VS Code terminal auto-approve rules. Keep credentials and project-specific approvals out of these tracked files |
 
 On the work Mac, `~/.gitconfig` includes the untracked `~/.gitconfig-personal`
 for `~/personal/` and `~/dotfiles/`, so commits here use the personal email and
@@ -106,6 +107,15 @@ Deliberately skipped as state rather than config: `.config/raycast` (~550MB of
 extension state), `.config/opencode` (mixed config and a multi-MB local index),
 `.config/{configstore,vercel-plugin,muse,tanstack,fresh,cliamp}` (session
 stamps, telemetry IDs, generated types).
+
+The exception is `.config/opencode/themes/solarized-osaka-vivid.json`, generated
+alongside the terminal themes by `scripts/gen-themes.lua`. No other OpenCode
+files are managed.
+
+TablePlus's `Solarized Osaka Vivid` theme is generated at
+`~/.config/tableplus/themes/solarized-osaka-vivid.json`. Import that file from
+TablePlus Settings > Fonts & Themes > Add theme > File or folder, then select it.
+Rerun `scripts/gen-themes.lua` and re-import after changing the Osaka palette.
 
 Also skipped because their installers own them and rewrite them on every
 upgrade: `~/.zshenv` (rustup, Vite+), `~/.zprofile` (Homebrew, Obsidian),

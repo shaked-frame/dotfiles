@@ -77,20 +77,10 @@ local setup = function()
       show_hidden = true,
     },
     keymaps = keymaps,
+    lsp_file_methods = { autosave_changes = true },
   })
 
   require('oil-git-status').setup()
-
-  -- Tell attached LSP servers (such as tsgo) to update imports when a file is
-  -- renamed or moved inside an Oil buffer.
-  Config.new_autocmd('User', 'OilActionsPost', function(event)
-    if event.data.actions == nil then return end
-    for _, action in ipairs(event.data.actions) do
-      if action.type == 'move' then
-        require('snacks.rename').on_rename_file(action.src_url, action.dest_url)
-      end
-    end
-  end, 'Inform LSP when Oil moves or renames a file')
 end
 
 local ready = false
